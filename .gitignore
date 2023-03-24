@@ -1,9 +1,19 @@
+# Node/TypeScript
 *.js
 !jest.config.js
 *.d.ts
 node_modules
 
+# Python stuff
+.venv
+__pycache__
+*.egg-info*
+.python-version
+
 # CDK assets
 cdk.context.json
 .cdk.staging
 cdk.out
+
+# Arkime stuff
+manage_arkime.log

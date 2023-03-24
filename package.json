@@ -2,7 +2,7 @@
   "name": "cloud-demo",
   "version": "0.1.0",
   "bin": {
-    "cloud-demo": "bin/cloud-demo.js"
+    "cloud-demo": "cdk-lib/cloud-demo.js"
   },
   "scripts": {
     "clean": "rm -rf cdk.out",

@@ -10,9 +10,18 @@ The AWS Cloud Development Kit (CDK) is used to perform infrastructure specificat
 
 * REQUIRED: A copy of the repo on your local host
 * REQUIRED: A properly installed/configured copy of Node ([see instructions here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
+* REQUIRED: A properly installed/configured copy of Python 3.6+ and venv ([see instructions here](https://realpython.com/installing-python/))
+* REQUIRED: A properly installed/configured copy of Docker (instructions vary by platform/organization)
 * REQUIRED: A properly installed/configured copy of the CDK CLI ([see instructions here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html))
 * REQUIRED: Valid, accessible AWS Credentials (see [instructions here](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) and [here](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-credentials-node.html))
 * HIGHLY RECOMMENDED: A properly installed/configured copy of the AWS CLI ([see instructions here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html))
+
+Why each of these needed:
+* Node is required to work with the CDK (our CDK Apps are written in TypeScript)
+* The Management CLI is writting in Python, so Python is needed to run it
+* Docker is required to transform our local Dockerfiles into images to be uploaded/deployed into the AWS Account by the CDK
+* The CDK CLI is how we deploy/manage the underlying AWS CloudFormation Stacks that encapsulate the Arkime AWS Resoruces; the Management CLI wraps this
+* The AWS CLI is recommended (but not strictly required) as a way to set up your AWS Credentials and default region, etc.  The CDK CLI needs these to be configured, but technically you can configure these manually without using the AWS CLI (see [the CDK setup guide](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_prerequisites) for details)
 
 NOTE: By default, the CDK CLI will use the AWS Region specified as default in your AWS Configuration file; you can set this using the `aws configure` command.  It will also use the AWS Account your credentials are associated with.
 
@@ -40,6 +49,34 @@ You can deploy a AWS Fargate-backed copy of this container to your AWS Account l
 ```
 cdk deploy TrafficGen01
 ```
+
+## How to run the unit tests
+
+### Step 1 - Activate your Python virtual environment
+
+To isolate the Python environment for the project from your local machine, create virtual environment like so:
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+You can exit the Python virtual environment and remove its resources like so:
+```
+deactivate
+rm -rf .venv
+```
+
+Learn more about venv [here](https://docs.python.org/3/library/venv.html).
+
+### Step 2 - Run Pytest
+The unit tests are executed by invoking Pytest:
+
+```
+python -m pytest test_manage_arkime/
+```
+
+You can read more about running unit tests with Pytest [here](https://docs.pytest.org/en/7.2.x/how-to/usage.html).
 
 ## Generally useful NPM/CDK commands
 
