@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build": "docker build --tag traffic-gen .",
+    "start": "docker kill traffic-gen || docker rm traffic-gen || docker run --rm --name traffic-gen traffic-gen",
+    "stop": "docker kill traffic-gen"
+  }
+}
