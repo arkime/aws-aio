@@ -12,7 +12,7 @@ const aws_account: string | undefined = process.env.CDK_DEFAULT_ACCOUNT
 
 // Like the CDK_DEFAULT_ACCOUNT, the CDK CLI sets the CDK_DEFAULT_REGION by reading the AWS Credential profile.
 // However, we want the user to to able to specify a different region than the default so we optionaly pass in one
-// via ENV variables ourselves.
+// via CDK Context ourselves.
 const region_context = app.node.tryGetContext("ARKIME_REGION")
 const aws_region: string | undefined = region_context ?? process.env.CDK_DEFAULT_REGION
 

@@ -25,15 +25,6 @@ Why each of these needed:
 
 NOTE: By default, the CDK CLI will use the AWS Region specified as default in your AWS Configuration file; you can set this using the `aws configure` command.  It will also use the AWS Account your credentials are associated with.
 
-### Perform CDK Bootstrap
-
-Before deploying AWS Resources to your account using the CDK, you must first perform a bootstrapping step.  While you can [learn more about that step here](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html), at a high level the CDK needs some existing resources in your AWS account before it deploys your target infrastructure.  Examples include an AWS S3 bucket to stage deployment resources and an AWS ECR repo to receive/house locally-defined Docker images.
-
-You can bootstrap your AWS Account/Region like so:
-
-```
-cdk bootstrap
-```
 
 ### Setting up traffic generation
 This demo uses Docker containers to generate traffic (`./docker-traffic-gen`).  The containers are simple Ubuntu boxes that continuously curl a selection of Alexa Top 20 websites.  You can run the container locally like so:
@@ -44,10 +35,18 @@ docker build --tag traffic-gen .
 docker run --name traffic-gen traffic-gen
 ```
 
-You can deploy a AWS Fargate-backed copy of this container to your AWS Account like so:
+You can deploy a AWS Fargate-backed copy of this container to your AWS Account like so.  First, set up your Python virtual environment:
 
 ```
-cdk deploy TrafficGen01
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Next, invoke the management CLI.  It will use your default AWS Credentials and Region unless you specify otherwise (see `./manage_arkime.py --help`).
+
+```
+./manage_arkime.py deploy-demo-traffic
 ```
 
 ## How to run the unit tests
@@ -77,6 +76,18 @@ python -m pytest test_manage_arkime/
 ```
 
 You can read more about running unit tests with Pytest [here](https://docs.pytest.org/en/7.2.x/how-to/usage.html).
+
+## Performing CDK Bootstrap
+
+Before deploying AWS Resources to your account using the CDK, you must first perform a bootstrapping step.  The management CLI should take care of this for you, but the following is provided in case you want/need to do this manually.
+
+At a high level the CDK needs some existing resources in your AWS account before it deploys your target infrastructure, which you can [learn more about here](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html).  Examples include an AWS S3 bucket to stage deployment resources and an AWS ECR repo to receive/house locally-defined Docker images.
+
+You can bootstrap your AWS Account/Region like so:
+
+```
+cdk bootstrap
+```
 
 ## Generally useful NPM/CDK commands
 

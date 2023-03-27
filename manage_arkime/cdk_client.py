@@ -36,12 +36,15 @@ class CdkClient:
         command = f"{command_prefix} {command_suffix}"
         
         logger.info(f"Executing command: {command_suffix}")
-        logger.warning(f"NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
+        logger.warning("NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
         exit_code, stdout = shell.call_shell_command(command=command)
         exceptions.raise_common_exceptions(exit_code, stdout)
 
         if exit_code != 0:
+            logger.error(f"Bootstrap failed")
             raise exceptions.CdkBootstrapFailedUnknown()
+
+        logger.info(f"Bootstrap succeeded")
 
     def deploy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None) -> None:
         command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region)
@@ -55,20 +58,25 @@ class CdkClient:
         cdk_confirmation_dialogue = ("Do you wish to deploy these changes (y/n)?", "yes")
 
         logger.info(f"Executing command: {command_suffix}")
-        logger.warning(f"NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
+        logger.warning("NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
         exit_code, stdout = shell.call_shell_command(command=command, request_response_pairs=[cdk_confirmation_dialogue])
 
         try:
             exceptions.raise_common_exceptions(exit_code, stdout)
         except exceptions.CommonCdkNotBootstrapped as exception:
             # If the CDK setup isn't bootstrapped, attempt to bootstrap and redeploy
+            logger.warning("The AWS Account/Region does not appear to be CDK Bootstrapped, which is required for"
+                        + " deployment.  Attempting to bootstrap now...")
             self.bootstrap(aws_profile=aws_profile, aws_region=aws_region)
             logger.info(f"Executing command: {command_suffix}")
             exit_code, stdout = shell.call_shell_command(command=command, request_response_pairs=[cdk_confirmation_dialogue])
             exceptions.raise_common_exceptions(exit_code, stdout)
 
         if exit_code != 0:
+            logger.error(f"Deployment failed")
             raise exceptions.CdkDeployFailedUnknown()
+
+        logger.info(f"Deployment succeeded")
 
     def deploy_single_stack(self, stack_name, aws_profile: str = None, aws_region: str = None):
         self.deploy([stack_name], aws_profile=aws_profile, aws_region=aws_region)
