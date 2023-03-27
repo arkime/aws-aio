@@ -66,3 +66,7 @@ class CdkBootstrapFailedUnknown(Exception):
 class CdkDeployFailedUnknown(Exception):
     def __init__(self):
         super().__init__("The CDK Deploy operation failed for unknown reasons, please check the logs and stdout.")
+
+class CdkDestroyFailedUnknown(Exception):
+    def __init__(self):
+        super().__init__("The CDK Destroy operation failed for unknown reasons, please check the logs and stdout.")

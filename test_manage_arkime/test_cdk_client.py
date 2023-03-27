@@ -1,4 +1,5 @@
 import pytest
+import re
 import unittest.mock as mock
 
 import manage_arkime.constants as constants
@@ -220,4 +221,79 @@ def test_WHEN_deploy_all_stacks_called_THEN_executes_command(mock_shell):
 
     # Check our results
     expected_calls = [mock.call(command="cdk deploy --all", request_response_pairs=mock.ANY)]
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('manage_arkime.cdk_client.get_cdk_env', mock.Mock())
+@mock.patch('manage_arkime.cdk_client.shell')
+def test_WHEN_destroy_called_THEN_executes_command(mock_shell):
+    # Set up our mock
+    mock_call_shell = mock_shell.call_shell_command
+    mock_call_shell.return_value = [0, ["success"]]
+
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "yes"
+
+    # Run our test
+    client = cdk.CdkClient()
+    client.destroy(["MyStack1", "MyStack2"])
+
+    # Check our results
+    expected_calls = [
+        mock.call(
+            command="cdk destroy --force MyStack1 MyStack2"
+        )
+    ]
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('manage_arkime.cdk_client.get_cdk_env', mock.Mock())
+@mock.patch('manage_arkime.cdk_client.shell')
+def test_WHEN_destroy_called_AND_no_confirmation_THEN_aborts_1(mock_shell):
+    # Set up our mock
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "no"
+
+    # Run our test
+    client = cdk.CdkClient()
+    client.destroy(["MyStack1", "MyStack2"])
+
+    # Check our results
+    expected_calls = []
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('manage_arkime.cdk_client.get_cdk_env', mock.Mock())
+@mock.patch('manage_arkime.cdk_client.shell')
+def test_WHEN_destroy_called_AND_no_confirmation_THEN_aborts_2(mock_shell):
+    # Set up our mock
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "bleh"
+
+    # Run our test
+    client = cdk.CdkClient()
+    client.destroy(["MyStack1", "MyStack2"])
+
+    # Check our results
+    expected_calls = []
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('manage_arkime.cdk_client.get_cdk_env', mock.Mock())
+@mock.patch('manage_arkime.cdk_client.shell')
+def test_WHEN_destroy_called_AND_fails_THEN_raises(mock_shell):
+    # Set up our mock
+    mock_call_shell = mock_shell.call_shell_command
+    mock_call_shell.return_value = (1, ["deploy failed for reasons"])
+
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "yes"
+
+    # Run our test
+    client = cdk.CdkClient()
+    with pytest.raises(exceptions.CdkDestroyFailedUnknown):
+        client.destroy(["MyStack1", "MyStack2"])
+
+    # Check our results
+    expected_calls = [
+        mock.call(
+            command="cdk destroy --force MyStack1 MyStack2"
+        )
+    ]
     assert expected_calls == mock_shell.call_shell_command.call_args_list

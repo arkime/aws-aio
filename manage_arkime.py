@@ -4,6 +4,7 @@ import logging
 import click
 
 from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
+from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
 from manage_arkime.logging_wrangler import LoggingWrangler
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,14 @@ def deploy_demo_traffic(ctx):
     region = ctx.obj.get("region")
     cmd_deploy_demo_traffic(profile, region)
 cli.add_command(deploy_demo_traffic)
+
+@click.command(help="Uses CDK to destroy previously-deployed sample traffic sources in your account")
+@click.pass_context
+def destroy_demo_traffic(ctx):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_destroy_demo_traffic(profile, region)
+cli.add_command(destroy_demo_traffic)
 
 
 def main():
