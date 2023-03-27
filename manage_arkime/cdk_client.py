@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import List
 
 import manage_arkime.shell_interactions as shell
@@ -83,4 +84,36 @@ class CdkClient:
 
     def deploy_all_stacks(self, aws_profile: str = None, aws_region: str = None):
         self.deploy(["--all"], aws_profile=aws_profile, aws_region=aws_region)
+
+    def destroy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region)
+        command_suffix = f"destroy --force {' '.join(stack_names)}"
+        command = f"{command_prefix} {command_suffix}"
+
+        # Get the CDK Environment and confirm user wants to tear down the stacks, abort if not
+        cdk_env = get_cdk_env(aws_profile=aws_profile, aws_region=aws_region)
+        destroy_prompt = ("Your command will result in the the following CloudFormation stacks being destroyed in"
+                           + f" AWS Account {cdk_env.aws_account} and Region {cdk_env.aws_region}: {stack_names}"
+                           + "\n\n"
+                           + "Do you wish to proceed (y/yes or n/no)? ")
+        prompt_response = shell.louder_input(message=destroy_prompt, print_header=True)
+        if prompt_response.strip().lower() not in ["y", "yes"]:
+            logger.info("Aborting per user response")
+            return
+
+        # Execute the command.  We should be checking the output to confirm the stacks that the user agreed to destroy
+        # above are actually the ones being destroyed (e.g. don't use the --force option), but I wasn't able to get
+        # pepexpect to reliably match the output the CDK CLI provided.
+        # See: https://github.com/arkime/cloud-demo/issues/12
+
+        logger.info(f"Executing command: {command_suffix}")
+        logger.warning("NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
+        exit_code, stdout = shell.call_shell_command(command=command)
+        exceptions.raise_common_exceptions(exit_code, stdout)
+
+        if exit_code != 0:
+            logger.error(f"Destruction failed")
+            raise exceptions.CdkDestroyFailedUnknown()
+
+        logger.info(f"Destruction succeeded")
         
