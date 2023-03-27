@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/cloud-demo.ts",
+  "app": "npx ts-node --prefer-ts-exts cdk-lib/cloud-demo.ts",
   "watch": {
     "include": [
       "**"
