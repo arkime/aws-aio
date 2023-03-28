@@ -31,8 +31,15 @@ This demo uses Docker containers to generate traffic (`./docker-traffic-gen`).  
 
 ```
 cd ./docker-traffic-gen
-docker build --tag traffic-gen .
-docker run --name traffic-gen traffic-gen
+
+# To build the docker container
+npm run build
+
+# To run the docker container
+npm run start
+
+# To stop the docker container
+npm run stop
 ```
 
 You can deploy a AWS Fargate-backed copy of this container to your AWS Account like so.  First, set up your Python virtual environment:
