@@ -36,22 +36,3 @@ STACK_TYPE_CAPTURE_VPC = "CaptureVpcStack"
 # =================================================================================================
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
