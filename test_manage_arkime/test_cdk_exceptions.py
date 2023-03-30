@@ -100,7 +100,7 @@ def test_WHEN_signature_mismatch_THEN_raises():
     with pytest.raises(exceptions.CommonAWSCredentialsSigMismatch):
         exceptions.raise_common_exceptions(exit_code, stdout)
 
-def test_WHEN_not_bootstrapped_stack_THEN_raises():
+def test_WHEN_not_bootstrapped_stack_THEN_raises_1():
     # Set up our mock
     exit_code = 1
     stdout = [
@@ -116,6 +116,22 @@ def test_WHEN_not_bootstrapped_stack_THEN_raises():
         "",
         "Building Assets Failed: Error: MyStack: SSM parameter /cdk-bootstrap/blah/version not found. Has the environment been bootstrapped? Please run 'cdk bootstrap' (see https://docs.aws.amazon.com/cdk/latest/guide/bootstrapping.html)"
     ]
+
+    # Run our test
+    with pytest.raises(exceptions.CommonCdkNotBootstrapped):
+        exceptions.raise_common_exceptions(exit_code, stdout)
+
+def test_WHEN_not_bootstrapped_stack_THEN_raises_2():
+    # Set up our mock
+    exit_code = 1
+    raw_stdout = """
+    [0%] start: Building da93f9fd3c42d618a322361a988afe52bdd76e6b284c1b2dbfadd7e063fe24df:XXXXXXXXXXXX-us-east-2
+    [0%] start: Building ed75578691729c241bb3f8fb32c6e68b317241e63c3ab33684c92f69ab66c9fc:XXXXXXXXXXXX-us-east-2
+    [50%] success: Built da93f9fd3c42d618a322361a988afe52bdd76e6b284c1b2dbfadd7e063fe24df:XXXXXXXXXXXX-us-east-2
+    [100%] fail: No ECR repository named 'cdk-hnb659fds-container-assets-XXXXXXXXXXXX-us-east-2' in account XXXXXXXXXXXX. Is this account bootstrapped?
+    """
+
+    stdout = raw_stdout.split("\n")
 
     # Run our test
     with pytest.raises(exceptions.CommonCdkNotBootstrapped):

@@ -3,6 +3,7 @@ import logging
 
 import click
 
+from manage_arkime.commands.create_cluster import cmd_create_cluster
 from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
 from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
 from manage_arkime.logging_wrangler import LoggingWrangler
@@ -44,6 +45,15 @@ def destroy_demo_traffic(ctx):
     region = ctx.obj.get("region")
     cmd_destroy_demo_traffic(profile, region)
 cli.add_command(destroy_demo_traffic)
+
+@click.command(help="Creates an Arkime Cluster in your account")
+@click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have")
+@click.pass_context
+def create_cluster(ctx, name):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_create_cluster(profile, region, name)
+cli.add_command(create_cluster)
 
 
 def main():

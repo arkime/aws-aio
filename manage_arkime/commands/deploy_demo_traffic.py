@@ -1,6 +1,6 @@
 import logging
 
-import manage_arkime.cdk_client as cdk
+from manage_arkime.cdk_client import CdkClient
 import manage_arkime.constants as constants
 
 logger = logging.getLogger(__name__)
@@ -8,6 +8,9 @@ logger = logging.getLogger(__name__)
 def cmd_deploy_demo_traffic(profile: str, region: str):
     logger.debug(f"Invoking deploy-demo-traffic with profile '{profile}' and region '{region}'")
 
-    cdk_client = cdk.CdkClient()
+    cdk_client = CdkClient()
     stacks_to_deploy = [constants.NAME_DEMO_STACK_1, constants.NAME_DEMO_STACK_2]
-    cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region)
+    context = {
+        constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DEPLOY_DEMO
+    }
+    cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=context)

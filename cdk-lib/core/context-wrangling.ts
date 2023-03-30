@@ -1,0 +1,93 @@
+import * as cdk from 'aws-cdk-lib';
+import * as prms from './command-params';
+import {CDK_CONTEXT_CMD_VAR, CDK_CONTEXT_REGION_VAR, CDK_CONTEXT_PARAMS_VAR, ManagementCmd} from './constants';
+
+
+/**
+ * Function for retrieving all information needed for template generation from environment variables and CDK context.
+ * Provides a wrapper for the process of retrieval so the rest of the CDK App does not need to know the specifics of
+ * where these values ultimately come from.
+ * 
+ * @param app The current CDK App
+ * @returns All external arguments for template generation
+ */
+export function getCommandParams(app: cdk.App) : (prms.CreateClusterParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) {
+    // This ENV variable is set by the CDK CLI.  It reads it from your AWS Credential profile, and configures the var
+    // before invoking CDK actions.
+    const awsAccount: string | undefined = process.env.CDK_DEFAULT_ACCOUNT    
+
+    // Like the CDK_DEFAULT_ACCOUNT, the CDK CLI sets the CDK_DEFAULT_REGION by reading the AWS Credential profile.
+    // However, we want the user to to able to specify a different region than the default so we optionaly pass in one
+    // via CDK Context ourselves.
+    const regionContext = app.node.tryGetContext(CDK_CONTEXT_REGION_VAR)
+    const awsRegion: string | undefined = regionContext ?? process.env.CDK_DEFAULT_REGION
+
+    // We pass in the name of the current management command via CDK Context
+    const cmdContext: keyof typeof ManagementCmd | undefined = app.node.tryGetContext(CDK_CONTEXT_CMD_VAR)
+    const managementCmd: ManagementCmd | undefined = cmdContext === undefined ? undefined : ManagementCmd[cmdContext]
+
+    // We pass in application state information via string-encoded JSON in this context variable
+    const cmdParamsRaw: string | undefined = app.node.tryGetContext(CDK_CONTEXT_PARAMS_VAR)
+
+    return validateArgs({
+            awsAccount: awsAccount,
+            awsRegion: awsRegion,
+            managementCmd: managementCmd,
+            cmdParamsRaw: cmdParamsRaw
+    });
+}
+
+interface ValidateArgs {
+    readonly awsAccount?: string;
+    readonly awsRegion?: string;
+    readonly managementCmd?: ManagementCmd;
+    readonly cmdParamsRaw?: string
+}
+
+function validateArgs(args: ValidateArgs) : (prms.CreateClusterParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) {
+    if (!args.awsAccount) {
+        throw Error("AWS Account not defined; have you configured your AWS Credentials?")
+    }
+
+    if (!args.awsRegion) {
+        throw Error(`AWS Region not defined; expected to pull it from AWS Config or the CDK Context variable ${CDK_CONTEXT_REGION_VAR}`)
+    }
+
+    if (!args.managementCmd) {
+        throw Error(`Management Command not defined; expected to pull it from the CDK Context variable ${CDK_CONTEXT_CMD_VAR}`)
+    }
+
+    switch (args.managementCmd) {
+        case ManagementCmd.DeployDemoTraffic:
+            const deployDemoParams: prms.DeployDemoTrafficParams = {
+                type: "DeployDemoTrafficParams",
+                awsAccount: args.awsAccount, 
+                awsRegion: args.awsRegion, 
+            }
+            return deployDemoParams;
+        case ManagementCmd.DestroyDemoTraffic:
+            const destroyDemoParams: prms.DeployDemoTrafficParams = {
+                type: "DeployDemoTrafficParams",
+                awsAccount: args.awsAccount, 
+                awsRegion: args.awsRegion, 
+            }
+            return destroyDemoParams;
+        case ManagementCmd.CreateCluster:
+            // Must define stack config
+            if (!args.cmdParamsRaw) {
+                throw Error(`Command Parameters not defined; expected to pull from the CDK Context variable ${CDK_CONTEXT_PARAMS_VAR}`)
+            }
+
+            // Get the raw arguments from Python and convert to our params type
+            const rawParamsObj: prms.CreateClusterParamsRaw = JSON.parse(args.cmdParamsRaw)
+            const createClusterParams: prms.CreateClusterParams = {
+                type: "CreateClusterParams",
+                awsAccount: args.awsAccount,
+                awsRegion: args.awsRegion,
+                nameCaptureVpc: rawParamsObj.nameCaptureVpc
+            }
+            return createClusterParams;
+        default:
+            throw new Error(`Non-existent command in switch: ${args.managementCmd}`);
+    }
+}
