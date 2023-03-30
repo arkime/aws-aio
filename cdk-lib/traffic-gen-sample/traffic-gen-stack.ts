@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as path from 'path'
 import { Construct } from 'constructs';
 
@@ -12,13 +14,29 @@ export class TrafficGenStack extends cdk.Stack {
         // private VPCs.
         const vpc = new ec2.Vpc(this, 'VPC', {maxAzs: 1});
 
+        // Key to encrypt SSM traffic when using ECS Exec to shell into the container
+        const ksmEncryptionKey = new kms.Key(this, 'ECSClusterKey', {
+            enableKeyRotation: true,
+        });
+
         // Create a Fargate service that runs a single instance of our traffic generation image
-        const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
+        const cluster = new ecs.Cluster(this, 'Cluster', {
+            vpc,
+            executeCommandConfiguration: { kmsKey: ksmEncryptionKey }
+        });
 
         const taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDef', {
             memoryLimitMiB: 512,
-            cpu: 256
+            cpu: 256,
         });
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['kms:Decrypt'], // Required for ECS Exec & shelling into the container
+                resources: [ksmEncryptionKey.keyArn]
+            }),
+        );
+
         const container = taskDefinition.addContainer("FargateContainer", {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-traffic-gen')),
             memoryLimitMiB: 512,
@@ -29,6 +47,7 @@ export class TrafficGenStack extends cdk.Stack {
             cluster,
             taskDefinition,
             desiredCount: 1,
-          });
+            enableExecuteCommand: true
+        });
     }
 }

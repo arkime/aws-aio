@@ -30,7 +30,8 @@ EXPIRED_CREDS_1: str = "There are expired AWS credentials in your environment"
 EXPIRED_CREDS_2: str = "ExpiredToken: The security token included in the request is expired"
 INVALID_TOKEN: str = "The security token included in the request is invalid"
 SIG_MISMATCH: str = "The request signature we calculated does not match the signature you provided"
-NOT_BOOTSTRAPPED: str = "Please run 'cdk bootstrap'"
+NOT_BOOTSTRAPPED_1: str = "Please run 'cdk bootstrap'"
+NOT_BOOTSTRAPPED_2: str = "Is this account bootstrapped?"
 
 def raise_common_exceptions(exit_code: int, stdout: List[str]) -> None:
     """
@@ -52,7 +53,9 @@ def raise_common_exceptions(exit_code: int, stdout: List[str]) -> None:
             raise CommonInvalidAWSToken()
         if re.search(SIG_MISMATCH, line):
             raise CommonAWSCredentialsSigMismatch()
-        if re.search(NOT_BOOTSTRAPPED, line):
+        if re.search(NOT_BOOTSTRAPPED_1, line):
+            raise CommonCdkNotBootstrapped()
+        if re.search(NOT_BOOTSTRAPPED_2, line):
             raise CommonCdkNotBootstrapped()
 
 # =============================================================================

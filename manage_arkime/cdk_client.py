@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import List
+from typing import Dict, List
 
 import manage_arkime.shell_interactions as shell
 from manage_arkime.cdk_environment import get_cdk_env
@@ -9,7 +9,7 @@ import manage_arkime.constants as constants
 
 logger = logging.getLogger(__name__)
 
-def get_command_prefix(aws_profile: str = None, aws_region: str = None) -> str:
+def get_command_prefix(aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> str:
     prefix_sections = ["cdk"]
 
     if aws_profile:
@@ -17,6 +17,10 @@ def get_command_prefix(aws_profile: str = None, aws_region: str = None) -> str:
 
     if aws_region:
         prefix_sections.append(f"--context {constants.CDK_CONTEXT_REGION_VAR}={aws_region}")
+
+    if context:
+        for context_key, context_value in context.items():
+            prefix_sections.append(f"--context {context_key}={context_value}")
 
     return " ".join(prefix_sections)
 
@@ -30,8 +34,8 @@ class CdkClient:
         self.profile = profile
         self.region = region
     
-    def bootstrap(self, aws_profile: str = None, aws_region: str = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region)
+    def bootstrap(self, aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region, context=context)
         cdk_env = get_cdk_env(aws_profile=aws_profile, aws_region=aws_region)
         command_suffix = f"bootstrap {str(cdk_env)}"
         command = f"{command_prefix} {command_suffix}"
@@ -47,8 +51,8 @@ class CdkClient:
 
         logger.info(f"Bootstrap succeeded")
 
-    def deploy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region)
+    def deploy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region, context=context)
         command_suffix = f"deploy {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 
@@ -68,7 +72,7 @@ class CdkClient:
             # If the CDK setup isn't bootstrapped, attempt to bootstrap and redeploy
             logger.warning("The AWS Account/Region does not appear to be CDK Bootstrapped, which is required for"
                         + " deployment.  Attempting to bootstrap now...")
-            self.bootstrap(aws_profile=aws_profile, aws_region=aws_region)
+            self.bootstrap(aws_profile=aws_profile, aws_region=aws_region, context=context)
             logger.info(f"Executing command: {command_suffix}")
             exit_code, stdout = shell.call_shell_command(command=command, request_response_pairs=[cdk_confirmation_dialogue])
             exceptions.raise_common_exceptions(exit_code, stdout)
@@ -79,14 +83,14 @@ class CdkClient:
 
         logger.info(f"Deployment succeeded")
 
-    def deploy_single_stack(self, stack_name, aws_profile: str = None, aws_region: str = None):
-        self.deploy([stack_name], aws_profile=aws_profile, aws_region=aws_region)
+    def deploy_single_stack(self, stack_name, aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None):
+        self.deploy([stack_name], aws_profile=aws_profile, aws_region=aws_region, context=context)
 
-    def deploy_all_stacks(self, aws_profile: str = None, aws_region: str = None):
-        self.deploy(["--all"], aws_profile=aws_profile, aws_region=aws_region)
+    def deploy_all_stacks(self, aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None):
+        self.deploy(["--all"], aws_profile=aws_profile, aws_region=aws_region, context=context)
 
-    def destroy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region)
+    def destroy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region, context=context)
         command_suffix = f"destroy --force {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 

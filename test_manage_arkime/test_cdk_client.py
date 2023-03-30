@@ -1,5 +1,4 @@
 import pytest
-import re
 import unittest.mock as mock
 
 import manage_arkime.constants as constants
@@ -30,6 +29,20 @@ def test_WHEN_get_command_prefix_called_AND_region_THEN_gens_correctly():
 
     # Check our results
     expected_value = f"cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1"
+    assert expected_value == actual_value
+
+def test_WHEN_get_command_prefix_called_AND_context_THEN_gens_correctly():
+    # Set up our test
+    test_context = {
+        "k1": "v1",
+        "k2": "v2",
+    }
+
+    # Run our test
+    actual_value = cdk.get_command_prefix(aws_region="mars-north-1", context=test_context)
+
+    # Check our results
+    expected_value = f"cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1 --context k1=v1 --context k2=v2"
     assert expected_value == actual_value
 
 @mock.patch('manage_arkime.cdk_client.get_cdk_env')
@@ -107,17 +120,17 @@ def test_WHEN_deploy_called_THEN_executes_command(mock_shell):
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
 @mock.patch('manage_arkime.cdk_client.shell')
-def test_WHEN_deploy_called_AND_profile_region_THEN_executes_command(mock_shell):
+def test_WHEN_deploy_called_AND_profile_region_context_THEN_executes_command(mock_shell):
     # Set up our mock
     mock_call_shell = mock_shell.call_shell_command
     mock_call_shell.return_value = [0, ["success"]]
 
     # Run our test
     client = cdk.CdkClient()
-    client.deploy(["MyStack"], aws_profile="my_profile", aws_region="region")
+    client.deploy(["MyStack"], aws_profile="my_profile", aws_region="region", context={"key": "value"})
 
     # Check our results
-    expected_command = cdk.get_command_prefix(aws_profile="my_profile", aws_region="region") + " deploy MyStack"
+    expected_command = cdk.get_command_prefix(aws_profile="my_profile", aws_region="region", context={"key": "value"}) + " deploy MyStack"
     expected_calls = [mock.call(command=expected_command, request_response_pairs=mock.ANY)]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
@@ -127,7 +140,7 @@ def test_WHEN_deploy_called_AND_not_bootstrapped_THEN_executes_command(mock_shel
     # Set up our mock
     mock_call_shell = mock_shell.call_shell_command
     mock_call_shell.side_effect = [
-        (1, [exceptions.NOT_BOOTSTRAPPED]),
+        (1, [exceptions.NOT_BOOTSTRAPPED_1]),
         (0, ["bootstrap success"]),
         (0, ["deploy success"])
     ]
@@ -159,7 +172,7 @@ def test_WHEN_deploy_called_AND_cant_bootstrap_THEN_raises(mock_shell, mock_get_
     # Set up our mock
     mock_call_shell = mock_shell.call_shell_command
     mock_call_shell.side_effect = [
-        (1, [exceptions.NOT_BOOTSTRAPPED]),
+        (1, [exceptions.NOT_BOOTSTRAPPED_1]),
         (1, ["bootstrap failed for reasons"])
     ]
 
@@ -243,6 +256,25 @@ def test_WHEN_destroy_called_THEN_executes_command(mock_shell):
             command="cdk destroy --force MyStack1 MyStack2"
         )
     ]
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('manage_arkime.cdk_client.get_cdk_env', mock.Mock())
+@mock.patch('manage_arkime.cdk_client.shell')
+def test_WHEN_destroy_called_AND_profile_region_context_THEN_executes_command(mock_shell):
+    # Set up our mock
+    mock_call_shell = mock_shell.call_shell_command
+    mock_call_shell.return_value = [0, ["success"]]
+
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "yes"
+
+    # Run our test
+    client = cdk.CdkClient()
+    client.destroy(["MyStack"], aws_profile="my_profile", aws_region="region", context={"key": "value"})
+
+    # Check our results
+    expected_command = cdk.get_command_prefix(aws_profile="my_profile", aws_region="region", context={"key": "value"}) + " destroy --force MyStack"
+    expected_calls = [mock.call(command=expected_command)]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
 @mock.patch('manage_arkime.cdk_client.get_cdk_env', mock.Mock())
