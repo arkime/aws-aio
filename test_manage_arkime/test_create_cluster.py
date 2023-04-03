@@ -17,13 +17,22 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     # Check our results
     expected_calls = [
         mock.call(
-            [constants.get_capture_vpc_stack_name("my-cluster")],
+            [
+                constants.get_capture_bucket_stack_name("my-cluster"),
+                constants.get_capture_nodes_stack_name("my-cluster"),
+                constants.get_capture_vpc_stack_name("my-cluster"),
+                constants.get_opensearch_domain_stack_name("my-cluster")
+            ],
             aws_profile="profile",
             aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "nameCaptureVpc": constants.get_capture_vpc_stack_name("my-cluster")
+                    "nameCluster": "my-cluster",
+                    "nameCaptureBucket": constants.get_capture_bucket_stack_name("my-cluster"),
+                    "nameCaptureNodes": constants.get_capture_nodes_stack_name("my-cluster"),
+                    "nameCaptureVpc": constants.get_capture_vpc_stack_name("my-cluster"),
+                    "nameOSDomain": constants.get_opensearch_domain_stack_name("my-cluster"),
                 }))
             }
         )

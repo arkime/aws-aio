@@ -26,13 +26,19 @@ CMD_CREATE_CLUSTER = "CreateCluster"
 NAME_DEMO_STACK_1: str = "DemoTrafficGen01"
 NAME_DEMO_STACK_2: str = "DemoTrafficGen02"
 
-# Static type names for our various stacks
-STACK_TYPE_CAPTURE_VPC = "CaptureVpcStack"
-
 # =================================================================================================
 # These stack names cross the boundary between the Python and CDK sides of the solution, but are not hardcoded on the
 # CDK side as well.  They are defined on the Python side because we need to know in-Python the names of the CDK stacks
 # we want to manipulate.
 # =================================================================================================
+def get_capture_bucket_stack_name(cluster_name: str) -> str:
+    return f"{cluster_name}-CaptureBucket"
+
+def get_capture_nodes_stack_name(cluster_name: str) -> str:
+    return f"{cluster_name}-CaptureNodes"
+
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
+
+def get_opensearch_domain_stack_name(cluster_name: str) -> str:
+    return f"{cluster_name}-OSDomain"

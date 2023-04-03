@@ -10,7 +10,11 @@ export interface CommandParamsRaw { }
  */
 export interface CreateClusterParamsRaw extends CommandParamsRaw {
     type: "CreateClusterParamsRaw";
+    nameCluster: string;
+    nameCaptureBucket: string;
+    nameCaptureNodes: string;
     nameCaptureVpc: string;
+    nameOSDomain: string;
 }
 
 /**
@@ -44,6 +48,10 @@ export interface DestroyDemoTrafficParams extends CommandParams {
  */
 export interface CreateClusterParams extends CommandParams {
     type: "CreateClusterParams"
+    nameCluster: string;
+    nameCaptureBucket: string;
+    nameCaptureNodes: string;
     nameCaptureVpc: string;
+    nameOSDomain: string;
 }
 

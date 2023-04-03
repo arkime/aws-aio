@@ -79,7 +79,7 @@ class CdkClient:
 
         if exit_code != 0:
             logger.error(f"Deployment failed")
-            raise exceptions.CdkDeployFailedUnknown()
+            exceptions.raise_deploy_exceptions(exit_code, stdout)
 
         logger.info(f"Deployment succeeded")
 

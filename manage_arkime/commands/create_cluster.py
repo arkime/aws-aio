@@ -13,14 +13,21 @@ def cmd_create_cluster(profile: str, region: str, name: str):
 
     cdk_client = CdkClient()
     stacks_to_deploy = [
-        constants.get_capture_vpc_stack_name(name)
+        constants.get_capture_bucket_stack_name(name),
+        constants.get_capture_nodes_stack_name(name),
+        constants.get_capture_vpc_stack_name(name),
+        constants.get_opensearch_domain_stack_name(name)
     ]
     context = _generate_cdk_context(name)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=context)
 
 def _generate_cdk_context(name: str) -> Dict[str, str]:
     cmd_params = {
-        "nameCaptureVpc": constants.get_capture_vpc_stack_name(name)
+        "nameCluster": name,
+        "nameCaptureBucket": constants.get_capture_bucket_stack_name(name),
+        "nameCaptureNodes": constants.get_capture_nodes_stack_name(name),
+        "nameCaptureVpc": constants.get_capture_vpc_stack_name(name),
+        "nameOSDomain": constants.get_opensearch_domain_stack_name(name),
     }
 
     return {

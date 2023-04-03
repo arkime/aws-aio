@@ -84,7 +84,11 @@ function validateArgs(args: ValidateArgs) : (prms.CreateClusterParams | prms.Dep
                 type: "CreateClusterParams",
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
-                nameCaptureVpc: rawParamsObj.nameCaptureVpc
+                nameCluster: rawParamsObj.nameCluster,
+                nameCaptureBucket: rawParamsObj.nameCaptureBucket,
+                nameCaptureNodes: rawParamsObj.nameCaptureNodes,
+                nameCaptureVpc: rawParamsObj.nameCaptureVpc,
+                nameOSDomain: rawParamsObj.nameOSDomain,
             }
             return createClusterParams;
         default:

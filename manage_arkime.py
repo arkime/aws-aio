@@ -47,7 +47,7 @@ def destroy_demo_traffic(ctx):
 cli.add_command(destroy_demo_traffic)
 
 @click.command(help="Creates an Arkime Cluster in your account")
-@click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have")
+@click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have", required=True)
 @click.pass_context
 def create_cluster(ctx, name):
     profile = ctx.obj.get("profile")

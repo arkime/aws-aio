@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build": "docker build --tag capture-node .",
+    "start": "docker kill capture-node || docker rm capture-node || docker run --rm --name capture-node capture-node",
+    "stop": "docker kill capture-node"
+  }
+}
