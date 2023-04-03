@@ -12,7 +12,7 @@ import { Environment } from 'aws-cdk-lib';
 
 const app = new cdk.App();
 
-const params: (prms.CreateClusterParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) = context.getCommandParams(app);
+const params: (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) = context.getCommandParams(app);
 
 const env: Environment = { 
     account: params.awsAccount, 
@@ -20,7 +20,7 @@ const env: Environment = {
 }
 
 switch(params.type) {
-    case "CreateClusterParams":
+    case "ClusterMgmtParams":
         const captureBucketStack = new CaptureBucketStack(app, params.nameCaptureBucket, {
             env: env
         });

@@ -21,6 +21,7 @@ CDK_CONTEXT_REGION_VAR: str = "ARKIME_REGION"
 CMD_DEPLOY_DEMO = "DeployDemoTraffic"
 CMD_DESTROY_DEMO = "DestroyDemoTraffic"
 CMD_CREATE_CLUSTER = "CreateCluster"
+CMD_DESTROY_CLUSTER = "DestroyCluster"
 
 # The names of static CDK Stacks defined in our App
 NAME_DEMO_STACK_1: str = "DemoTrafficGen01"

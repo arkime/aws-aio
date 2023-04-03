@@ -4,6 +4,7 @@ import logging
 import click
 
 from manage_arkime.commands.create_cluster import cmd_create_cluster
+from manage_arkime.commands.destroy_cluster import cmd_destroy_cluster
 from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
 from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
 from manage_arkime.logging_wrangler import LoggingWrangler
@@ -54,6 +55,15 @@ def create_cluster(ctx, name):
     region = ctx.obj.get("region")
     cmd_create_cluster(profile, region, name)
 cli.add_command(create_cluster)
+
+@click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")
+@click.option("--name", help="The name of the Arkime Cluster to tear down", required=True)
+@click.pass_context
+def destroy_cluster(ctx, name):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_destroy_cluster(profile, region, name)
+cli.add_command(destroy_cluster)
 
 
 def main():
