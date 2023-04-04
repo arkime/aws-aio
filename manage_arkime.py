@@ -58,11 +58,18 @@ cli.add_command(create_cluster)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")
 @click.option("--name", help="The name of the Arkime Cluster to tear down", required=True)
+@click.option(
+    "--destroy-everything", 
+    help="Tears down all resources and ALL DATA associated with the cluster instead of preserving that data",
+    is_flag=True,
+    show_default=True,
+    default=False
+)
 @click.pass_context
-def destroy_cluster(ctx, name):
+def destroy_cluster(ctx, name, destroy_everything):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_destroy_cluster(profile, region, name)
+    cmd_destroy_cluster(profile, region, name, destroy_everything)
 cli.add_command(destroy_cluster)
 
 

@@ -35,6 +35,9 @@ NAME_DEMO_STACK_2: str = "DemoTrafficGen02"
 def get_capture_bucket_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureBucket"
 
+def get_capture_bucket_ssm_param_name(cluster_name: str) -> str:
+    return f"{cluster_name}-CaptureBucket-Name"
+
 def get_capture_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureNodes"
 
@@ -43,3 +46,6 @@ def get_capture_vpc_stack_name(cluster_name: str) -> str:
 
 def get_opensearch_domain_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-OSDomain"
+
+def get_opensearch_domain_ssm_param_name(cluster_name: str) -> str:
+    return f"{cluster_name}-OSDomain-Name"

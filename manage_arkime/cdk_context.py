@@ -17,10 +17,12 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
 def _generate_cluster_context(name: str) -> Dict[str, str]:
     cmd_params = {
         "nameCluster": name,
-        "nameCaptureBucket": constants.get_capture_bucket_stack_name(name),
-        "nameCaptureNodes": constants.get_capture_nodes_stack_name(name),
-        "nameCaptureVpc": constants.get_capture_vpc_stack_name(name),
-        "nameOSDomain": constants.get_opensearch_domain_stack_name(name),
+        "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
+        "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(name),
+        "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(name),
+        "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(name),
+        "nameOSDomainStack": constants.get_opensearch_domain_stack_name(name),
+        "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(name),
     }
 
     return {

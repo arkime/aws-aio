@@ -11,10 +11,12 @@ export interface CommandParamsRaw { }
 export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     type: "ClusterMgmtParamsRaw";
     nameCluster: string;
-    nameCaptureBucket: string;
-    nameCaptureNodes: string;
-    nameCaptureVpc: string;
-    nameOSDomain: string;
+    nameCaptureBucketStack: string;
+    nameCaptureBucketSsmParam: string;
+    nameCaptureNodesStack: string;
+    nameCaptureVpcStack: string;
+    nameOSDomainStack: string;
+    nameOSDomainSsmParam: string;
 }
 
 /**
@@ -49,8 +51,10 @@ export interface DestroyDemoTrafficParams extends CommandParams {
 export interface ClusterMgmtParams extends CommandParams {
     type: "ClusterMgmtParams"
     nameCluster: string;
-    nameCaptureBucket: string;
-    nameCaptureNodes: string;
-    nameCaptureVpc: string;
-    nameOSDomain: string;
+    nameCaptureBucketStack: string;
+    nameCaptureBucketSsmParam: string;
+    nameCaptureNodesStack: string;
+    nameCaptureVpcStack: string;
+    nameOSDomainStack: string;
+    nameOSDomainSsmParam: string;
 }

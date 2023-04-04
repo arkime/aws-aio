@@ -5,9 +5,12 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import {Domain, EngineVersion, TLSSecurityPolicy} from 'aws-cdk-lib/aws-opensearchservice';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+
 
 export interface OpenSearchDomainStackProps extends StackProps {
-    captureVpc: ec2.Vpc;
+    readonly captureVpc: ec2.Vpc;
+    readonly ssmParamName: string;
 }
 
 export class OpenSearchDomainStack extends Stack {
@@ -87,6 +90,16 @@ export class OpenSearchDomainStack extends Stack {
             fineGrainedAccessControl: {
                 masterUserPassword: this.osPassword.secretValue
             }
+        });
+
+        // This SSM parameter will be used to export the name of the domain to other consumers outside of
+        // CloudFormation (such as our management CLI)
+        new ssm.StringParameter(this, 'DomainName', {
+            allowedPattern: '.*',
+            description: 'The name of the Capture OpenSearch Domain',
+            parameterName: props.ssmParamName,
+            stringValue: this.domain.domainName,
+            tier: ssm.ParameterTier.STANDARD,
         });
     }
 }

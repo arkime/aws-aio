@@ -86,10 +86,12 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
                 nameCluster: rawClusterMgmtParamsObj.nameCluster,
-                nameCaptureBucket: rawClusterMgmtParamsObj.nameCaptureBucket,
-                nameCaptureNodes: rawClusterMgmtParamsObj.nameCaptureNodes,
-                nameCaptureVpc: rawClusterMgmtParamsObj.nameCaptureVpc,
-                nameOSDomain: rawClusterMgmtParamsObj.nameOSDomain,
+                nameCaptureBucketStack: rawClusterMgmtParamsObj.nameCaptureBucketStack,
+                nameCaptureBucketSsmParam: rawClusterMgmtParamsObj.nameCaptureBucketSsmParam,
+                nameCaptureNodesStack: rawClusterMgmtParamsObj.nameCaptureNodesStack,
+                nameCaptureVpcStack: rawClusterMgmtParamsObj.nameCaptureVpcStack,
+                nameOSDomainStack: rawClusterMgmtParamsObj.nameOSDomainStack,
+                nameOSDomainSsmParam: rawClusterMgmtParamsObj.nameOSDomainSsmParam,
             }
             return clusterMgmtParams;
         default:

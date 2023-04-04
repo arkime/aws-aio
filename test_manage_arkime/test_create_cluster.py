@@ -29,10 +29,12 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "nameCluster": "my-cluster",
-                    "nameCaptureBucket": constants.get_capture_bucket_stack_name("my-cluster"),
-                    "nameCaptureNodes": constants.get_capture_nodes_stack_name("my-cluster"),
-                    "nameCaptureVpc": constants.get_capture_vpc_stack_name("my-cluster"),
-                    "nameOSDomain": constants.get_opensearch_domain_stack_name("my-cluster"),
+                    "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
+                    "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
+                    "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
+                    "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
+                    "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
+                    "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
                 }))
             }
         )

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import logging
 
-from manage_arkime.aws_client_provider import AwsClientProvider
+from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
 
 
 """

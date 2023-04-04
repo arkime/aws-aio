@@ -21,21 +21,23 @@ const env: Environment = {
 
 switch(params.type) {
     case "ClusterMgmtParams":
-        const captureBucketStack = new CaptureBucketStack(app, params.nameCaptureBucket, {
-            env: env
-        });
-
-        const captureVpcStack = new CaptureVpcStack(app, params.nameCaptureVpc, {
-            env: env
-        });
-
-        const osDomainStack = new OpenSearchDomainStack(app, params.nameOSDomain, {
+        const captureBucketStack = new CaptureBucketStack(app, params.nameCaptureBucketStack, {
             env: env,
-            captureVpc: captureVpcStack.vpc
+            ssmParamName: params.nameCaptureBucketSsmParam,
+        });
+
+        const captureVpcStack = new CaptureVpcStack(app, params.nameCaptureVpcStack, {
+            env: env
+        });
+
+        const osDomainStack = new OpenSearchDomainStack(app, params.nameOSDomainStack, {
+            env: env,
+            captureVpc: captureVpcStack.vpc,
+            ssmParamName: params.nameOSDomainSsmParam,
         });
         osDomainStack.addDependency(captureVpcStack)
 
-        const captureNodesStack = new CaptureNodesStack(app, params.nameCaptureNodes, {
+        const captureNodesStack = new CaptureNodesStack(app, params.nameCaptureNodesStack, {
             env: env,
             captureBucket: captureBucketStack.bucket,
             captureVpc: captureVpcStack.vpc,
