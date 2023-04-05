@@ -152,6 +152,18 @@ You can bootstrap your AWS Account/Region like so:
 cdk bootstrap
 ```
 
+## Account Limit, Scaling, and Other Concerns
+
+In general, it should be assumed that this setup is intended for "light to medium usage".  In other words, don't expect to pour massive amounts of data through it.  The wording here is intentionally vague to encourage the reader to assess for themselves whether it will scale for their use-case.  Ideally, load testing will be performed on the setup to give a bit more specifity here but that is not guaranteed.
+
+Here are some scaling things that you'll want to consider:
+* The compute/memory capacity of individual Fargate Capture Nodes
+* The maximum scaling limit of the Fargate Service as well as the scaling conditions
+* The number of availability zones the setup launches in, and whether specific zones are required
+
+Here are some account limits you'll want to watch out for:
+* Number of EIPs per region
+
 ## Generally useful NPM/CDK commands
 
 * `npm run build`   compile typescript to js
