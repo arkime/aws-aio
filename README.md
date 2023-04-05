@@ -68,6 +68,36 @@ You can tear down the demo Fargate stacks using an additional command:
 ./manage_arkime.py deploy-demo-traffic
 ```
 
+### Setting up your Arkime Cluster
+
+You can deploy the Arkime Cluster into your AWS account like so:
+
+```
+./manage_arkime.py create-cluster --name MyCluster
+```
+
+**NOTE:** You must perform a manual action in your AWS Account in order for this deployment to succeed.  Specifically you must [create an IAM Service Linked Role for AWS OpenSearch](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/slr.html) to be able to manage the OpenSearch Domain.  This is very easy to do with the AWS CLI, and only needs to be done once per AWS Account:
+
+```
+aws iam create-service-linked-role --aws-service-name es.amazonaws.com
+```
+
+### Tearing down your Arkime Cluster
+
+You can destroy the Arkime Cluster in your AWS account like so:
+
+```
+./manage_arkime.py destroy-cluster --name MyCluster
+```
+
+By default, this will tear down the Capture/Viewer Nodes and leave the OpenSearch Domain and Capture Bucket intact.  Consequently, it will also leave a number of CloudFormation stacks in place as well.  
+
+If you want to tear down **EVERYTHING** and are willing to blow away all your data, you can use the "nuke" option:
+
+```
+./manage_arkime.py destroy-cluster --name MyCluster --destroy-everything
+```
+
 ## How to shell into the Fargate containers
 
 It's possible to create interactive terminal sessions inside the Fargate Docker containers deployed into your account.  The official documentation/blog posts are a bit confusing, so we explain the process here.  The Fargate tasks we spin up have all been pre-configured on the server-side to enable this, so what you need to do is the stuff on the client-side (e.g. your laptop).  This process involves using the ECS Exec capability to perform a remote Docker Exec, and works even if your Tasks are running in private subnets.  You can learn way more in [this (verbose/confusing) blog post](https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/).

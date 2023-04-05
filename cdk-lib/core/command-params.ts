@@ -6,11 +6,17 @@
 export interface CommandParamsRaw { }
 
 /**
- * Type to receive the raw Create Cluster arguments from Python
+ * Type to receive the raw Create and Destroy Cluster arguments from Python
  */
-export interface CreateClusterParamsRaw extends CommandParamsRaw {
-    type: "CreateClusterParamsRaw";
-    nameCaptureVpc: string;
+export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
+    type: "ClusterMgmtParamsRaw";
+    nameCluster: string;
+    nameCaptureBucketStack: string;
+    nameCaptureBucketSsmParam: string;
+    nameCaptureNodesStack: string;
+    nameCaptureVpcStack: string;
+    nameOSDomainStack: string;
+    nameOSDomainSsmParam: string;
 }
 
 /**
@@ -40,10 +46,15 @@ export interface DestroyDemoTrafficParams extends CommandParams {
 }
 
 /**
- * Receptacle type to store arguments for Create Cluster calls
+ * Receptacle type to store arguments for Create and Destroy Cluster calls
  */
-export interface CreateClusterParams extends CommandParams {
-    type: "CreateClusterParams"
-    nameCaptureVpc: string;
+export interface ClusterMgmtParams extends CommandParams {
+    type: "ClusterMgmtParams"
+    nameCluster: string;
+    nameCaptureBucketStack: string;
+    nameCaptureBucketSsmParam: string;
+    nameCaptureNodesStack: string;
+    nameCaptureVpcStack: string;
+    nameOSDomainStack: string;
+    nameOSDomainSsmParam: string;
 }
-

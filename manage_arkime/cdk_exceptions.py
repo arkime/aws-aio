@@ -42,7 +42,6 @@ def raise_common_exceptions(exit_code: int, stdout: List[str]) -> None:
     * Non-existent region
     * Profile doesn't exist
     * Stack name not in app
-    * Oddball Cfn deployment failures
     """
     for line in stdout:
         if re.search(EXPIRED_CREDS_1, line):
@@ -66,9 +65,27 @@ class CdkBootstrapFailedUnknown(Exception):
     def __init__(self):
         super().__init__("The CDK Bootstrap operation failed for unknown reasons, please check the logs and stdout.")
 
+class CdkDeployFailedOpenSearchSLR(Exception):
+    def __init__(self):
+        super().__init__("The CDK Deploy operation failed because your account is missing the AWS IAM Service Linked"
+                         + " Role required by OpenSearch. You can create it using the AWS CLI with the command"
+                         + " 'aws iam create-service-linked-role --aws-service-name es.amazonaws.com'."
+                         + "  See the AWS OpenSearch documentation for more details:"
+                         + " https://docs.aws.amazon.com/opensearch-service/latest/developerguide/slr.html")
+
 class CdkDeployFailedUnknown(Exception):
     def __init__(self):
         super().__init__("The CDK Deploy operation failed for unknown reasons, please check the logs and stdout.")
+
+MISSING_OS_SLR: str = "you must enable a service-linked role to give Amazon OpenSearch Service permissions"
+
+def raise_deploy_exceptions(exit_code: int, stdout: List[str]):
+    for line in stdout:        
+        if re.search(MISSING_OS_SLR, line):
+            raise CdkDeployFailedOpenSearchSLR()
+
+    if exit_code != 0:
+        raise CdkDeployFailedUnknown()
 
 class CdkDestroyFailedUnknown(Exception):
     def __init__(self):

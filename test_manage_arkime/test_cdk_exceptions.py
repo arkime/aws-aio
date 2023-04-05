@@ -137,6 +137,19 @@ def test_WHEN_not_bootstrapped_stack_THEN_raises_2():
     with pytest.raises(exceptions.CommonCdkNotBootstrapped):
         exceptions.raise_common_exceptions(exit_code, stdout)
 
+def test_WHEN_deploy_missing_os_slr_THEN_raises():
+    # Set up our mock
+    exit_code = 1
+    raw_stdout = """
+    Resource handler returned message: "Invalid request provided: Before you can proceed, you must enable a service-linked role to give Amazon OpenSearch Service permissions to access your VPC. (Service: OpenSearch, Status Code: 400, Request ID: de567f61-cd4d-4b5b-a64f-d43ecd1b25ec)"
+    """
+
+    stdout = raw_stdout.split("\n")
+
+    # Run our test
+    with pytest.raises(exceptions.CdkDeployFailedOpenSearchSLR):
+        exceptions.raise_deploy_exceptions(exit_code, stdout)
+
 
 # =================================================================================================
 # Errors to handle later
