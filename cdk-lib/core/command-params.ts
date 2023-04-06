@@ -15,6 +15,8 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameCaptureBucketSsmParam: string;
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
+    nameClusterSsmParam: string;
+    nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
 }
@@ -55,6 +57,8 @@ export interface ClusterMgmtParams extends CommandParams {
     nameCaptureBucketSsmParam: string;
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
+    nameClusterSsmParam: string;
+    nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
 }

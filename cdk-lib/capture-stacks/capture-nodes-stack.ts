@@ -12,12 +12,16 @@ import * as ssm from "aws-cdk-lib/aws-ssm";
 import * as path from "path"
 import { Construct } from "constructs";
 
+import {ClusterSsmValue} from "../core/ssm-wrangling"
+
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
     readonly captureVpc: ec2.Vpc;
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
+    readonly ssmParamNameCluster: string;
+    readonly ssmParamNameInitialized: string;
 }
 
 export class CaptureNodesStack extends cdk.Stack {
@@ -118,7 +122,7 @@ export class CaptureNodesStack extends cdk.Stack {
         const initializedParam = new ssm.StringParameter(this, "IsInitialized", {
             allowedPattern: "true|false",
             description: "Whether the capture setup is initialized or not",
-            parameterName: `${props.clusterName}-Initialized`,
+            parameterName: props.ssmParamNameInitialized,
             stringValue: "false",
             tier: ssm.ParameterTier.STANDARD,
         });
@@ -166,7 +170,7 @@ export class CaptureNodesStack extends cdk.Stack {
             gatewayLoadBalancerArns: [gwlb.ref],
 
             // Allows us to bypass the need to confirm acceptance of each endpoint we create, but means we are limited
-            // to our own account
+            // to our own account (I think)
             acceptanceRequired: false,
         });
 
@@ -174,5 +178,16 @@ export class CaptureNodesStack extends cdk.Stack {
             serviceId: gwlbEndpointService.ref,
             allowedPrincipals: [`arn:aws:iam::${this.account}:root`],
         });
+
+        // This SSM parameter will enable us share the details of our Capture setup.
+        const clusterParamValue: ClusterSsmValue = {vpceServiceID: gwlbEndpointService.ref}
+        const clusterParam = new ssm.StringParameter(this, "ClusterParam", {
+            allowedPattern: ".*",
+            description: "The Cluster's details",
+            parameterName: props.ssmParamNameCluster,
+            stringValue: JSON.stringify(clusterParamValue),
+            tier: ssm.ParameterTier.STANDARD,
+        });
+        clusterParam.node.addDependency(gwlbEndpointService);        
     }
 }

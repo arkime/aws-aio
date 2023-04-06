@@ -28,15 +28,17 @@ NAME_DEMO_STACK_1: str = "DemoTrafficGen01"
 NAME_DEMO_STACK_2: str = "DemoTrafficGen02"
 
 # =================================================================================================
-# These stack names cross the boundary between the Python and CDK sides of the solution, but are not hardcoded on the
+# These names cross the boundary between the Python and CDK sides of the solution, but are not hardcoded on the
 # CDK side as well.  They are defined on the Python side because we need to know in-Python the names of the CDK stacks
 # we want to manipulate.
 # =================================================================================================
+SSM_CLUSTERS_PREFIX = "/arkime/clusters"
+
 def get_capture_bucket_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureBucket"
 
 def get_capture_bucket_ssm_param_name(cluster_name: str) -> str:
-    return f"{cluster_name}-CaptureBucket-Name"
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-bucket-name"
 
 def get_capture_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureNodes"
@@ -44,8 +46,14 @@ def get_capture_nodes_stack_name(cluster_name: str) -> str:
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
 
+def get_cluster_initialized_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/initialized"
+
+def get_cluster_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
+
 def get_opensearch_domain_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-OSDomain"
 
 def get_opensearch_domain_ssm_param_name(cluster_name: str) -> str:
-    return f"{cluster_name}-OSDomain-Name"
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/os-domain-name"

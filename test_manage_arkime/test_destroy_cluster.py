@@ -37,6 +37,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(TEST_CLUSTER),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(TEST_CLUSTER),
+                    "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
+                    "nameClusterInitializedSsmParam": constants.get_cluster_initialized_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
                 }))
@@ -48,7 +50,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
 @mock.patch("manage_arkime.commands.destroy_cluster.AwsClientProvider", mock.Mock())
 @mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
 @mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
-@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_param")
+@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_param_value")
 @mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket, mock_destroy_domain):
     # Set up our mock
@@ -99,6 +101,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(TEST_CLUSTER),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(TEST_CLUSTER),
+                    "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
+                    "nameClusterInitializedSsmParam": constants.get_cluster_initialized_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
                 }))

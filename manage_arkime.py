@@ -7,6 +7,7 @@ from manage_arkime.commands.create_cluster import cmd_create_cluster
 from manage_arkime.commands.destroy_cluster import cmd_destroy_cluster
 from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
 from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
+from manage_arkime.commands.list_clusters import cmd_list_clusters
 from manage_arkime.logging_wrangler import LoggingWrangler
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,14 @@ def destroy_cluster(ctx, name, destroy_everything):
     region = ctx.obj.get("region")
     cmd_destroy_cluster(profile, region, name, destroy_everything)
 cli.add_command(destroy_cluster)
+
+@click.command(help="Lists the currently deployed Arkime Clusters and their VPCs")
+@click.pass_context
+def list_clusters(ctx):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_list_clusters(profile, region)
+cli.add_command(list_clusters)
 
 
 def main():
