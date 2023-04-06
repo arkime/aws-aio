@@ -22,6 +22,19 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
 }
 
 /**
+ * Type to receive the raw Add Vpc arguments from Python
+ */
+export interface MirrorMgmtParamsRaw extends CommandParamsRaw {
+    type: "MirrorMgmtParamsRaw";
+    nameVpcMirrorStack: string;
+    nameVpcSsmParam: string;
+    idVpc: string;
+    idVpceService: string;
+    listSubnetIds: string[];
+    listSubnetSsmParams: string[];
+}
+
+/**
  * Base type for storing arguments received from the Python side of the app.  These may be embellished with additional
  * details not present in the raw arguments from Python.  The rest of the CDK App will use these types to seed stack
  * generation configuration based.
@@ -61,4 +74,17 @@ export interface ClusterMgmtParams extends CommandParams {
     nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
+}
+
+/**
+ * Receptacle type to store arguments for Add Vpc calls
+ */
+export interface MirrorMgmtParams extends CommandParams {
+    type: "MirrorMgmtParams";
+    nameVpcMirrorStack: string;
+    nameVpcSsmParam: string;
+    idVpc: string;
+    idVpceService: string;
+    listSubnetIds: string[];
+    listSubnetSsmParams: string[];
 }

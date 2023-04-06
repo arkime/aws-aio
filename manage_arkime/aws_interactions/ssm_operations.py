@@ -21,7 +21,7 @@ def _get_ssm_param(param_name: str, aws_client_provider: AwsClientProvider) -> D
         logger.info(f"Pulling SSM Parameter {param_name}...")
         return ssm_client.get_parameter(Name=param_name)["Parameter"]
     except ClientError as exc:
-        if exc.response['Error']['Code'] == 'ResourceNotFoundException':
+        if exc.response['Error']['Code'] == 'ParameterNotFound':
             raise ParamDoesNotExist(param_name=param_name)
         raise
 

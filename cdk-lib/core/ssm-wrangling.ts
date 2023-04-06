@@ -5,5 +5,14 @@
  */
 
 export interface ClusterSsmValue {
-    readonly vpceServiceID: string;
+    readonly vpceServiceId: string;
+}
+
+export interface SubnetSsmValue {
+    readonly vpcEndpointId: string;
+    readonly mirrorTargetId: string;
+}
+
+export interface VpcSsmValue {
+    readonly mirrorFilterId: string;
 }

@@ -31,7 +31,7 @@ def test_WHEN_get_ssm_param_value_called_AND_doesnt_exist_THEN_raises():
     # Set up our mock
     mock_ssm_client = mock.Mock()
     mock_ssm_client.get_parameter.side_effect = [
-        ClientError(error_response={"Error": {"Code": "ResourceNotFoundException"}}, operation_name="") # Already gone
+        ClientError(error_response={"Error": {"Code": "ParameterNotFound"}}, operation_name="")
     ]
 
     mock_aws_provider = mock.Mock()

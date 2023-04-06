@@ -3,6 +3,7 @@ import logging
 
 import click
 
+from manage_arkime.commands.add_vpc import cmd_add_vpc
 from manage_arkime.commands.create_cluster import cmd_create_cluster
 from manage_arkime.commands.destroy_cluster import cmd_destroy_cluster
 from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
@@ -80,6 +81,16 @@ def list_clusters(ctx):
     region = ctx.obj.get("region")
     cmd_list_clusters(profile, region)
 cli.add_command(list_clusters)
+
+@click.command(help="Sets up the specified VPC to have its traffic monitored by the specified, existing Arkime Cluster")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
+@click.option("--vpc-id", help="The VPC ID to begin monitoring.  Must be in the same account/region as the Cluster.", required=True)
+@click.pass_context
+def add_vpc(ctx, cluster_name, vpc_id):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_add_vpc(profile, region, cluster_name, vpc_id)
+cli.add_command(add_vpc)
 
 
 def main():

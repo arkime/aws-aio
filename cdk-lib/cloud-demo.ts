@@ -8,11 +8,12 @@ import { CaptureBucketStack } from './capture-stacks/capture-bucket-stack';
 import { CaptureNodesStack } from './capture-stacks/capture-nodes-stack';
 import { CaptureVpcStack } from './capture-stacks/capture-vpc-stack';
 import { OpenSearchDomainStack } from './capture-stacks/opensearch-domain-stack';
+import { VpcMirrorStack } from './mirror-stacks/vpc-mirror-stack';
 import { Environment } from 'aws-cdk-lib';
 
 const app = new cdk.App();
 
-const params: (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) = context.getCommandParams(app);
+const params: (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams | prms.MirrorMgmtParams) = context.getCommandParams(app);
 
 const env: Environment = { 
     account: params.awsAccount, 
@@ -51,6 +52,15 @@ switch(params.type) {
         captureNodesStack.addDependency(captureVpcStack)
         captureNodesStack.addDependency(osDomainStack)
 
+        break;
+    case "MirrorMgmtParams":
+        new VpcMirrorStack(app, params.nameVpcMirrorStack, {
+            subnetIds: params.listSubnetIds,
+            subnetSsmParamNames: params.listSubnetSsmParams,
+            vpcId: params.idVpc,
+            vpcSsmParamName: params.nameVpcSsmParam,
+            vpceServiceId: params.idVpceService
+        })
         break;
     case "DeployDemoTrafficParams":
         new TrafficGenStack(app, 'DemoTrafficGen01', {

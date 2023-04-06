@@ -22,6 +22,7 @@ CMD_DEPLOY_DEMO = "DeployDemoTraffic"
 CMD_DESTROY_DEMO = "DestroyDemoTraffic"
 CMD_CREATE_CLUSTER = "CreateCluster"
 CMD_DESTROY_CLUSTER = "DestroyCluster"
+CMD_ADD_VPC = "AddVpc"
 
 # The names of static CDK Stacks defined in our App
 NAME_DEMO_STACK_1: str = "DemoTrafficGen01"
@@ -57,3 +58,12 @@ def get_opensearch_domain_stack_name(cluster_name: str) -> str:
 
 def get_opensearch_domain_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/os-domain-name"
+
+def get_subnet_ssm_param_name(cluster_name: str, vpc_id: str, subnet_id: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}/subnets/{subnet_id}"
+
+def get_vpc_mirror_setup_stack_name(cluster_name: str, vpc_id: str) -> str:
+    return f"{cluster_name}-{vpc_id}-Mirror"
+
+def get_vpc_ssm_param_name(cluster_name: str, vpc_id: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}"

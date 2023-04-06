@@ -10,6 +10,10 @@ class AwsClientProvider:
         self._aws_profile = aws_profile if aws_profile else "default"
         self._aws_region = aws_region
 
+    def get_ec2(self):
+        session = boto3.Session(profile_name=self._aws_profile, region_name=self._aws_region)
+        return session.client("ec2")
+
     def get_opensearch(self):
         session = boto3.Session(profile_name=self._aws_profile, region_name=self._aws_region)
         return session.client("opensearch")

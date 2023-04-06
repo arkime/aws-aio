@@ -160,9 +160,12 @@ Here are some scaling things that you'll want to consider:
 * The compute/memory capacity of individual Fargate Capture Nodes
 * The maximum scaling limit of the Fargate Service as well as the scaling conditions
 * The number of availability zones the setup launches in, and whether specific zones are required
+* The max throughput of a single Gateway Load Balancer Endpoint is 100 Gbps, and we provision one per User subnet
 
 Here are some account limits you'll want to watch out for:
-* Number of EIPs per region
+* Number of EIPs per region is small, and we spin up several for each Arkime Cluster
+* There's a max of 10,000 Traffic Mirroring Sessions and Standard SSM Parameters/region, and we use ~1 of each for every User ENI
+
 
 ## Generally useful NPM/CDK commands
 
