@@ -4,8 +4,6 @@
 # Use http url so we capture both clear and usually encrypted version
 # after a redirect.
 
-set -e
-
 URLS=(
   http://www.google.com
   http://www.youtube.com
@@ -30,7 +28,7 @@ while :
 do
     u=${URLS[$RANDOM % ${#URLS[@]}]}
     s=${SLEEPS[$RANDOM % ${#SLEEPS[@]}]}
-    #echo $s - $u
+    echo Curling $u with next sleep $s
     curl -L --output /dev/null $u
     sleep $s
 done

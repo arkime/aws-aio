@@ -15,8 +15,23 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameCaptureBucketSsmParam: string;
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
+    nameClusterSsmParam: string;
+    nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
+}
+
+/**
+ * Type to receive the raw Add Vpc arguments from Python
+ */
+export interface MirrorMgmtParamsRaw extends CommandParamsRaw {
+    type: "MirrorMgmtParamsRaw";
+    nameVpcMirrorStack: string;
+    nameVpcSsmParam: string;
+    idVpc: string;
+    idVpceService: string;
+    listSubnetIds: string[];
+    listSubnetSsmParams: string[];
 }
 
 /**
@@ -55,6 +70,21 @@ export interface ClusterMgmtParams extends CommandParams {
     nameCaptureBucketSsmParam: string;
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
+    nameClusterSsmParam: string;
+    nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
+}
+
+/**
+ * Receptacle type to store arguments for Add Vpc calls
+ */
+export interface MirrorMgmtParams extends CommandParams {
+    type: "MirrorMgmtParams";
+    nameVpcMirrorStack: string;
+    nameVpcSsmParam: string;
+    idVpc: string;
+    idVpceService: string;
+    listSubnetIds: string[];
+    listSubnetSsmParams: string[];
 }

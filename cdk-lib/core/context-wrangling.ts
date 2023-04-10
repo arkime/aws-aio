@@ -11,7 +11,7 @@ import {CDK_CONTEXT_CMD_VAR, CDK_CONTEXT_REGION_VAR, CDK_CONTEXT_PARAMS_VAR, Man
  * @param app The current CDK App
  * @returns All external arguments for template generation
  */
-export function getCommandParams(app: cdk.App) : (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) {
+export function getCommandParams(app: cdk.App) : (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams | prms.MirrorMgmtParams) {
     // This ENV variable is set by the CDK CLI.  It reads it from your AWS Credential profile, and configures the var
     // before invoking CDK actions.
     const awsAccount: string | undefined = process.env.CDK_DEFAULT_ACCOUNT    
@@ -44,7 +44,7 @@ interface ValidateArgs {
     readonly cmdParamsRaw?: string
 }
 
-function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams) {
+function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams | prms.MirrorMgmtParams) {
     if (!args.awsAccount) {
         throw Error("AWS Account not defined; have you configured your AWS Credentials?")
     }
@@ -90,10 +90,33 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameCaptureBucketSsmParam: rawClusterMgmtParamsObj.nameCaptureBucketSsmParam,
                 nameCaptureNodesStack: rawClusterMgmtParamsObj.nameCaptureNodesStack,
                 nameCaptureVpcStack: rawClusterMgmtParamsObj.nameCaptureVpcStack,
+                nameClusterSsmParam: rawClusterMgmtParamsObj.nameClusterSsmParam,
+                nameClusterInitializedSsmParam: rawClusterMgmtParamsObj.nameClusterInitializedSsmParam,
                 nameOSDomainStack: rawClusterMgmtParamsObj.nameOSDomainStack,
                 nameOSDomainSsmParam: rawClusterMgmtParamsObj.nameOSDomainSsmParam,
             }
             return clusterMgmtParams;
+        case ManagementCmd.AddVpc: // Add and Remove VPC use the same parameters
+        case ManagementCmd.RemoveVpc:
+            // Must define stack config
+            if (!args.cmdParamsRaw) {
+                throw Error(`Command Parameters not defined; expected to pull from the CDK Context variable ${CDK_CONTEXT_PARAMS_VAR}`)
+            }
+
+            // Get the raw arguments from Python and convert to our params type
+            const rawMirrorMgmtParamsObj: prms.MirrorMgmtParamsRaw = JSON.parse(args.cmdParamsRaw)
+            const mirrorMgmtParams: prms.MirrorMgmtParams = {
+                type: "MirrorMgmtParams",
+                awsAccount: args.awsAccount,
+                awsRegion: args.awsRegion,
+                nameVpcMirrorStack: rawMirrorMgmtParamsObj.nameVpcMirrorStack,
+                nameVpcSsmParam: rawMirrorMgmtParamsObj.nameVpcSsmParam,
+                idVpc: rawMirrorMgmtParamsObj.idVpc,
+                idVpceService: rawMirrorMgmtParamsObj.idVpceService,
+                listSubnetIds: rawMirrorMgmtParamsObj.listSubnetIds,
+                listSubnetSsmParams: rawMirrorMgmtParamsObj.listSubnetSsmParams
+            }
+            return mirrorMgmtParams;
         default:
             throw new Error(`Non-existent command in switch: ${args.managementCmd}`);
     }

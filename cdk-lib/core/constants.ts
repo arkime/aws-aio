@@ -15,5 +15,7 @@ export enum ManagementCmd {
     DestroyDemoTraffic = "DestroyDemoTraffic",
     CreateCluster = "CreateCluster",
     DestroyCluster = "DestroyCluster",
+    AddVpc = "AddVpc",
+    RemoveVpc = "RemoveVpc",
 }
 

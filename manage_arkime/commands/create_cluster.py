@@ -1,7 +1,4 @@
-import json
 import logging
-import shlex
-from typing import Dict
 
 from manage_arkime.cdk_client import CdkClient
 import manage_arkime.constants as constants

@@ -1,12 +1,9 @@
-import json
 import logging
-import shlex
-from typing import Dict
 
 from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
 from manage_arkime.aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
 from manage_arkime.aws_interactions.destroy_s3_bucket import destroy_s3_bucket
-from manage_arkime.aws_interactions.get_ssm_parameter import get_ssm_param
+from aws_interactions.ssm_operations import get_ssm_param_value
 from manage_arkime.cdk_client import CdkClient
 import manage_arkime.constants as constants
 import manage_arkime.cdk_context as context
@@ -19,10 +16,10 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
     if destroy_everything:
         logger.info("Destroying User Data...")
         aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
-        os_domain_name = get_ssm_param(param_name=constants.get_opensearch_domain_ssm_param_name(name), aws_client_provider=aws_provider)
+        os_domain_name = get_ssm_param_value(param_name=constants.get_opensearch_domain_ssm_param_name(name), aws_client_provider=aws_provider)
         destroy_os_domain_and_wait(domain_name=os_domain_name, aws_client_provider=aws_provider)
 
-        bucket_name = get_ssm_param(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
+        bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
         destroy_s3_bucket(bucket_name=bucket_name, aws_client_provider=aws_provider)
 
     if not destroy_everything:

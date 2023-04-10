@@ -1,4 +1,5 @@
 import coloredlogs
+from contextlib import contextmanager
 from datetime import datetime
 import logging
 import os
@@ -55,3 +56,19 @@ class LoggingWrangler:
     @property
     def log_file(self):
         return self._logfile_path
+
+@contextmanager
+def set_boto_log_level(log_level = 'INFO'):
+    boto_log_level = logging.getLogger('boto').level
+    boto_log_level = logging.getLogger('boto3').level
+    botocore_log_level = logging.getLogger('botocore').level
+
+    logging.getLogger('boto').setLevel(log_level)
+    logging.getLogger('boto3').setLevel(log_level)
+    logging.getLogger('botocore').setLevel(log_level)
+
+    yield
+
+    logging.getLogger('boto').setLevel(boto_log_level)
+    logging.getLogger('boto3').setLevel(boto_log_level)
+    logging.getLogger('botocore').setLevel(botocore_log_level)

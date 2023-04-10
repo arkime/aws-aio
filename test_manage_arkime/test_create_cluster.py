@@ -33,6 +33,8 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
+                    "nameClusterSsmParam": constants.get_cluster_ssm_param_name("my-cluster"),
+                    "nameClusterInitializedSsmParam": constants.get_cluster_initialized_ssm_param_name("my-cluster"),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
                 }))
