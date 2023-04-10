@@ -180,7 +180,7 @@ export class CaptureNodesStack extends cdk.Stack {
         });
 
         // This SSM parameter will enable us share the details of our Capture setup.
-        const clusterParamValue: ClusterSsmValue = {vpceServiceId: gwlbEndpointService.ref}
+        const clusterParamValue: ClusterSsmValue = {clusterName: props.clusterName, vpceServiceId: gwlbEndpointService.ref}
         const clusterParam = new ssm.StringParameter(this, "ClusterParam", {
             allowedPattern: ".*",
             description: "The Cluster's details",

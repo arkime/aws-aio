@@ -3,6 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path'
 import { Construct } from 'constructs';
 
@@ -49,5 +50,18 @@ export class TrafficGenStack extends cdk.Stack {
             desiredCount: 1,
             enableExecuteCommand: true
         });
+
+        // Set up VPC Flow Logs to enable visibility of the traffic mirroring on the user-side    
+        const flowLogsGroup = new logs.LogGroup(this, 'FlowLogsLogGroup', {
+            logGroupName: `FlowLogs-${id}`,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            retention: logs.RetentionDays.TEN_YEARS,
+        });
+
+        new ec2.FlowLog(this, 'FlowLogs', {
+            resourceType: ec2.FlowLogResourceType.fromVpc(vpc),
+            destination: ec2.FlowLogDestination.toCloudWatchLogs(flowLogsGroup),
+        });
+
     }
 }

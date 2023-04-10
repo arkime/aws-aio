@@ -96,7 +96,8 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameOSDomainSsmParam: rawClusterMgmtParamsObj.nameOSDomainSsmParam,
             }
             return clusterMgmtParams;
-        case ManagementCmd.AddVpc:
+        case ManagementCmd.AddVpc: // Add and Remove VPC use the same parameters
+        case ManagementCmd.RemoveVpc:
             // Must define stack config
             if (!args.cmdParamsRaw) {
                 throw Error(`Command Parameters not defined; expected to pull from the CDK Context variable ${CDK_CONTEXT_PARAMS_VAR}`)

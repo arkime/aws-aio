@@ -16,5 +16,6 @@ export enum ManagementCmd {
     CreateCluster = "CreateCluster",
     DestroyCluster = "DestroyCluster",
     AddVpc = "AddVpc",
+    RemoveVpc = "RemoveVpc",
 }
 

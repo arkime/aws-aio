@@ -36,6 +36,11 @@ def generate_add_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str, vp
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_ADD_VPC
     return destroy_context
 
+def generate_remove_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str) -> Dict[str, str]:
+    destroy_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)
+    destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_REMOVE_VPC
+    return destroy_context
+
 def _generate_mirroring_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str) -> Dict[str, str]:
     cmd_params = {
         "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id),

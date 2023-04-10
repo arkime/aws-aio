@@ -52,7 +52,7 @@ export class VpcMirrorStack extends Stack {
             });
 
             // These SSM parameter will enable us share the details of our subnet-specific Capture setups
-            const subnetParamValue: SubnetSsmValue = {mirrorTargetId: mirrorTarget.ref, vpcEndpointId: vpcEndpoint.ref}
+            const subnetParamValue: SubnetSsmValue = {mirrorTargetId: mirrorTarget.ref, subnetId: subnetId, vpcEndpointId: vpcEndpoint.ref}
             const subnetParam = new ssm.StringParameter(this, `SubnetParam-${subnetId}`, {
                 allowedPattern: ".*",
                 description: "The Subnet's details",
@@ -107,7 +107,7 @@ export class VpcMirrorStack extends Stack {
         });
 
         // This SSM parameter will enable us share the details of our VPC-specific Capture setup
-        const vpcParamValue: VpcSsmValue = {mirrorFilterId: filter.ref}
+        const vpcParamValue: VpcSsmValue = {mirrorFilterId: filter.ref, vpcId: props.vpcId}
         const vpcParam = new ssm.StringParameter(this, `VpcParam-${props.vpcId}`, {
             allowedPattern: ".*",
             description: "The Subnet's details",

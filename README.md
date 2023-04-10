@@ -152,7 +152,7 @@ You can bootstrap your AWS Account/Region like so:
 cdk bootstrap
 ```
 
-## Account Limit, Scaling, and Other Concerns
+## Account Limits, Scaling, and Other Concerns
 
 In general, it should be assumed that this setup is intended for "light to medium usage".  In other words, don't expect to pour massive amounts of data through it.  The wording here is intentionally vague to encourage the reader to assess for themselves whether it will scale for their use-case.  Ideally, load testing will be performed on the setup to give a bit more specifity here but that is not guaranteed.
 

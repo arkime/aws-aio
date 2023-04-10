@@ -50,35 +50,59 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
 
     cdk_client = CdkClient()
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=add_vpc_context)
-    
 
-    # if destroy_everything:
-    #     logger.info("Destroying User Data...")
-    #     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
-    #     os_domain_name = get_ssm_param_value(param_name=constants.get_opensearch_domain_ssm_param_name(name), aws_client_provider=aws_provider)
-    #     destroy_os_domain_and_wait(domain_name=os_domain_name, aws_client_provider=aws_provider)
+    # Create the per-ENI Traffic Mirroring Sessions.
+    #
+    # Why create these using Boto instead of the CDK?  We expect the ENIs to change frequently and want a more nimble
+    # way to update our configuration for them than using CloudFormation.  Additionally, CloudFormation has limits that
+    # would be annoying to deal with (limits on the resources/stack most especially).  These limits mean we'd need to
+    # split our Traffic Sessions across multiple stacks while maintaining consistent and safe ordering to prevent a Cfn
+    # Stack Update from deleting Sessions in one stack only to move them to another Stack, and dealing with race
+    # conditions on CloudFormation trying to have the same Session exist in two stacks momentarily.  Not a good
+    # experience.
+    traffic_filter_id = json.loads(ssm_ops.get_ssm_param_value(constants.get_vpc_ssm_param_name(cluster_name, vpc_id), aws_provider))["mirrorFilterId"]
+    for subnet_id in subnet_ids:
+        describe_eni_response = ec2_client.describe_network_interfaces(
+            Filters=[{"Name": "subnet-id", "Values": [subnet_id]}]
+        )
+        eni_ids_and_types = [(eni["NetworkInterfaceId"], eni["InterfaceType"]) for eni in describe_eni_response.get("NetworkInterfaces", [])]
 
-    #     bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
-    #     destroy_s3_bucket(bucket_name=bucket_name, aws_client_provider=aws_provider)
+        for eni_id, eni_type in eni_ids_and_types:
+            eni_param_name = constants.get_eni_ssm_param_name(cluster_name, vpc_id, subnet_id, eni_id)
 
-    # if not destroy_everything:
-    #     # By default, destroy-cluster just tears down the capture/viewer nodes in order to preserve the user's data.  We
-    #     # could tear down the OpenSearch Domain and Bucket stacks, but that would leave loose (non-CloudFormation managed)
-    #     # resources in the user's account that they'd likely stumble across later, so it's probably better to leave those
-    #     # stacks intact.  We can't delete the VPC stack because the OpenSearch Domain has the VPC as a dependency, as we're
-    #     # keeping the Domain.
-    #     stacks_to_destroy = [
-    #         constants.get_capture_nodes_stack_name(name),
-    #     ]
-    # else:
-    #     # Because we've destroyed the user data, we can tear down all CloudFormation stacks.
-    #     stacks_to_destroy = [
-    #         constants.get_capture_bucket_stack_name(name),
-    #         constants.get_capture_nodes_stack_name(name),
-    #         constants.get_capture_vpc_stack_name(name),
-    #         constants.get_opensearch_domain_stack_name(name)
-    #     ]
-    # destroy_context = context.generate_destroy_cluster_context(name)
+            try:
+                ssm_ops.get_ssm_param_value(eni_param_name, aws_provider)
+                logger.info(f"Mirroring already configured for ENI {eni_id}")
+                continue
+            except ssm_ops.ParamDoesNotExist:
+                pass
+            
+            if eni_type in ["gateway_load_balancer_endpoint", "nat_gateway"]:
+                logger.info(f"Eni {eni_id} is of unsupport type {eni_type}; skipping")
+                continue
 
-    # cdk_client = CdkClient()
-    # cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=destroy_context)
+            logger.info(f"Creating mirroring session for ENI {eni_id}")
+
+            subnet_param_name = constants.get_subnet_ssm_param_name(cluster_name, vpc_id, subnet_id)
+            subnet_param_value = json.loads(ssm_ops.get_ssm_param_value(subnet_param_name, aws_provider))
+            traffic_target_id = subnet_param_value["mirrorTargetId"]
+
+            create_session_response = ec2_client.create_traffic_mirror_session(
+                NetworkInterfaceId=eni_id,
+                TrafficMirrorTargetId=traffic_target_id,
+                TrafficMirrorFilterId=traffic_filter_id,
+                SessionNumber=1,
+                VirtualNetworkId=123
+            )
+
+            aws_provider.get_ssm().put_parameter(
+                Name=eni_param_name,
+                Description=f"Mirroring details for {eni_id}",
+                Value=json.dumps({
+                    "eniId": eni_id,
+                    "trafficSessionId": create_session_response["TrafficMirrorSession"]["TrafficMirrorSessionId"]
+                }),
+                Type="String",
+                AllowedPattern=".*",
+                Tier='Standard',
+            )
