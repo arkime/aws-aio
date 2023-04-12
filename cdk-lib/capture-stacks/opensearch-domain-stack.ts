@@ -55,7 +55,11 @@ export class OpenSearchDomainStack extends Stack {
             'allow HTTPS traffic from anywhere',
         );
 
-        this.osPassword = new secretsmanager.Secret(this, "OpenSearchPassword");
+        this.osPassword = new secretsmanager.Secret(this, "OpenSearchPassword", {
+            generateSecretString: {
+                excludeCharacters: '\\$:()[]&\'\"<>`|;*?# ' // Characters likely to cause problems in shells
+            }
+        });
         this.domain = new Domain(this, 'ArkimeDomain', {
             version: EngineVersion.OPENSEARCH_1_3,
             enableVersionUpgrade: true,

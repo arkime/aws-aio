@@ -93,6 +93,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameClusterSsmParam: rawClusterMgmtParamsObj.nameClusterSsmParam,
                 nameOSDomainStack: rawClusterMgmtParamsObj.nameOSDomainStack,
                 nameOSDomainSsmParam: rawClusterMgmtParamsObj.nameOSDomainSsmParam,
+                nameViewerNodesStack: rawClusterMgmtParamsObj.nameViewerNodesStack,
             }
             return clusterMgmtParams;
         case ManagementCmd.AddVpc: // Add and Remove VPC use the same parameters

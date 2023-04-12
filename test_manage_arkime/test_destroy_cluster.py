@@ -26,6 +26,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
         mock.call(
             [
                 constants.get_capture_nodes_stack_name(TEST_CLUSTER),
+                constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
             ],
             aws_profile="profile",
             aws_region="region",
@@ -40,6 +41,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                 }))
             }
         )
@@ -88,7 +90,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                 constants.get_capture_bucket_stack_name(TEST_CLUSTER),
                 constants.get_capture_nodes_stack_name(TEST_CLUSTER),
                 constants.get_capture_vpc_stack_name(TEST_CLUSTER),
-                constants.get_opensearch_domain_stack_name(TEST_CLUSTER)
+                constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
+                constants.get_viewer_nodes_stack_name(TEST_CLUSTER)
             ],
             aws_profile="profile",
             aws_region="region",
@@ -103,6 +106,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                 }))
             }
         )

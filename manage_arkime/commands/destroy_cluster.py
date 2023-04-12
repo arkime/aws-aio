@@ -30,6 +30,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         # keeping the Domain.
         stacks_to_destroy = [
             constants.get_capture_nodes_stack_name(name),
+            constants.get_viewer_nodes_stack_name(name)
         ]
     else:
         # Because we've destroyed the user data, we can tear down all CloudFormation stacks.
@@ -37,7 +38,8 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
             constants.get_capture_bucket_stack_name(name),
             constants.get_capture_nodes_stack_name(name),
             constants.get_capture_vpc_stack_name(name),
-            constants.get_opensearch_domain_stack_name(name)
+            constants.get_opensearch_domain_stack_name(name),
+            constants.get_viewer_nodes_stack_name(name)
         ]
     destroy_context = context.generate_destroy_cluster_context(name)
 

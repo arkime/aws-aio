@@ -8,6 +8,7 @@ import { CaptureBucketStack } from './capture-stacks/capture-bucket-stack';
 import { CaptureNodesStack } from './capture-stacks/capture-nodes-stack';
 import { CaptureVpcStack } from './capture-stacks/capture-vpc-stack';
 import { OpenSearchDomainStack } from './capture-stacks/opensearch-domain-stack';
+import { ViewerNodesStack } from './viewer-stacks/viewer-nodes-stack';
 import { VpcMirrorStack } from './mirror-stacks/vpc-mirror-stack';
 import { Environment } from 'aws-cdk-lib';
 
@@ -50,6 +51,19 @@ switch(params.type) {
         captureNodesStack.addDependency(captureBucketStack)
         captureNodesStack.addDependency(captureVpcStack)
         captureNodesStack.addDependency(osDomainStack)
+
+        const viewerNodesStack = new ViewerNodesStack(app, params.nameViewerNodesStack, {
+            env: env,
+            captureBucket: captureBucketStack.bucket,
+            viewerVpc: captureVpcStack.vpc,
+            clusterName: params.nameCluster,
+            osDomain: osDomainStack.domain,
+            osPassword: osDomainStack.osPassword
+        });
+        viewerNodesStack.addDependency(captureBucketStack)
+        viewerNodesStack.addDependency(captureVpcStack)
+        viewerNodesStack.addDependency(osDomainStack)
+        viewerNodesStack.addDependency(captureNodesStack)
 
         break;
     case "MirrorMgmtParams":

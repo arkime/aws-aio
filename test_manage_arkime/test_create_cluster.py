@@ -21,7 +21,8 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                 constants.get_capture_bucket_stack_name("my-cluster"),
                 constants.get_capture_nodes_stack_name("my-cluster"),
                 constants.get_capture_vpc_stack_name("my-cluster"),
-                constants.get_opensearch_domain_stack_name("my-cluster")
+                constants.get_opensearch_domain_stack_name("my-cluster"),
+                constants.get_viewer_nodes_stack_name("my-cluster"),
             ],
             aws_profile="profile",
             aws_region="region",
@@ -36,6 +37,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name("my-cluster"),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
+                    "nameViewerNodesStack": constants.get_viewer_nodes_stack_name("my-cluster"),
                 }))
             }
         )

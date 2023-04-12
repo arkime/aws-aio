@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "build": "docker build --tag viewer-node .",
+    "start": "docker kill viewer-node || docker rm viewer-node || docker run --rm --name viewer-node viewer-node",
+    "stop": "docker kill viewer-node"
+  }
+}

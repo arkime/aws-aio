@@ -73,7 +73,7 @@ export class CaptureNodesStack extends cdk.Stack {
         // Load Balancers do not properly integrate with ECS Fargate.
         const autoScalingGroup = new autoscaling.AutoScalingGroup(this, "ASG", {
             vpc: props.captureVpc,
-            instanceType: new ec2.InstanceType("m5.xlarge"),
+            instanceType: new ec2.InstanceType("m5.xlarge"), // Arbitrarily chosen
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
             desiredCapacity: 1,
             minCapacity: 1,
@@ -132,6 +132,7 @@ export class CaptureNodesStack extends cdk.Stack {
             }),
         );
         props.osPassword.grantRead(taskDefinition.taskRole);
+        props.captureBucket.grantReadWrite(taskDefinition.taskRole);
         
         const container = taskDefinition.addContainer("CaptureContainer", {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "..", "..", "docker-capture-node")),
@@ -143,7 +144,8 @@ export class CaptureNodesStack extends cdk.Stack {
                 "OPENSEARCH_ENDPOINT": props.osDomain.domainEndpoint,
                 "OPENSEARCH_SECRET_ARN": props.osPassword.secretArn,
             },
-            memoryLimitMiB: 4096,
+            cpu: 4, // one full m5.xlarge
+            memoryLimitMiB: 16384, // one full m5.xlarge
             portMappings: [
                 { containerPort: 6081, hostPort: 6081, protocol: ecs.Protocol.UDP},
                 { containerPort: healthCheckPort, hostPort: healthCheckPort, protocol: ecs.Protocol.TCP},
@@ -154,6 +156,7 @@ export class CaptureNodesStack extends cdk.Stack {
             cluster,
             taskDefinition,
             desiredCount: 1,
+            minHealthyPercent: 0, // TODO: Speeds up test deployments but need to change to something safer
             enableExecuteCommand: true
         });
         
