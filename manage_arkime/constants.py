@@ -48,9 +48,6 @@ def get_capture_nodes_stack_name(cluster_name: str) -> str:
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
 
-def get_cluster_initialized_ssm_param_name(cluster_name: str) -> str:
-    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/initialized"
-
 def get_cluster_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
 

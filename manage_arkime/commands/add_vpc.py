@@ -39,7 +39,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
 
     # Get the VPCE Service ID we set up with our Capture VPC
     cluster_param = ssm_ops.get_ssm_param_value(constants.get_cluster_ssm_param_name(cluster_name), aws_provider)
-    vpce_service_id = json.loads(cluster_param)["vpceServiceID"]
+    vpce_service_id = json.loads(cluster_param)["vpceServiceId"]
 
     # Deploy the resources we need in the user's VPC and Subnets
     logger.info("Deploying shared mirroring components via CDK...")

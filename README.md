@@ -98,9 +98,9 @@ If you want to tear down **EVERYTHING** and are willing to blow away all your da
 ./manage_arkime.py destroy-cluster --name MyCluster --destroy-everything
 ```
 
-## How to shell into the Fargate containers
+## How to shell into the ECS containers
 
-It's possible to create interactive terminal sessions inside the Fargate Docker containers deployed into your account.  The official documentation/blog posts are a bit confusing, so we explain the process here.  The Fargate tasks we spin up have all been pre-configured on the server-side to enable this, so what you need to do is the stuff on the client-side (e.g. your laptop).  This process involves using the ECS Exec capability to perform a remote Docker Exec, and works even if your Tasks are running in private subnets.  You can learn way more in [this (verbose/confusing) blog post](https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/).
+It's possible to create interactive terminal sessions inside the ECS Docker containers deployed into your account.  The official documentation/blog posts are a bit confusing, so we explain the process here.  The ECS tasks we spin up have all been pre-configured on the server-side to enable this, so what you need to do is the stuff on the client-side (e.g. your laptop).  This process involves using the ECS Exec capability to perform a remote Docker Exec, and works even if your Tasks are running in private subnets.  You can learn way more in [this (verbose/confusing) blog post](https://aws.amazon.com/blogs/containers/new-using-amazon-ecs-exec-access-your-containers-fargate-ec2/).
 
 First, you need a recent version of the AWS CLI that has the required commands.  You can install/update your installation with [the instructions here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
@@ -109,7 +109,7 @@ Second, you need to install the Session Manager Plugin for the AWS CLI using [th
 Finally, you can create an interactive session using the AWS CLI.  You'll need to know the Cluster ID and the Task ID, which you can find either using the AWS CLI or the AWS Console.
 
 ```
-aws ecs execute-command --cluster <your cluster ID> --container FargateContainer --task <your task id> --interactive --command "/bin/sh"
+aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/sh"
 ```
 
 ## How to run the unit tests

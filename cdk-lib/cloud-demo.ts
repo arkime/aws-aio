@@ -45,8 +45,7 @@ switch(params.type) {
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
             osPassword: osDomainStack.osPassword,
-            ssmParamNameCluster: params.nameClusterSsmParam,
-            ssmParamNameInitialized: params.nameClusterInitializedSsmParam
+            ssmParamNameCluster: params.nameClusterSsmParam
         });
         captureNodesStack.addDependency(captureBucketStack)
         captureNodesStack.addDependency(captureVpcStack)

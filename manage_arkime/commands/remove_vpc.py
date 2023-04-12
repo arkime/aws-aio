@@ -25,7 +25,7 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
         logger.warning(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
         logger.warning("Aborting operation...")
         return
-    vpce_service_id = json.loads(cluster_config)["vpceServiceID"]
+    vpce_service_id = json.loads(cluster_config)["vpceServiceId"]
 
     ec2_client = aws_provider.get_ec2()
     ssm_client = aws_provider.get_ssm()
