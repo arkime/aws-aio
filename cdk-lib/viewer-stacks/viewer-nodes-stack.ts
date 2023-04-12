@@ -17,6 +17,8 @@ export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
+    readonly ssmParamNameViewerDns: string;
+    readonly ssmParamNameViewerPass: string;
 }
 
 export class ViewerNodesStack extends cdk.Stack {

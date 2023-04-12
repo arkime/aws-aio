@@ -93,6 +93,8 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameClusterSsmParam: rawClusterMgmtParamsObj.nameClusterSsmParam,
                 nameOSDomainStack: rawClusterMgmtParamsObj.nameOSDomainStack,
                 nameOSDomainSsmParam: rawClusterMgmtParamsObj.nameOSDomainSsmParam,
+                nameViewerDnsSsmParam: rawClusterMgmtParamsObj.nameViewerDnsSsmParam,
+                nameViewerPassSsmParam: rawClusterMgmtParamsObj.nameViewerPassSsmParam,
                 nameViewerNodesStack: rawClusterMgmtParamsObj.nameViewerNodesStack,
             }
             return clusterMgmtParams;

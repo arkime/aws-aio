@@ -58,7 +58,9 @@ switch(params.type) {
             viewerVpc: captureVpcStack.vpc,
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
-            osPassword: osDomainStack.osPassword
+            osPassword: osDomainStack.osPassword,
+            ssmParamNameViewerDns: params.nameViewerDnsSsmParam,
+            ssmParamNameViewerPass: params.nameViewerPassSsmParam,
         });
         viewerNodesStack.addDependency(captureBucketStack)
         viewerNodesStack.addDependency(captureVpcStack)

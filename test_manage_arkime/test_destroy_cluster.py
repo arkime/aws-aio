@@ -41,6 +41,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                 }))
             }
@@ -106,6 +108,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                 }))
             }

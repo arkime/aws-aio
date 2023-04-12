@@ -144,8 +144,13 @@ export class CaptureNodesStack extends cdk.Stack {
                 "OPENSEARCH_ENDPOINT": props.osDomain.domainEndpoint,
                 "OPENSEARCH_SECRET_ARN": props.osPassword.secretArn,
             },
-            cpu: 4, // one full m5.xlarge
-            memoryLimitMiB: 16384, // one full m5.xlarge
+            // We want the full capacity of our m5.xlarge because we're using HOST network type and therefore won't
+            // place multiple containers on a single host.  However, we can't ask for ALL of its resources (ostensibly,
+            // 4 vCPU and 16 GiB) because then ECS placement will fail.  We therefore ask for a slightly reduced
+            // amount.  This is the minimum amount we're requesting ECS to reserve, so it can't reserve more than
+            // exist.
+            cpu: 3584, // 3.5 vCPUs
+            memoryLimitMiB: 15360, // 15 GiB
             portMappings: [
                 { containerPort: 6081, hostPort: 6081, protocol: ecs.Protocol.UDP},
                 { containerPort: healthCheckPort, hostPort: healthCheckPort, protocol: ecs.Protocol.TCP},

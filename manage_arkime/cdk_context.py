@@ -24,6 +24,8 @@ def _generate_cluster_context(name: str) -> Dict[str, str]:
         "nameClusterSsmParam": constants.get_cluster_ssm_param_name(name),
         "nameOSDomainStack": constants.get_opensearch_domain_stack_name(name),
         "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(name),
+        "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(name),
+        "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(name),
         "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(name),
     }
 
