@@ -80,11 +80,6 @@ export class CaptureNodesStack extends cdk.Stack {
             minCapacity: 1,
             maxCapacity: 10 // Arbitrarily chosen
         });
-
-        // TODO: These two lines are temporary hacks; the plugin for S3 upload of PCAP data is hard-wired to pull from
-        // the ec2 metadata service rather than the ecs metadata service on the host.
-        props.captureBucket.grantReadWrite(autoScalingGroup.role);
-        props.captureBucketKey.grantEncryptDecrypt(autoScalingGroup.role);
         
         const asgSecurityGroup = new ec2.SecurityGroup(this, 'ASGSecurityGroup', {
             vpc: props.captureVpc,
