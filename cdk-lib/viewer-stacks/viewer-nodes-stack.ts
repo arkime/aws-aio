@@ -85,12 +85,11 @@ export class ViewerNodesStack extends cdk.Stack {
         const service = new ecs.FargateService(this, 'Service', {
             cluster,
             taskDefinition,
-            desiredCount: 1,
             minHealthyPercent: 0, // TODO: Speeds up test deployments but need to change to something safer
             enableExecuteCommand: true
         });        
 
-        const scaling = service.autoScaleTaskCount({ maxCapacity: 10 });
+        const scaling = service.autoScaleTaskCount({ maxCapacity: 10, minCapacity: 4 });
         scaling.scaleOnCpuUtilization('CpuScaling', {
             targetUtilizationPercent: 60,
         });
