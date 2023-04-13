@@ -109,7 +109,7 @@ Second, you need to install the Session Manager Plugin for the AWS CLI using [th
 Finally, you can create an interactive session using the AWS CLI.  You'll need to know the Cluster ID and the Task ID, which you can find either using the AWS CLI or the AWS Console.
 
 ```
-aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/sh"
+aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/bash"
 ```
 
 ## How to run the unit tests

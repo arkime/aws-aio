@@ -6,6 +6,7 @@ echo "============================================================"
 echo "Cluster: $CLUSTER_NAME"
 echo "Role: Capture Node"
 echo "AWS Region: $AWS_REGION"
+echo "Bucket Name: $BUCKET_NAME"
 echo "LB Healthcheck Port: $LB_HEALTH_PORT"
 echo "OpenSearch Endpoint: $OPENSEARCH_ENDPOINT"
 echo "OpenSearch Secret Arn: $OPENSEARCH_SECRET_ARN"
@@ -22,7 +23,9 @@ OPENSEARCH_PASS=$(aws secretsmanager get-secret-value --secret-id $OPENSEARCH_SE
 BASE64_AUTH=$(echo -n "admin:$OPENSEARCH_PASS" | base64)
 sed -i'' "s/_AUTH_/$BASE64_AUTH/g" /opt/arkime/etc/config.ini
 
+sed -i'' "s/_BUCKET_/$BUCKET_NAME/g" /opt/arkime/etc/config.ini
 sed -i'' "s/_HEALTH_PORT_/$LB_HEALTH_PORT/g" /opt/arkime/etc/config.ini
+sed -i'' "s/_REGION_/$AWS_REGION/g" /opt/arkime/etc/config.ini
 echo "Successfully configured /opt/arkime/etc/config.ini"
 
 echo "Testing connection/creds to OpenSearch domain $OPENSEARCH_ENDPOINT ..."

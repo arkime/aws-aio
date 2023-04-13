@@ -16,6 +16,7 @@ import {ClusterSsmValue} from "../core/ssm-wrangling"
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
+    readonly captureBucketKey: kms.Key;
     readonly captureVpc: ec2.Vpc;
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
@@ -79,6 +80,11 @@ export class CaptureNodesStack extends cdk.Stack {
             minCapacity: 1,
             maxCapacity: 10 // Arbitrarily chosen
         });
+
+        // TODO: These two lines are temporary hacks; the plugin for S3 upload of PCAP data is hard-wired to pull from
+        // the ec2 metadata service rather than the ecs metadata service on the host.
+        props.captureBucket.grantReadWrite(autoScalingGroup.role);
+        props.captureBucketKey.grantEncryptDecrypt(autoScalingGroup.role);
         
         const asgSecurityGroup = new ec2.SecurityGroup(this, 'ASGSecurityGroup', {
             vpc: props.captureVpc,
@@ -133,12 +139,14 @@ export class CaptureNodesStack extends cdk.Stack {
         );
         props.osPassword.grantRead(taskDefinition.taskRole);
         props.captureBucket.grantReadWrite(taskDefinition.taskRole);
+        props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);
         
         const container = taskDefinition.addContainer("CaptureContainer", {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "..", "..", "docker-capture-node")),
             logging: new ecs.AwsLogDriver({ streamPrefix: "CaptureNodes", mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
                 "AWS_REGION": this.region, // Seems not to be defined in this container, strangely
+                "BUCKET_NAME": props.captureBucket.bucketName,
                 "CLUSTER_NAME": props.clusterName,
                 "LB_HEALTH_PORT": healthCheckPort.toString(),
                 "OPENSEARCH_ENDPOINT": props.osDomain.domainEndpoint,

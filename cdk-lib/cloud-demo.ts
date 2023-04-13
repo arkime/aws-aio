@@ -42,6 +42,7 @@ switch(params.type) {
         const captureNodesStack = new CaptureNodesStack(app, params.nameCaptureNodesStack, {
             env: env,
             captureBucket: captureBucketStack.bucket,
+            captureBucketKey: captureBucketStack.bucketKey,
             captureVpc: captureVpcStack.vpc,
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
