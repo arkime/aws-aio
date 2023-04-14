@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && \
     apt-get install -y --no-install-recommends wget curl ca-certificates unzip less mandoc man-db vim libmagic1 iproute2 dnsutils net-tools tcpdump
 
-# Install the AWS CLI so we can pull passwords from AWS Secrets Manager at runtime
+# Install the AWS CLI so we can pull the OpenSearch Domain password from AWS Secrets Manager at runtime
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
@@ -18,5 +18,5 @@ RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu
     rm -rf ./arkime.deb 
 COPY ./arkime_config.ini /opt/arkime/etc/config.ini
 
-COPY ./run_capture_node.sh /run_capture_node.sh
-CMD ["/run_capture_node.sh"]
+COPY ./run_viewer_node.sh /run_viewer_node.sh
+CMD ["/run_viewer_node.sh"]

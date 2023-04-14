@@ -1,5 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
+import * as kms from "aws-cdk-lib/aws-kms";
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
@@ -14,12 +15,19 @@ export interface CaptureBucketStackProps extends StackProps {
  */
 export class CaptureBucketStack extends Stack {
     readonly bucket: s3.Bucket;
+    readonly bucketKey: kms.Key;
 
     constructor(scope: Construct, id: string, props: CaptureBucketStackProps) {
         super(scope, id, props);
 
+
+        this.bucketKey = new kms.Key(this, "BucketKey", {
+            enableKeyRotation: true,
+        });
+
         this.bucket = new s3.Bucket(this, 'CaptureBucket', {
             encryption: s3.BucketEncryption.KMS,
+            encryptionKey: this.bucketKey
           });
 
         // This SSM parameter will be used to export the name of the capture bucket to other consumers outside of

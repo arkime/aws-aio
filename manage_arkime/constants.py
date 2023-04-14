@@ -48,9 +48,6 @@ def get_capture_nodes_stack_name(cluster_name: str) -> str:
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
 
-def get_cluster_initialized_ssm_param_name(cluster_name: str) -> str:
-    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/initialized"
-
 def get_cluster_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
 
@@ -65,6 +62,15 @@ def get_opensearch_domain_ssm_param_name(cluster_name: str) -> str:
 
 def get_subnet_ssm_param_name(cluster_name: str, vpc_id: str, subnet_id: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}/subnets/{subnet_id}"
+
+def get_viewer_dns_ssm_param_name(cluster_name: str) -> str:
+    return f"/arkime/clusters/{cluster_name}/viewer-dns"
+
+def get_viewer_password_ssm_param_name(cluster_name: str) -> str:
+    return f"/arkime/clusters/{cluster_name}/viewer-pass-arn"
+
+def get_viewer_nodes_stack_name(cluster_name: str) -> str:
+    return f"{cluster_name}-ViewerNodes"
 
 def get_vpc_mirror_setup_stack_name(cluster_name: str, vpc_id: str) -> str:
     return f"{cluster_name}-{vpc_id}-Mirror"

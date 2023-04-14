@@ -16,12 +16,12 @@ import {ClusterSsmValue} from "../core/ssm-wrangling"
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
+    readonly captureBucketKey: kms.Key;
     readonly captureVpc: ec2.Vpc;
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
     readonly ssmParamNameCluster: string;
-    readonly ssmParamNameInitialized: string;
 }
 
 export class CaptureNodesStack extends cdk.Stack {
@@ -42,17 +42,16 @@ export class CaptureNodesStack extends cdk.Stack {
             ],
         });
 
-        // Per docs, the protocol and port MUST be these.
+        // Per docs, the protocol (GENEVE) and port (6081) MUST be these.
         // See: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/target-groups.html
+        const healthCheckPort = 4242; // arbitrarily chosen
         const gwlbTargetGroup = new elbv2.CfnTargetGroup(this, "GWLBTargetGroup", {
             protocol: "GENEVE",
             port: 6081,
             vpcId: props.captureVpc.vpcId,
             targetType: "instance",
-
-            // TODO: Needs to be configured correctly
-            // healthCheckProtocol: "TCP",
-            // healthCheckPort: "8032",
+            healthCheckProtocol: "TCP",
+            healthCheckPort: healthCheckPort.toString(),
         });
         
         const gwlbListener = new elbv2.CfnListener(this, "GWLBListener", {
@@ -71,13 +70,25 @@ export class CaptureNodesStack extends cdk.Stack {
          * Define our ECS Cluster and its associated resources
          */
 
-        // Create an ECS Cluster that runs fleet of Arkime Capture Nodes
+        // Create an ECS Cluster that runs fleet of Arkime Capture Nodes.  We use EC2 as our compute because Gateway
+        // Load Balancers do not properly integrate with ECS Fargate.
         const autoScalingGroup = new autoscaling.AutoScalingGroup(this, "ASG", {
             vpc: props.captureVpc,
-            instanceType: new ec2.InstanceType("m5.xlarge"),
+            instanceType: new ec2.InstanceType("m5.xlarge"), // Arbitrarily chosen
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
-            desiredCapacity: 3,
+            desiredCapacity: 1,
+            minCapacity: 1,
+            maxCapacity: 10 // Arbitrarily chosen
         });
+        
+        const asgSecurityGroup = new ec2.SecurityGroup(this, 'ASGSecurityGroup', {
+            vpc: props.captureVpc,
+            description: 'Control traffic to the Capture Nodes',
+            allowAllOutbound: true
+        });
+        asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(healthCheckPort), 'Enable LB Health Checks');
+        asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.udp(6081), 'Enable mirrored traffic');
+        autoScalingGroup.addSecurityGroup(asgSecurityGroup);
 
         // There might be a better way to do this, but the escape hatch exists for a reason.  We need to associate the
         // ASG with the GWLB Target Group so that our Containers get registered with the LB, and we don't have a
@@ -106,7 +117,13 @@ export class CaptureNodesStack extends cdk.Stack {
         cluster.addAsgCapacityProvider(capacityProvider);
 
         const taskDefinition = new ecs.Ec2TaskDefinition(this, "TaskDef", {
-            networkMode: ecs.NetworkMode.AWS_VPC,
+            // The Gateway Load Balancer register our ASG's instances as its targets, and directs traffic to those
+            // instances at their host-level IP/PORT.  To enable our ECS Container to receive traffic from the LB (and
+            // respond to its health checks), we need to directly map the instance's ports to our containers.  That
+            // means we can use either the HOST or BRIDGE modes here, but not VPC (as far as I know).
+            // 
+            // See: https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/networking-networkmode.html
+            networkMode: ecs.NetworkMode.HOST,
         });
         taskDefinition.addToTaskRolePolicy(
             new iam.PolicyStatement({
@@ -116,45 +133,44 @@ export class CaptureNodesStack extends cdk.Stack {
             }),
         );
         props.osPassword.grantRead(taskDefinition.taskRole);
-
-        // This SSM parameter will be used to track whether the Capture Setup has been initialized or not.  Currently,
-        // this means whether Arkime's initialization scripts have been invoked against the OpenSearch Domain.
-        const initializedParam = new ssm.StringParameter(this, "IsInitialized", {
-            allowedPattern: "true|false",
-            description: "Whether the capture setup is initialized or not",
-            parameterName: props.ssmParamNameInitialized,
-            stringValue: "false",
-            tier: ssm.ParameterTier.STANDARD,
-        });
-        initializedParam.grantRead(taskDefinition.taskRole);
-        initializedParam.grantWrite(taskDefinition.taskRole);
+        props.captureBucket.grantReadWrite(taskDefinition.taskRole);
+        props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);
         
         const container = taskDefinition.addContainer("CaptureContainer", {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "..", "..", "docker-capture-node")),
             logging: new ecs.AwsLogDriver({ streamPrefix: "CaptureNodes", mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
+                "AWS_REGION": this.region, // Seems not to be defined in this container, strangely
+                "BUCKET_NAME": props.captureBucket.bucketName,
                 "CLUSTER_NAME": props.clusterName,
-                "SSM_INITIALIZED_PARAM": initializedParam.parameterName,
+                "LB_HEALTH_PORT": healthCheckPort.toString(),
                 "OPENSEARCH_ENDPOINT": props.osDomain.domainEndpoint,
                 "OPENSEARCH_SECRET_ARN": props.osPassword.secretArn,
             },
-            memoryLimitMiB: 4096,
+            // We want the full capacity of our m5.xlarge because we're using HOST network type and therefore won't
+            // place multiple containers on a single host.  However, we can't ask for ALL of its resources (ostensibly,
+            // 4 vCPU and 16 GiB) because then ECS placement will fail.  We therefore ask for a slightly reduced
+            // amount.  This is the minimum amount we're requesting ECS to reserve, so it can't reserve more than
+            // exist.
+            cpu: 3584, // 3.5 vCPUs
+            memoryLimitMiB: 15360, // 15 GiB
             portMappings: [
-                // TODO: Pretty sure this is wrong; get real numbers.  This is the GWLB port # and protocol.
                 { containerPort: 6081, hostPort: 6081, protocol: ecs.Protocol.UDP},
+                { containerPort: healthCheckPort, hostPort: healthCheckPort, protocol: ecs.Protocol.TCP},
             ],
         });
         
         const service = new ecs.Ec2Service(this, "Service", {
             cluster,
             taskDefinition,
-
-            // TODO: The LB hits the containers to see if they are healthy, but our containers aren't configured to
-            // respond.  This causes the ECS Service Cfn resource to wait for 3 hours then Cfn kills the deployment.
-            desiredCount: 0,
+            desiredCount: 1,
+            minHealthyPercent: 0, // TODO: Speeds up test deployments but need to change to something safer
             enableExecuteCommand: true
         });
         
+        // TODO: Fix autoscaling.  We need our ECS Tasks to scale together with our EC2 fleet since we are only placing
+        // a single container on each instance due to using the HOST network mode.
+        // See: https://stackoverflow.com/questions/72839842/aws-ecs-auto-scaling-an-ec2-auto-scaling-group-with-single-container-hosts
         const scaling = service.autoScaleTaskCount({ maxCapacity: 10 });
         scaling.scaleOnCpuUtilization("CpuScaling", {
             targetUtilizationPercent: 60,

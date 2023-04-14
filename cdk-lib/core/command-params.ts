@@ -16,9 +16,11 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
     nameClusterSsmParam: string;
-    nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
+    nameViewerDnsSsmParam: string;
+    nameViewerPassSsmParam: string;
+    nameViewerNodesStack: string;
 }
 
 /**
@@ -71,9 +73,11 @@ export interface ClusterMgmtParams extends CommandParams {
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
     nameClusterSsmParam: string;
-    nameClusterInitializedSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
+    nameViewerDnsSsmParam: string;
+    nameViewerPassSsmParam: string;
+    nameViewerNodesStack: string;
 }
 
 /**
