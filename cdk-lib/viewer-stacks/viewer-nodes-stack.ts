@@ -97,7 +97,11 @@ export class ViewerNodesStack extends cdk.Stack {
             targetUtilizationPercent: 60,
         });
 
-        const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', { vpc: props.viewerVpc, internetFacing: true });
+        const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', { 
+            vpc: props.viewerVpc,
+            internetFacing: true,
+            loadBalancerName: `${props.clusterName}-Viewer` // Receives a random suffix, which minimizes DNS collisions
+        });
         const listener = lb.addListener('Listener', {
             protocol: elbv2.ApplicationProtocol.HTTP,
             port: 80,
@@ -118,14 +122,6 @@ export class ViewerNodesStack extends cdk.Stack {
                 healthyThresholdCount: 5,
                 interval: cdk.Duration.seconds(30),
             },
-        });
-        listener.addAction('/static', {
-            priority: 5,
-            conditions: [elbv2.ListenerCondition.pathPatterns(['/static'])],
-            action: elbv2.ListenerAction.fixedResponse(200, {
-                contentType: 'text/html',
-                messageBody: '<h1>Static ALB Response</h1>',
-            }),
         });
 
         // This SSM parameter will be share the DNS name of the ALB fronting the Viewer nodes.

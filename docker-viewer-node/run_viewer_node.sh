@@ -40,5 +40,5 @@ mkdir -p /opt/arkime/raw
 # Start Arkime Viewer
 echo "Running Arkime Viewer process ..."
 cd /opt/arkime/viewer
-/opt/arkime/bin/node addUser.js admin admin $VIEWER_PASS --admin --packetSearch --createOnly
+/opt/arkime/bin/node addUser.js admin admin $VIEWER_PASS --admin --packetSearch
 /opt/arkime/bin/node viewer.js
