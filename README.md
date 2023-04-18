@@ -4,6 +4,16 @@ The goals of this project are 1) provide a demonstration of how Arkime can be de
 
 The AWS Cloud Development Kit (CDK) is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
 
+
+## Architecture and Design
+
+This tool provides a Python CLI which the user can interact with to manage the Arkime installation(s) in their account.  The Python CLI wraps a CDK App.  The CLI provides orchestration; the CDK App provides the CloudFormation Templates based on inputs from the CLI and performs CloudFormation create/update/destroy operations.  State about the user's deployed Arkime Clusters is stored in the user's AWS Account using [the AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html).  The capture itself is performed by using [VPC Traffic Mirroring](https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html) to mirror traffic to/from [the elastic network interfaces](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html) in the user's VPC through [a Gateway Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html) and into another VPC (the Capture VPC), created by the CLI, in the user's account.  The Arkime Capture Nodes live in the Capture VPC.
+
+**Figure 1:** Current design of the Arkime Cloud Demo
+
+![Alt text](./cloud_arkime_design.png?raw=true)
+
+
 ## How to run the demo
 
 ### Pre-requisites
@@ -82,9 +92,39 @@ You can deploy the Arkime Cluster into your AWS account like so:
 aws iam create-service-linked-role --aws-service-name es.amazonaws.com
 ```
 
+You can see your created cluster and the VPCs it is currently monitoring using the `list-clusters` command, like so:
+
+```
+./manage_arkime.py create-cluster --name MyCluster
+```
+
+### Setting up capture for a VPC
+
+Once you have an Arkime Cluster, you can begin capturing traffic in a target VPC using the `add-vpc` command, like so:
+
+```
+./manage_arkime.py add-vpc --cluster-name MyCluster --vpc-id vpc-123456789
+```
+
+**NOTE:** There are some caveats you need to be aware of.  First, the VPC must be in the same AWS Account and Region as the Arkime Cluster.  Second, the capture setup is currently static, meaning if the network configuration of your VPC changes or your compute fleet changes (due to instance replacement, scaling events, etc), those changes will not be reflected in the capture.  We're working on a solution for this.
+
+### Viewing the captured sessions
+
+You can log into your Viewer Dashboard using credentials from the `get-login-details` command, which will provide the URL, username, and password of the Arkime Cluster.
+
+```
+./manage_arkime.py get-login-details --name MyCluster
+```
+
 ### Tearing down your Arkime Cluster
 
-You can destroy the Arkime Cluster in your AWS account like so:
+You can destroy the Arkime Cluster in your AWS account by first turning off traffic capture for all VPCs:
+
+```
+./manage_arkime.py remove-vpc --cluster-name MyCluster --vpc-id vpc-123456789
+```
+
+and then terminating the Arkime Cluster:
 
 ```
 ./manage_arkime.py destroy-cluster --name MyCluster
@@ -106,7 +146,7 @@ First, you need a recent version of the AWS CLI that has the required commands. 
 
 Second, you need to install the Session Manager Plugin for the AWS CLI using [the instructions here](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html).
 
-Finally, you can create an interactive session using the AWS CLI.  You'll need to know the Cluster ID and the Task ID, which you can find either using the AWS CLI or the AWS Console.
+Finally, you can create an interactive session using the AWS CLI.  You'll need to know the ECS Cluster ID and the Task ID, which you can find either using the AWS CLI or the AWS Console.
 
 ```
 aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/bash"
@@ -151,6 +191,7 @@ You can bootstrap your AWS Account/Region like so:
 ```
 cdk bootstrap
 ```
+
 
 ## Account Limits, Scaling, and Other Concerns
 
