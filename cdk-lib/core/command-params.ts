@@ -9,7 +9,7 @@ export interface CommandParamsRaw { }
  * Type to receive the raw Create and Destroy Cluster arguments from Python
  */
 export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
-    type: "ClusterMgmtParamsRaw";
+    type: 'ClusterMgmtParamsRaw';
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
@@ -20,6 +20,7 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameOSDomainSsmParam: string;
     nameViewerDnsSsmParam: string;
     nameViewerPassSsmParam: string;
+    nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
 }
 
@@ -27,7 +28,7 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
  * Type to receive the raw Add Vpc arguments from Python
  */
 export interface MirrorMgmtParamsRaw extends CommandParamsRaw {
-    type: "MirrorMgmtParamsRaw";
+    type: 'MirrorMgmtParamsRaw';
     nameVpcMirrorStack: string;
     nameVpcSsmParam: string;
     idVpc: string;
@@ -50,7 +51,7 @@ export interface CommandParams {
  * Receptacle type to store arguments for Deploy Demo Traffic calls
  */
 export interface DeployDemoTrafficParams extends CommandParams {
-    type: "DeployDemoTrafficParams";
+    type: 'DeployDemoTrafficParams';
     // same as base for now
 }
 
@@ -58,7 +59,7 @@ export interface DeployDemoTrafficParams extends CommandParams {
  * Receptacle type to store arguments for Destroy Demo Traffic calls
  */
 export interface DestroyDemoTrafficParams extends CommandParams {
-    type: "DestroyDemoTrafficParams";
+    type: 'DestroyDemoTrafficParams';
     // same as base for now
 }
 
@@ -66,7 +67,7 @@ export interface DestroyDemoTrafficParams extends CommandParams {
  * Receptacle type to store arguments for Create and Destroy Cluster calls
  */
 export interface ClusterMgmtParams extends CommandParams {
-    type: "ClusterMgmtParams"
+    type: 'ClusterMgmtParams'
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
@@ -77,6 +78,7 @@ export interface ClusterMgmtParams extends CommandParams {
     nameOSDomainSsmParam: string;
     nameViewerDnsSsmParam: string;
     nameViewerPassSsmParam: string;
+    nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
 }
 
@@ -84,7 +86,7 @@ export interface ClusterMgmtParams extends CommandParams {
  * Receptacle type to store arguments for Add Vpc calls
  */
 export interface MirrorMgmtParams extends CommandParams {
-    type: "MirrorMgmtParams";
+    type: 'MirrorMgmtParams';
     nameVpcMirrorStack: string;
     nameVpcSsmParam: string;
     idVpc: string;

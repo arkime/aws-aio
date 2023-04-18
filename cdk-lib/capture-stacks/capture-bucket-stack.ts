@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
-import * as kms from "aws-cdk-lib/aws-kms";
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
@@ -21,7 +21,7 @@ export class CaptureBucketStack extends Stack {
         super(scope, id, props);
 
 
-        this.bucketKey = new kms.Key(this, "BucketKey", {
+        this.bucketKey = new kms.Key(this, 'BucketKey', {
             enableKeyRotation: true,
         });
 

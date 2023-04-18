@@ -11,6 +11,7 @@ echo "OpenSearch Endpoint: $OPENSEARCH_ENDPOINT"
 echo "OpenSearch Secret Arn: $OPENSEARCH_SECRET_ARN"
 echo "Viewer Port: $VIEWER_PORT"
 echo "Viewer Password Secret Arn: $VIEWER_PASS_ARN"
+echo "Viewer User: $VIEWER_USER"
 echo "============================================================"
 
 # Pull configuration from ENV and AWS in order to set up our Arkime install.  The ENV variables come from the Fargate
@@ -40,5 +41,5 @@ mkdir -p /opt/arkime/raw
 # Start Arkime Viewer
 echo "Running Arkime Viewer process ..."
 cd /opt/arkime/viewer
-/opt/arkime/bin/node addUser.js admin admin $VIEWER_PASS --admin --packetSearch
+/opt/arkime/bin/node addUser.js $VIEWER_USER $VIEWER_USER $VIEWER_PASS --admin --packetSearch
 /opt/arkime/bin/node viewer.js

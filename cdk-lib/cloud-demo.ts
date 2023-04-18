@@ -22,7 +22,7 @@ const env: Environment = {
 }
 
 switch(params.type) {
-    case "ClusterMgmtParams":
+    case 'ClusterMgmtParams':
         const captureBucketStack = new CaptureBucketStack(app, params.nameCaptureBucketStack, {
             env: env,
             ssmParamName: params.nameCaptureBucketSsmParam,
@@ -62,6 +62,7 @@ switch(params.type) {
             osPassword: osDomainStack.osPassword,
             ssmParamNameViewerDns: params.nameViewerDnsSsmParam,
             ssmParamNameViewerPass: params.nameViewerPassSsmParam,
+            ssmParamNameViewerUser: params.nameViewerUserSsmParam,
         });
         viewerNodesStack.addDependency(captureBucketStack)
         viewerNodesStack.addDependency(captureVpcStack)
@@ -69,7 +70,7 @@ switch(params.type) {
         viewerNodesStack.addDependency(captureNodesStack)
 
         break;
-    case "MirrorMgmtParams":
+    case 'MirrorMgmtParams':
         new VpcMirrorStack(app, params.nameVpcMirrorStack, {
             subnetIds: params.listSubnetIds,
             subnetSsmParamNames: params.listSubnetSsmParams,
@@ -78,7 +79,7 @@ switch(params.type) {
             vpceServiceId: params.idVpceService
         })
         break;
-    case "DeployDemoTrafficParams":
+    case 'DeployDemoTrafficParams':
         new TrafficGenStack(app, 'DemoTrafficGen01', {
             env: env
         });
@@ -86,7 +87,7 @@ switch(params.type) {
             env: env
         });
         break;
-    case "DestroyDemoTrafficParams":
+    case 'DestroyDemoTrafficParams':
         new TrafficGenStack(app, 'DemoTrafficGen01', {
             env: env
         });

@@ -39,6 +39,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
                     "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name("my-cluster"),
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name("my-cluster"),
+                    "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name("my-cluster"),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name("my-cluster"),
                 }))
             }

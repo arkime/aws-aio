@@ -8,6 +8,7 @@ from manage_arkime.commands.create_cluster import cmd_create_cluster
 from manage_arkime.commands.destroy_cluster import cmd_destroy_cluster
 from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
 from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
+from manage_arkime.commands.get_login_details import cmd_get_login_details
 from manage_arkime.commands.list_clusters import cmd_list_clusters
 from manage_arkime.commands.remove_vpc import cmd_remove_vpc
 from manage_arkime.logging_wrangler import LoggingWrangler
@@ -74,6 +75,15 @@ def destroy_cluster(ctx, name, destroy_everything):
     region = ctx.obj.get("region")
     cmd_destroy_cluster(profile, region, name, destroy_everything)
 cli.add_command(destroy_cluster)
+
+@click.command(help="Retrieves the login details of a cluster's the Arkime Viewer(s)")
+@click.option("--name", help="The name of the Arkime Cluster to get the login details for", required=True)
+@click.pass_context
+def get_login_details(ctx, name):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_get_login_details(profile, region, name)
+cli.add_command(get_login_details)
 
 @click.command(help="Lists the currently deployed Arkime Clusters and their VPCs")
 @click.pass_context

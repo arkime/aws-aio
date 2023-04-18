@@ -1,9 +1,9 @@
 /**
  * CDK Context variables the Python side will pass information through.  Currently hardcoded over there as well.
  */
-export const CDK_CONTEXT_CMD_VAR: string = "ARKIME_CMD"
-export const CDK_CONTEXT_REGION_VAR: string = "ARKIME_REGION"
-export const CDK_CONTEXT_PARAMS_VAR: string = "ARKIME_PARAMS"
+export const CDK_CONTEXT_CMD_VAR: string = 'ARKIME_CMD'
+export const CDK_CONTEXT_REGION_VAR: string = 'ARKIME_REGION'
+export const CDK_CONTEXT_PARAMS_VAR: string = 'ARKIME_PARAMS'
 
 /**
  * These map directly to the specific commands executed by the user via the management CLI.  Since the strings are
@@ -11,11 +11,11 @@ export const CDK_CONTEXT_PARAMS_VAR: string = "ARKIME_PARAMS"
  * rather than hardcoded in both locations.
  */
 export enum ManagementCmd {
-    DeployDemoTraffic = "DeployDemoTraffic",
-    DestroyDemoTraffic = "DestroyDemoTraffic",
-    CreateCluster = "CreateCluster",
-    DestroyCluster = "DestroyCluster",
-    AddVpc = "AddVpc",
-    RemoveVpc = "RemoveVpc",
+    DeployDemoTraffic = 'DeployDemoTraffic',
+    DestroyDemoTraffic = 'DestroyDemoTraffic',
+    CreateCluster = 'CreateCluster',
+    DestroyCluster = 'DestroyCluster',
+    AddVpc = 'AddVpc',
+    RemoveVpc = 'RemoveVpc',
 }
 

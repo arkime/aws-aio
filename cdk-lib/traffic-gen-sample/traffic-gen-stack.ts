@@ -38,7 +38,7 @@ export class TrafficGenStack extends cdk.Stack {
             }),
         );
 
-        const container = taskDefinition.addContainer("FargateContainer", {
+        const container = taskDefinition.addContainer('FargateContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-traffic-gen')),
             memoryLimitMiB: 512,
             logging: new ecs.AwsLogDriver({ streamPrefix: 'DemoTrafficGen', mode: ecs.AwsLogDriverMode.NON_BLOCKING })
