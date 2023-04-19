@@ -24,7 +24,7 @@ export class OpenSearchDomainStack extends Stack {
 
         // Support encryption-at-rest of the data in the OpenSearch Domain
         this.domainKey = new kms.Key(this, 'ArkimeDomainKey', {
-            description: "Key for encrypting the Arkime OpenSearch Domain"
+            description: 'Key for encrypting the Arkime OpenSearch Domain'
         });
 
         /**
@@ -55,9 +55,9 @@ export class OpenSearchDomainStack extends Stack {
             'allow HTTPS traffic from anywhere',
         );
 
-        this.osPassword = new secretsmanager.Secret(this, "OpenSearchPassword", {
+        this.osPassword = new secretsmanager.Secret(this, 'OpenSearchPassword', {
             generateSecretString: {
-                excludeCharacters: '\\$:()[]&\'\"<>`|;*?# ' // Characters likely to cause problems in shells
+                excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
             }
         });
         this.domain = new Domain(this, 'ArkimeDomain', {

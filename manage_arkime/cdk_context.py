@@ -26,6 +26,7 @@ def _generate_cluster_context(name: str) -> Dict[str, str]:
         "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(name),
         "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(name),
         "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(name),
+        "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(name),
         "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(name),
     }
 
@@ -34,9 +35,9 @@ def _generate_cluster_context(name: str) -> Dict[str, str]:
     }
 
 def generate_add_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str) -> Dict[str, str]:
-    destroy_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)
-    destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_ADD_VPC
-    return destroy_context
+    add_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)
+    add_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_ADD_VPC
+    return add_context
 
 def generate_remove_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str) -> Dict[str, str]:
     destroy_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)

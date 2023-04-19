@@ -36,6 +36,12 @@ class AwsClientProvider:
             resource = boto3.resource("s3", region_name=self._aws_region)
         return resource
 
+    def get_secretsmanager(self):
+        with set_boto_log_level("WARNING"):
+            session = boto3.Session(profile_name=self._aws_profile, region_name=self._aws_region)
+            client = session.client("secretsmanager")
+        return client
+
     def get_ssm(self):
         with set_boto_log_level("WARNING"):
             session = boto3.Session(profile_name=self._aws_profile, region_name=self._aws_region)

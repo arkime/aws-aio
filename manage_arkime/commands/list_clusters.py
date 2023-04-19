@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Dict, List
 
@@ -22,7 +23,8 @@ def cmd_list_clusters(profile: str, region: str) -> List[Dict[str, str]]:
             "monitored_vpcs": vpc_ids
         })
 
-    logger.info(f"Deployed Clusters: \n{cluster_details}")
+    formatted_details = json.dumps(cluster_details, indent=4)
+    logger.info(f"Deployed Clusters: \n{formatted_details}")
     return cluster_details
 
     

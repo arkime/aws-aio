@@ -1,11 +1,11 @@
-import assert = require("assert");
+import assert = require('assert');
 
-import { Construct } from "constructs";
-import { Stack, StackProps } from "aws-cdk-lib";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ssm from "aws-cdk-lib/aws-ssm";
+import { Construct } from 'constructs';
+import { Stack, StackProps } from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-import {SubnetSsmValue, VpcSsmValue} from "../core/ssm-wrangling"
+import {SubnetSsmValue, VpcSsmValue} from '../core/ssm-wrangling'
 
 export interface VpcMirrorStackProps extends StackProps {
     readonly subnetIds: string[];
@@ -21,7 +21,7 @@ export interface VpcMirrorStackProps extends StackProps {
  * instantiates AWS Resources into the user's Source VPC in order for their traffic to be mirrored to the Capture
  * VPC.
  * 
- * The components it contains are considered "core/shared" components because they are (relatively) static.  They
+ * The components it contains are considered 'core/shared' components because they are (relatively) static.  They
  * should remain unchanged as long as the subnets in the user's Source VPC remain unchanged.  They will shared by the
  * many, fluidly-defined mirroring configurations we make for each Elastic Network Interface in the user's VPC.  We
  * create/manage the ENI-specific components from the Python management CLI.  It is presumed that the subnets in a User
@@ -43,7 +43,7 @@ export class VpcMirrorStack extends Stack {
             const vpcEndpoint = new ec2.CfnVPCEndpoint(this, `VPCE-${subnetId}`, {
                 serviceName: `com.amazonaws.vpce.${this.region}.${props.vpceServiceId}`,
                 vpcId: props.vpcId,
-                vpcEndpointType: "GatewayLoadBalancer",
+                vpcEndpointType: 'GatewayLoadBalancer',
                 subnetIds: [subnetId],
             });
 
@@ -54,8 +54,8 @@ export class VpcMirrorStack extends Stack {
             // These SSM parameter will enable us share the details of our subnet-specific Capture setups
             const subnetParamValue: SubnetSsmValue = {mirrorTargetId: mirrorTarget.ref, subnetId: subnetId, vpcEndpointId: vpcEndpoint.ref}
             const subnetParam = new ssm.StringParameter(this, `SubnetParam-${subnetId}`, {
-                allowedPattern: ".*",
-                description: "The Subnet's details",
+                allowedPattern: '.*',
+                description: 'The Subnet\'s details',
                 parameterName: subnetParamName,
                 stringValue: JSON.stringify(subnetParamValue),
                 tier: ssm.ParameterTier.STANDARD,
@@ -66,51 +66,51 @@ export class VpcMirrorStack extends Stack {
         // Let's mirror all non-local VPC traffic
         // See: https://docs.aws.amazon.com/vpc/latest/mirroring/tm-example-non-vpc.html
         const filter = new ec2.CfnTrafficMirrorFilter(this, `Filter`, {
-            description: "Mirror non-local VPC traffic"
+            description: 'Mirror non-local VPC traffic'
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalOutbound`, {
-            destinationCidrBlock: "10.0.0.0/16", // TODO: Need to figure this out instead of hardcode
-            ruleAction: "REJECT",
+            destinationCidrBlock: '10.0.0.0/16', // TODO: Need to figure this out instead of hardcode
+            ruleAction: 'REJECT',
             ruleNumber: 10,
-            sourceCidrBlock: "0.0.0.0/0",
-            trafficDirection: "EGRESS",
+            sourceCidrBlock: '0.0.0.0/0',
+            trafficDirection: 'EGRESS',
             trafficMirrorFilterId: filter.ref,
-            description: "Reject all intra-VPC traffic"
+            description: 'Reject all intra-VPC traffic'
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherOutbound`, {
-            destinationCidrBlock: "0.0.0.0/0", // TODO: Need to figure this out instead of hardcode
-            ruleAction: "ACCEPT",
+            destinationCidrBlock: '0.0.0.0/0', // TODO: Need to figure this out instead of hardcode
+            ruleAction: 'ACCEPT',
             ruleNumber: 20,
-            sourceCidrBlock: "0.0.0.0/0",
-            trafficDirection: "EGRESS",
+            sourceCidrBlock: '0.0.0.0/0',
+            trafficDirection: 'EGRESS',
             trafficMirrorFilterId: filter.ref,
-            description: "Accept all outbound traffic"
+            description: 'Accept all outbound traffic'
         });
 
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalInbound`, {
-            destinationCidrBlock: "0.0.0.0/0",
-            ruleAction: "REJECT",
+            destinationCidrBlock: '0.0.0.0/0',
+            ruleAction: 'REJECT',
             ruleNumber: 10,
-            sourceCidrBlock: "10.0.0.0/16", // TODO: Need to figure this out instead of hardcode
-            trafficDirection: "INGRESS",
+            sourceCidrBlock: '10.0.0.0/16', // TODO: Need to figure this out instead of hardcode
+            trafficDirection: 'INGRESS',
             trafficMirrorFilterId: filter.ref,
-            description: "Reject all intra-VPC traffic"
+            description: 'Reject all intra-VPC traffic'
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherInbound`, {
-            destinationCidrBlock: "0.0.0.0/0",
-            ruleAction: "ACCEPT",
+            destinationCidrBlock: '0.0.0.0/0',
+            ruleAction: 'ACCEPT',
             ruleNumber: 20,
-            sourceCidrBlock: "0.0.0.0/0",
-            trafficDirection: "INGRESS",
+            sourceCidrBlock: '0.0.0.0/0',
+            trafficDirection: 'INGRESS',
             trafficMirrorFilterId: filter.ref,
-            description: "Accept all inbound traffic"
+            description: 'Accept all inbound traffic'
         });
 
         // This SSM parameter will enable us share the details of our VPC-specific Capture setup
         const vpcParamValue: VpcSsmValue = {mirrorFilterId: filter.ref, vpcId: props.vpcId}
         const vpcParam = new ssm.StringParameter(this, `VpcParam-${props.vpcId}`, {
-            allowedPattern: ".*",
-            description: "The Subnet's details",
+            allowedPattern: '.*',
+            description: 'The VPC\'s details',
             parameterName: props.vpcSsmParamName,
             stringValue: JSON.stringify(vpcParamValue),
             tier: ssm.ParameterTier.STANDARD,

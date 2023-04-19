@@ -1,18 +1,18 @@
-import * as cdk from "aws-cdk-lib";
-import * as autoscaling from "aws-cdk-lib/aws-autoscaling";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as ecs from "aws-cdk-lib/aws-ecs";
-import * as elbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as kms from "aws-cdk-lib/aws-kms";
-import * as opensearch from "aws-cdk-lib/aws-opensearchservice";
-import * as s3 from "aws-cdk-lib/aws-s3";
-import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
-import * as ssm from "aws-cdk-lib/aws-ssm";
-import * as path from "path"
-import { Construct } from "constructs";
+import * as cdk from 'aws-cdk-lib';
+import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
+import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as path from 'path'
+import { Construct } from 'constructs';
 
-import {ClusterSsmValue} from "../core/ssm-wrangling"
+import {ClusterSsmValue} from '../core/ssm-wrangling'
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
@@ -31,13 +31,13 @@ export class CaptureNodesStack extends cdk.Stack {
         /**
          * Begin configuration of the Gateway Load Balancer and associated resources
          */
-        const gwlb = new elbv2.CfnLoadBalancer(this, "GatewayLoadBalancer", {
-            type: "gateway",
+        const gwlb = new elbv2.CfnLoadBalancer(this, 'GatewayLoadBalancer', {
+            type: 'gateway',
             subnets: props.captureVpc.selectSubnets({subnetType: ec2.SubnetType.PUBLIC}).subnetIds,
             loadBalancerAttributes: [
                 {
-                    key: "load_balancing.cross_zone.enabled",
-                    value: "true", // IMO, resilience is more important than latency here
+                    key: 'load_balancing.cross_zone.enabled',
+                    value: 'true', // IMO, resilience is more important than latency here
                 }
             ],
         });
@@ -45,21 +45,21 @@ export class CaptureNodesStack extends cdk.Stack {
         // Per docs, the protocol (GENEVE) and port (6081) MUST be these.
         // See: https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/target-groups.html
         const healthCheckPort = 4242; // arbitrarily chosen
-        const gwlbTargetGroup = new elbv2.CfnTargetGroup(this, "GWLBTargetGroup", {
-            protocol: "GENEVE",
+        const gwlbTargetGroup = new elbv2.CfnTargetGroup(this, 'GWLBTargetGroup', {
+            protocol: 'GENEVE',
             port: 6081,
             vpcId: props.captureVpc.vpcId,
-            targetType: "instance",
-            healthCheckProtocol: "TCP",
+            targetType: 'instance',
+            healthCheckProtocol: 'TCP',
             healthCheckPort: healthCheckPort.toString(),
         });
         
-        const gwlbListener = new elbv2.CfnListener(this, "GWLBListener", {
+        const gwlbListener = new elbv2.CfnListener(this, 'GWLBListener', {
             loadBalancerArn: gwlb.ref,
             defaultActions: [
                 {
                     targetGroupArn: gwlbTargetGroup.ref,
-                    type: "forward",
+                    type: 'forward',
                 },
             ],
         });
@@ -72,9 +72,9 @@ export class CaptureNodesStack extends cdk.Stack {
 
         // Create an ECS Cluster that runs fleet of Arkime Capture Nodes.  We use EC2 as our compute because Gateway
         // Load Balancers do not properly integrate with ECS Fargate.
-        const autoScalingGroup = new autoscaling.AutoScalingGroup(this, "ASG", {
+        const autoScalingGroup = new autoscaling.AutoScalingGroup(this, 'ASG', {
             vpc: props.captureVpc,
-            instanceType: new ec2.InstanceType("m5.xlarge"), // Arbitrarily chosen
+            instanceType: new ec2.InstanceType('m5.xlarge'), // Arbitrarily chosen
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
             desiredCapacity: 1,
             minCapacity: 1,
@@ -102,21 +102,21 @@ export class CaptureNodesStack extends cdk.Stack {
         cfnAsg.node.addDependency(gwlbListener);
 
         // Key to encrypt SSM traffic when using ECS Exec to shell into the container
-        const ksmEncryptionKey = new kms.Key(this, "ECSClusterKey", {
+        const ksmEncryptionKey = new kms.Key(this, 'ECSClusterKey', {
             enableKeyRotation: true,
         });
         
-        const cluster = new ecs.Cluster(this, "Cluster", {
+        const cluster = new ecs.Cluster(this, 'Cluster', {
             vpc: props.captureVpc,
             executeCommandConfiguration: { kmsKey: ksmEncryptionKey }
         });
         
-        const capacityProvider = new ecs.AsgCapacityProvider(this, "AsgCapacityProvider", {
+        const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
             autoScalingGroup,
         });
         cluster.addAsgCapacityProvider(capacityProvider);
 
-        const taskDefinition = new ecs.Ec2TaskDefinition(this, "TaskDef", {
+        const taskDefinition = new ecs.Ec2TaskDefinition(this, 'TaskDef', {
             // The Gateway Load Balancer register our ASG's instances as its targets, and directs traffic to those
             // instances at their host-level IP/PORT.  To enable our ECS Container to receive traffic from the LB (and
             // respond to its health checks), we need to directly map the instance's ports to our containers.  That
@@ -128,7 +128,7 @@ export class CaptureNodesStack extends cdk.Stack {
         taskDefinition.addToTaskRolePolicy(
             new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
-                actions: ["kms:Decrypt"], // Required for ECS Exec & shelling into the container
+                actions: ['kms:Decrypt'], // Required for ECS Exec & shelling into the container
                 resources: [ksmEncryptionKey.keyArn]
             }),
         );
@@ -136,16 +136,16 @@ export class CaptureNodesStack extends cdk.Stack {
         props.captureBucket.grantReadWrite(taskDefinition.taskRole);
         props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);
         
-        const container = taskDefinition.addContainer("CaptureContainer", {
-            image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, "..", "..", "docker-capture-node")),
-            logging: new ecs.AwsLogDriver({ streamPrefix: "CaptureNodes", mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
+        const container = taskDefinition.addContainer('CaptureContainer', {
+            image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-capture-node')),
+            logging: new ecs.AwsLogDriver({ streamPrefix: 'CaptureNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
-                "AWS_REGION": this.region, // Seems not to be defined in this container, strangely
-                "BUCKET_NAME": props.captureBucket.bucketName,
-                "CLUSTER_NAME": props.clusterName,
-                "LB_HEALTH_PORT": healthCheckPort.toString(),
-                "OPENSEARCH_ENDPOINT": props.osDomain.domainEndpoint,
-                "OPENSEARCH_SECRET_ARN": props.osPassword.secretArn,
+                'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
+                'BUCKET_NAME': props.captureBucket.bucketName,
+                'CLUSTER_NAME': props.clusterName,
+                'LB_HEALTH_PORT': healthCheckPort.toString(),
+                'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
+                'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
             },
             // We want the full capacity of our m5.xlarge because we're using HOST network type and therefore won't
             // place multiple containers on a single host.  However, we can't ask for ALL of its resources (ostensibly,
@@ -160,7 +160,7 @@ export class CaptureNodesStack extends cdk.Stack {
             ],
         });
         
-        const service = new ecs.Ec2Service(this, "Service", {
+        const service = new ecs.Ec2Service(this, 'Service', {
             cluster,
             taskDefinition,
             desiredCount: 1,
@@ -172,17 +172,17 @@ export class CaptureNodesStack extends cdk.Stack {
         // a single container on each instance due to using the HOST network mode.
         // See: https://stackoverflow.com/questions/72839842/aws-ecs-auto-scaling-an-ec2-auto-scaling-group-with-single-container-hosts
         const scaling = service.autoScaleTaskCount({ maxCapacity: 10 });
-        scaling.scaleOnCpuUtilization("CpuScaling", {
+        scaling.scaleOnCpuUtilization('CpuScaling', {
             targetUtilizationPercent: 60,
         });
-        scaling.scaleOnMemoryUtilization("MemoryScaling", {
+        scaling.scaleOnMemoryUtilization('MemoryScaling', {
             targetUtilizationPercent: 60,
         });
 
         /**
          * Set up our Capture setup to use VPC Endpoints
          */
-        const gwlbEndpointService = new ec2.CfnVPCEndpointService(this, "VPCEndpointService", {
+        const gwlbEndpointService = new ec2.CfnVPCEndpointService(this, 'VPCEndpointService', {
             gatewayLoadBalancerArns: [gwlb.ref],
 
             // Allows us to bypass the need to confirm acceptance of each endpoint we create, but means we are limited
@@ -190,16 +190,16 @@ export class CaptureNodesStack extends cdk.Stack {
             acceptanceRequired: false,
         });
 
-        new ec2.CfnVPCEndpointServicePermissions(this, "EndpointServicePermissions", {
+        new ec2.CfnVPCEndpointServicePermissions(this, 'EndpointServicePermissions', {
             serviceId: gwlbEndpointService.ref,
             allowedPrincipals: [`arn:aws:iam::${this.account}:root`],
         });
 
         // This SSM parameter will enable us share the details of our Capture setup.
         const clusterParamValue: ClusterSsmValue = {clusterName: props.clusterName, vpceServiceId: gwlbEndpointService.ref}
-        const clusterParam = new ssm.StringParameter(this, "ClusterParam", {
-            allowedPattern: ".*",
-            description: "The Cluster's details",
+        const clusterParam = new ssm.StringParameter(this, 'ClusterParam', {
+            allowedPattern: '.*',
+            description: 'The Cluster\'s details',
             parameterName: props.ssmParamNameCluster,
             stringValue: JSON.stringify(clusterParamValue),
             tier: ssm.ParameterTier.STANDARD,

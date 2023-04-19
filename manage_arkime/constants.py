@@ -69,6 +69,9 @@ def get_viewer_dns_ssm_param_name(cluster_name: str) -> str:
 def get_viewer_password_ssm_param_name(cluster_name: str) -> str:
     return f"/arkime/clusters/{cluster_name}/viewer-pass-arn"
 
+def get_viewer_user_ssm_param_name(cluster_name: str) -> str:
+    return f"/arkime/clusters/{cluster_name}/viewer-user"
+
 def get_viewer_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-ViewerNodes"
 

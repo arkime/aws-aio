@@ -19,6 +19,7 @@ export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly osPassword: secretsmanager.Secret;
     readonly ssmParamNameViewerDns: string;
     readonly ssmParamNameViewerPass: string;
+    readonly ssmParamNameViewerUser: string;
 }
 
 export class ViewerNodesStack extends cdk.Stack {
@@ -27,9 +28,10 @@ export class ViewerNodesStack extends cdk.Stack {
 
         // Some configuration values
         const viewerPort = 8005; // Arkime default
-        const viewerPass = new secretsmanager.Secret(this, "ViewerPassword", {
+        const viewerUser = "admin";
+        const viewerPass = new secretsmanager.Secret(this, 'ViewerPassword', {
             generateSecretString: {
-                excludeCharacters: '\\$:()[]&\'\"<>`|;*?# ' // Characters likely to cause problems in shells
+                excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
             }
         });
 
@@ -64,17 +66,19 @@ export class ViewerNodesStack extends cdk.Stack {
         viewerPass.grantRead(taskDefinition.taskRole);
 
         // Our Arkime Capture container
-        const container = taskDefinition.addContainer("ViewerContainer", {
+
+        const container = taskDefinition.addContainer('ViewerContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
-                "AWS_REGION": this.region, // Seems not to be defined in this container, strangely
-                "BUCKET_NAME": props.captureBucket.bucketName,
-                "CLUSTER_NAME": props.clusterName,
-                "OPENSEARCH_ENDPOINT": props.osDomain.domainEndpoint,
-                "OPENSEARCH_SECRET_ARN": props.osPassword.secretArn,
-                "VIEWER_PASS_ARN": viewerPass.secretArn,
-                "VIEWER_PORT": viewerPort.toString(),
+                'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
+                'BUCKET_NAME': props.captureBucket.bucketName,
+                'CLUSTER_NAME': props.clusterName,
+                'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
+                'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
+                'VIEWER_PASS_ARN': viewerPass.secretArn,
+                'VIEWER_PORT': viewerPort.toString(),
+                'VIEWER_USER': viewerUser,
             }
         });
         container.addPortMappings({
@@ -93,7 +97,7 @@ export class ViewerNodesStack extends cdk.Stack {
         scaling.scaleOnCpuUtilization('CpuScaling', {
             targetUtilizationPercent: 60,
         });
-        scaling.scaleOnMemoryUtilization("MemoryScaling", {
+        scaling.scaleOnMemoryUtilization('MemoryScaling', {
             targetUtilizationPercent: 60,
         });
 
@@ -116,7 +120,7 @@ export class ViewerNodesStack extends cdk.Stack {
                 containerPort: viewerPort
             })],
             healthCheck: {
-                healthyHttpCodes: "200,401",
+                healthyHttpCodes: '200,401',
                 path: '/',
                 unhealthyThresholdCount: 2,
                 healthyThresholdCount: 5,
@@ -127,7 +131,7 @@ export class ViewerNodesStack extends cdk.Stack {
         // This SSM parameter will be share the DNS name of the ALB fronting the Viewer nodes.
         new ssm.StringParameter(this, 'ViewerDNS', {
             description: 'The DNS name of the Viewer for the cluster',
-            parameterName: `/arkime/clusters/${props.clusterName}/viewer-dns`,
+            parameterName: props.ssmParamNameViewerDns,
             stringValue: lb.loadBalancerDnsName,
             tier: ssm.ParameterTier.STANDARD,
         });
@@ -135,8 +139,16 @@ export class ViewerNodesStack extends cdk.Stack {
         // This SSM parameter will be share the login password for the Viewer nodes.
         new ssm.StringParameter(this, 'ViewerPassArn', {
             description: 'The ARN of the AWS Secret Manager Secret containing the admin password',
-            parameterName: `/arkime/clusters/${props.clusterName}/viewer-pass-arn`,
+            parameterName: props.ssmParamNameViewerPass,
             stringValue: viewerPass.secretArn,
+            tier: ssm.ParameterTier.STANDARD,
+        });
+
+        // This SSM parameter will be share the login username for the Viewer nodes.
+        new ssm.StringParameter(this, 'ViewerUserArn', {
+            description: 'The login username for the Viewers',
+            parameterName: props.ssmParamNameViewerUser,
+            stringValue: viewerUser,
             tier: ssm.ParameterTier.STANDARD,
         });
     }

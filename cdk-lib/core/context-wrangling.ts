@@ -46,7 +46,7 @@ interface ValidateArgs {
 
 function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams | prms.MirrorMgmtParams) {
     if (!args.awsAccount) {
-        throw Error("AWS Account not defined; have you configured your AWS Credentials?")
+        throw Error('AWS Account not defined; have you configured your AWS Credentials?')
     }
 
     if (!args.awsRegion) {
@@ -60,14 +60,14 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
     switch (args.managementCmd) {
         case ManagementCmd.DeployDemoTraffic:
             const deployDemoParams: prms.DeployDemoTrafficParams = {
-                type: "DeployDemoTrafficParams",
+                type: 'DeployDemoTrafficParams',
                 awsAccount: args.awsAccount, 
                 awsRegion: args.awsRegion, 
             }
             return deployDemoParams;
         case ManagementCmd.DestroyDemoTraffic:
             const destroyDemoParams: prms.DeployDemoTrafficParams = {
-                type: "DeployDemoTrafficParams",
+                type: 'DeployDemoTrafficParams',
                 awsAccount: args.awsAccount, 
                 awsRegion: args.awsRegion, 
             }
@@ -82,7 +82,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
             // Get the raw arguments from Python and convert to our params type
             const rawClusterMgmtParamsObj: prms.ClusterMgmtParamsRaw = JSON.parse(args.cmdParamsRaw)
             const clusterMgmtParams: prms.ClusterMgmtParams = {
-                type: "ClusterMgmtParams",
+                type: 'ClusterMgmtParams',
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
                 nameCluster: rawClusterMgmtParamsObj.nameCluster,
@@ -95,6 +95,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameOSDomainSsmParam: rawClusterMgmtParamsObj.nameOSDomainSsmParam,
                 nameViewerDnsSsmParam: rawClusterMgmtParamsObj.nameViewerDnsSsmParam,
                 nameViewerPassSsmParam: rawClusterMgmtParamsObj.nameViewerPassSsmParam,
+                nameViewerUserSsmParam: rawClusterMgmtParamsObj.nameViewerUserSsmParam,
                 nameViewerNodesStack: rawClusterMgmtParamsObj.nameViewerNodesStack,
             }
             return clusterMgmtParams;
@@ -108,7 +109,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
             // Get the raw arguments from Python and convert to our params type
             const rawMirrorMgmtParamsObj: prms.MirrorMgmtParamsRaw = JSON.parse(args.cmdParamsRaw)
             const mirrorMgmtParams: prms.MirrorMgmtParams = {
-                type: "MirrorMgmtParams",
+                type: 'MirrorMgmtParams',
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
                 nameVpcMirrorStack: rawMirrorMgmtParamsObj.nameVpcMirrorStack,

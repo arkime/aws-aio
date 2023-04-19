@@ -7,11 +7,14 @@ import manage_arkime.constants as constants
 
 TEST_CLUSTER = "my-cluster"
 
+@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_names_by_path")
 @mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
 @mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
 @mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
-def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain):
+def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain, mock_ssm_get):
     # Set up our mock
+    mock_ssm_get.return_value = []
+
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
 
@@ -43,6 +46,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
                     "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(TEST_CLUSTER),
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                 }))
             }
@@ -51,12 +55,15 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
     assert expected_calls == mock_client.destroy.call_args_list
 
 @mock.patch("manage_arkime.commands.destroy_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_names_by_path")
 @mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
 @mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
 @mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_param_value")
 @mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
-def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket, mock_destroy_domain):
+def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket, mock_destroy_domain, mock_ssm_names):
     # Set up our mock
+    mock_ssm_names.return_value = []
+
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
 
@@ -110,9 +117,29 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
                     "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(TEST_CLUSTER),
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
+                    "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                 }))
             }
         )
     ]
     assert expected_cdk_calls == mock_client.destroy.call_args_list
+
+@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_names_by_path")
+@mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
+@mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
+def test_WHEN_cmd_destroy_cluster_called_AND_existing_captures_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain, mock_ssm_names):
+    # Set up our mock
+    mock_ssm_names.return_value = ["vpc-1", "vpc-2"]
+
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    # Run our test
+    cmd_destroy_cluster("profile", "region", TEST_CLUSTER, False)
+
+    # Check our results
+    mock_destroy_bucket.assert_not_called()
+    mock_destroy_domain.assert_not_called()
+    mock_client.destroy.assert_not_called()

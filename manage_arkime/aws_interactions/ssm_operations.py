@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Dict, List
 
@@ -13,6 +14,9 @@ class ParamDoesNotExist(Exception):
 
 def get_ssm_param_value(param_name: str, aws_client_provider: AwsClientProvider) -> str:
     return _get_ssm_param(param_name, aws_client_provider)["Value"]
+
+def get_ssm_param_json_value(param_name: str, key: str, aws_client_provider: AwsClientProvider) -> str:
+    return json.loads(get_ssm_param_value(param_name, aws_client_provider))[key]
 
 def _get_ssm_param(param_name: str, aws_client_provider: AwsClientProvider) -> Dict[str, str]:
     ssm_client = aws_client_provider.get_ssm()
@@ -48,3 +52,22 @@ def get_ssm_params_by_path(param_path: str, aws_client_provider: AwsClientProvid
 def get_ssm_names_by_path(param_path: str, aws_client_provider: AwsClientProvider) -> List[str]:
     raw_params = get_ssm_params_by_path(param_path, aws_client_provider)
     return [param["Name"].split("/")[-1] for param in raw_params]
+
+def put_ssm_param(param_name: str, param_value: str, aws_client_provider: AwsClientProvider, description: str = None, pattern: str = None):
+    ssm_client = aws_client_provider.get_ssm()
+
+    ssm_client.put_parameter(
+        Name=param_name,
+        Description=description,
+        Value=param_value,
+        Type="String",
+        AllowedPattern=".*",
+        Tier='Standard',
+    )
+
+def delete_ssm_param(param_name: str, aws_client_provider: AwsClientProvider):
+    ssm_client = aws_client_provider.get_ssm()
+
+    ssm_client.delete_parameter(
+        Name=param_name
+    )
