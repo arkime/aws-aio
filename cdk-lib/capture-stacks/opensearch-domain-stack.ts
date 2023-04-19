@@ -61,7 +61,7 @@ export class OpenSearchDomainStack extends Stack {
             }
         });
         this.domain = new Domain(this, 'ArkimeDomain', {
-            version: EngineVersion.OPENSEARCH_1_3,
+            version: EngineVersion.openSearch("2.5"),
             enableVersionUpgrade: true,
             capacity: {
                 masterNodes: 3,
