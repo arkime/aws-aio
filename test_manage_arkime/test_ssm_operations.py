@@ -1,10 +1,10 @@
+import json
 import pytest
 import unittest.mock as mock
 
 from botocore.exceptions import ClientError
 
-from manage_arkime.aws_interactions.ssm_operations import (get_ssm_param_value, get_ssm_params_by_path, get_ssm_names_by_path, 
-    ParamDoesNotExist)
+import manage_arkime.aws_interactions.ssm_operations as ssm
 
 
 def test_WHEN_get_ssm_param_value_called_AND_exists_THEN_gets_it():
@@ -16,7 +16,7 @@ def test_WHEN_get_ssm_param_value_called_AND_exists_THEN_gets_it():
     mock_aws_provider.get_ssm.return_value = mock_ssm_client    
 
     # Run our test
-    actual_value = get_ssm_param_value("my-param", mock_aws_provider)
+    actual_value = ssm.get_ssm_param_value("my-param", mock_aws_provider)
 
     # Check our results
     expected_get_calls = [
@@ -38,8 +38,32 @@ def test_WHEN_get_ssm_param_value_called_AND_doesnt_exist_THEN_raises():
     mock_aws_provider.get_ssm.return_value = mock_ssm_client    
 
     # Run our test
-    with pytest.raises(ParamDoesNotExist):
-        get_ssm_param_value("my-param", mock_aws_provider)
+    with pytest.raises(ssm.ParamDoesNotExist):
+        ssm.get_ssm_param_value("my-param", mock_aws_provider)
+
+def test_WHEN_get_ssm_param_json_value_called_THEN_gets_it():
+    # Set up our mock
+    mock_ssm_client = mock.Mock()
+    mock_ssm_client.get_parameter.return_value = {
+        "Parameter": {
+            "Value": json.dumps({"key-1": "value-1"})
+        }
+    }
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ssm.return_value = mock_ssm_client    
+
+    # Run our test
+    actual_value = ssm.get_ssm_param_json_value("my-param", "key-1", mock_aws_provider)
+
+    # Check our results
+    expected_get_calls = [
+        mock.call(Name="my-param")
+    ]
+    assert expected_get_calls == mock_ssm_client.get_parameter.call_args_list
+
+    expected_value = "value-1"
+    assert expected_value == actual_value
 
 def test_WHEN_get_ssm_params_by_path_called_AND_exists_THEN_gets_them():
     # Set up our mock
@@ -53,7 +77,7 @@ def test_WHEN_get_ssm_params_by_path_called_AND_exists_THEN_gets_them():
     mock_aws_provider.get_ssm.return_value = mock_ssm_client    
 
     # Run our test
-    actual_value = get_ssm_params_by_path("/the/path", mock_aws_provider)
+    actual_value = ssm.get_ssm_params_by_path("/the/path", mock_aws_provider)
 
     # Check our results
     expected_get_calls = [
@@ -76,7 +100,7 @@ def test_WHEN_get_ssm_params_by_path_called_AND_doesnt_exists_THEN_empty_result(
     mock_aws_provider.get_ssm.return_value = mock_ssm_client    
 
     # Run our test
-    actual_value = get_ssm_params_by_path("/the/path", mock_aws_provider)
+    actual_value = ssm.get_ssm_params_by_path("/the/path", mock_aws_provider)
 
     # Check our results
     expected_get_calls = [
@@ -99,7 +123,7 @@ def test_WHEN_get_ssm_names_by_path_called_THEN_gets_them(mock_get_params):
     mock_aws_provider = mock.Mock()
 
     # Run our test
-    actual_value = get_ssm_names_by_path("/the/path", mock_aws_provider)
+    actual_value = ssm.get_ssm_names_by_path("/the/path", mock_aws_provider)
 
     # Check our results
     expected_get_calls = [
@@ -109,3 +133,40 @@ def test_WHEN_get_ssm_names_by_path_called_THEN_gets_them(mock_get_params):
 
     expected_value = ["name1", "name2", "name3"]
     assert expected_value == actual_value
+
+def test_WHEN_put_ssm_param_called_THEN_puts_it():
+    # Set up our mock
+    mock_ssm_client = mock.Mock()
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ssm.return_value = mock_ssm_client    
+
+    # Run our test
+    ssm.put_ssm_param("my-param", "param-value", mock_aws_provider, description="param-desc", pattern=".*")
+
+    # Check our results
+    expected_put_calls = [
+        mock.call(
+            Name="my-param",
+            Description="param-desc",
+            Value="param-value",
+            Type="String",
+            AllowedPattern=".*",
+            Tier='Standard'
+        )
+    ]
+    assert expected_put_calls == mock_ssm_client.put_parameter.call_args_list
+
+def test_WHEN_delete_ssm_param_called_THEN_deletes_it():
+    # Set up our mock
+    mock_ssm_client = mock.Mock()
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ssm.return_value = mock_ssm_client    
+
+    # Run our test
+    ssm.delete_ssm_param("my-param", mock_aws_provider)
+
+    # Check our results
+    expected_delete_calls = [
+        mock.call(Name="my-param")
+    ]
+    assert expected_delete_calls == mock_ssm_client.delete_parameter.call_args_list

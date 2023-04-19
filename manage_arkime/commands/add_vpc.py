@@ -2,8 +2,7 @@ import json
 import logging
 
 from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
-from manage_arkime.aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
-from manage_arkime.aws_interactions.destroy_s3_bucket import destroy_s3_bucket
+import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.ssm_operations as ssm_ops
 from manage_arkime.cdk_client import CdkClient
 import manage_arkime.constants as constants
@@ -25,21 +24,15 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
         return
 
     # Get all the subnets in the VPC
-    # TODO: Handle pagination
-    logger.info("Retrieving required information from your AWS account...")
-    ec2_client = aws_provider.get_ec2()
-    subnets_response = ec2_client.describe_subnets(
-        Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
-    )
-    if not subnets_response["Subnets"]: # will be [] if the subnet does not exist
+    try:
+        subnet_ids = ec2i.get_subnets_of_vpc(vpc_id, aws_provider)
+    except ec2i.VpcDoesNotExist as ex:
         logger.warning(f"The VPC {vpc_id} does not exist in the account/region")
         logger.warning("Aborting operation...")
         return
-    subnet_ids = [subnet["SubnetId"] for subnet in subnets_response["Subnets"]]
 
     # Get the VPCE Service ID we set up with our Capture VPC
-    cluster_param = ssm_ops.get_ssm_param_value(constants.get_cluster_ssm_param_name(cluster_name), aws_provider)
-    vpce_service_id = json.loads(cluster_param)["vpceServiceId"]
+    vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
 
     # Deploy the resources we need in the user's VPC and Subnets
     logger.info("Deploying shared mirroring components via CDK...")
@@ -60,49 +53,46 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     # Stack Update from deleting Sessions in one stack only to move them to another Stack, and dealing with race
     # conditions on CloudFormation trying to have the same Session exist in two stacks momentarily.  Not a good
     # experience.
-    traffic_filter_id = json.loads(ssm_ops.get_ssm_param_value(constants.get_vpc_ssm_param_name(cluster_name, vpc_id), aws_provider))["mirrorFilterId"]
+    vpc_param_name = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
+    traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
+    
     for subnet_id in subnet_ids:
-        describe_eni_response = ec2_client.describe_network_interfaces(
-            Filters=[{"Name": "subnet-id", "Values": [subnet_id]}]
+        _mirror_enis_in_subnet(cluster_name, vpc_id, subnet_id, traffic_filter_id, aws_provider)
+
+def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, aws_provider: AwsClientProvider):
+    enis = ec2i.get_enis_of_subnet(subnet_id, aws_provider)
+
+    for eni in enis:
+        eni_param_name = constants.get_eni_ssm_param_name(cluster_name, vpc_id, subnet_id, eni.id)
+
+        try:
+            ssm_ops.get_ssm_param_value(eni_param_name, aws_provider)
+            logger.info(f"Mirroring already configured for ENI {eni.id}")
+            continue
+        except ssm_ops.ParamDoesNotExist:
+            pass
+
+        logger.info(f"Creating mirroring session for ENI {eni.id}")
+
+        subnet_param_name = constants.get_subnet_ssm_param_name(cluster_name, vpc_id, subnet_id)
+        traffic_target_id = ssm_ops.get_ssm_param_json_value(subnet_param_name, "mirrorTargetId", aws_provider)
+
+        try:
+            traffic_session_id = ec2i.mirror_eni(
+                eni,
+                traffic_target_id,
+                traffic_filter_id,
+                aws_provider,
+                virtual_network=123
+            )
+        except ec2i.NonMirrorableEniType as ex:
+            logger.info(f"Eni {eni.id} is of unsupported type {eni.type}; skipping")
+            continue
+
+        ssm_ops.put_ssm_param(
+            eni_param_name, 
+            json.dumps({"eniId": eni.id, "trafficSessionId": traffic_session_id}),
+            aws_provider,
+            description=f"Mirroring details for {eni.id}",
+            pattern=".*"
         )
-        eni_ids_and_types = [(eni["NetworkInterfaceId"], eni["InterfaceType"]) for eni in describe_eni_response.get("NetworkInterfaces", [])]
-
-        for eni_id, eni_type in eni_ids_and_types:
-            eni_param_name = constants.get_eni_ssm_param_name(cluster_name, vpc_id, subnet_id, eni_id)
-
-            try:
-                ssm_ops.get_ssm_param_value(eni_param_name, aws_provider)
-                logger.info(f"Mirroring already configured for ENI {eni_id}")
-                continue
-            except ssm_ops.ParamDoesNotExist:
-                pass
-            
-            if eni_type in ["gateway_load_balancer_endpoint", "nat_gateway"]:
-                logger.info(f"Eni {eni_id} is of unsupport type {eni_type}; skipping")
-                continue
-
-            logger.info(f"Creating mirroring session for ENI {eni_id}")
-
-            subnet_param_name = constants.get_subnet_ssm_param_name(cluster_name, vpc_id, subnet_id)
-            subnet_param_value = json.loads(ssm_ops.get_ssm_param_value(subnet_param_name, aws_provider))
-            traffic_target_id = subnet_param_value["mirrorTargetId"]
-
-            create_session_response = ec2_client.create_traffic_mirror_session(
-                NetworkInterfaceId=eni_id,
-                TrafficMirrorTargetId=traffic_target_id,
-                TrafficMirrorFilterId=traffic_filter_id,
-                SessionNumber=1,
-                VirtualNetworkId=123
-            )
-
-            aws_provider.get_ssm().put_parameter(
-                Name=eni_param_name,
-                Description=f"Mirroring details for {eni_id}",
-                Value=json.dumps({
-                    "eniId": eni_id,
-                    "trafficSessionId": create_session_response["TrafficMirrorSession"]["TrafficMirrorSessionId"]
-                }),
-                Type="String",
-                AllowedPattern=".*",
-                Tier='Standard',
-            )
