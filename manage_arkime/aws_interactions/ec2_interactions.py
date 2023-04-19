@@ -64,26 +64,6 @@ def get_enis_of_subnet(subnet_id: str, aws_provider: AwsClientProvider) -> List[
 
     return network_inferfaces
 
-def get_enis_of_subnet(subnet_id: str, aws_provider: AwsClientProvider) -> List[NetworkInterface]:
-    ec2_client = aws_provider.get_ec2()
-    describe_eni_response = ec2_client.describe_network_interfaces(
-            Filters=[{"Name": "subnet-id", "Values": [subnet_id]}]
-    )
-    network_inferfaces = [NetworkInterface(eni["NetworkInterfaceId"], eni["InterfaceType"]) for eni in describe_eni_response.get("NetworkInterfaces", [])]
-
-    next_token = describe_eni_response.get("NextToken")
-    while next_token:
-        describe_eni_response = ec2_client.describe_network_interfaces(
-            Filters=[{"Name": "subnet-id", "Values": [subnet_id]}],
-            NextToken=next_token
-        )
-        next_interfaces = [NetworkInterface(eni["NetworkInterfaceId"], eni["InterfaceType"]) for eni in describe_eni_response.get("NetworkInterfaces", [])]
-        network_inferfaces.extend(next_interfaces)
-        next_token = describe_eni_response.get("NextToken")
-
-    return network_inferfaces
-
-
 NON_MIRRORABLE_ENI_TYPES = ["gateway_load_balancer_endpoint", "nat_gateway"]
 
 class NonMirrorableEniType(Exception):
