@@ -8,6 +8,8 @@ import manage_arkime.constants as constants
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_UNKNOWN_VAL = "unknown"
+
 @dataclass
 class LoginDetails:
     password: str
@@ -24,15 +26,27 @@ def cmd_get_login_details(profile: str, region: str, name: str) -> LoginDetails:
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
     # Get the URL
-    login_url = ssm_ops.get_ssm_param_value(constants.get_viewer_dns_ssm_param_name(name), aws_provider)
+    try:
+        login_url = ssm_ops.get_ssm_param_value(constants.get_viewer_dns_ssm_param_name(name), aws_provider)
+    except ssm_ops.ParamDoesNotExist:
+        logger.warning("Unable to retrieve Login URL from SSM Parameter Store")
+        login_url = DEFAULT_UNKNOWN_VAL
 
     # Get the username
-    username = ssm_ops.get_ssm_param_value(constants.get_viewer_user_ssm_param_name(name), aws_provider)
+    try:
+        username = ssm_ops.get_ssm_param_value(constants.get_viewer_user_ssm_param_name(name), aws_provider)
+    except ssm_ops.ParamDoesNotExist:
+        logger.warning("Unable to retrieve Username from SSM Parameter Store")
+        username = DEFAULT_UNKNOWN_VAL
 
     # Get the password
-    pass_arn = ssm_ops.get_ssm_param_value(constants.get_viewer_password_ssm_param_name(name), aws_provider)
-    secrets_client = aws_provider.get_secretsmanager()
-    password = secrets_client.get_secret_value(SecretId=pass_arn)["SecretString"]
+    try:
+        pass_arn = ssm_ops.get_ssm_param_value(constants.get_viewer_password_ssm_param_name(name), aws_provider)
+        secrets_client = aws_provider.get_secretsmanager()
+        password = secrets_client.get_secret_value(SecretId=pass_arn)["SecretString"]
+    except ssm_ops.ParamDoesNotExist:
+        logger.warning("Unable to retrieve Password from SSM Parameter Store")
+        password = DEFAULT_UNKNOWN_VAL
 
     # Display the result without logging it
     login_details = LoginDetails(password=password, username=username, url=login_url)

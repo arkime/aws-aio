@@ -57,7 +57,7 @@ export class OpenSearchDomainStack extends Stack {
 
         this.osPassword = new secretsmanager.Secret(this, 'OpenSearchPassword', {
             generateSecretString: {
-                excludeCharacters: '\\$:()[]&\'\"<>`|;*?# ' // Characters likely to cause problems in shells
+                excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
             }
         });
         this.domain = new Domain(this, 'ArkimeDomain', {

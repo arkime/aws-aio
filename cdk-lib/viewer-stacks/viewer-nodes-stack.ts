@@ -31,7 +31,7 @@ export class ViewerNodesStack extends cdk.Stack {
         const viewerUser = "admin";
         const viewerPass = new secretsmanager.Secret(this, 'ViewerPassword', {
             generateSecretString: {
-                excludeCharacters: '\\$:()[]&\'\'<>`|;*?# ' // Characters likely to cause problems in shells
+                excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
             }
         });
 
