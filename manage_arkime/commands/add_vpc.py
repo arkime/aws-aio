@@ -88,6 +88,7 @@ def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traff
                 eni,
                 traffic_target_id,
                 traffic_filter_id,
+                vpc_id,
                 aws_provider,
                 virtual_network=vni
             )

@@ -67,7 +67,8 @@ export class VpcMirrorStack extends Stack {
         // Let's mirror all non-local VPC traffic
         // See: https://docs.aws.amazon.com/vpc/latest/mirroring/tm-example-non-vpc.html
         const filter = new ec2.CfnTrafficMirrorFilter(this, `Filter`, {
-            description: 'Mirror non-local VPC traffic'
+            description: 'Mirror non-local VPC traffic',
+            tags: [{key: "Name", value: props.vpcId}]
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalOutbound`, {
             destinationCidrBlock: '10.0.0.0/16', // TODO: Need to figure this out instead of hardcode

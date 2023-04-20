@@ -33,6 +33,7 @@ def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, moc
             eni_1,
             "target-1",
             "filter-1",
+            "vpc-1",
             mock.ANY,
             virtual_network=1234
         ),
@@ -40,6 +41,7 @@ def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, moc
             eni_2,
             "target-1",
             "filter-1",
+            "vpc-1",
             mock.ANY,
             virtual_network=1234
         ),
@@ -94,6 +96,7 @@ def test_WHEN_mirror_enis_in_subnet_called_AND_already_mirrored_THEN_skips(mock_
             eni_1,
             "target-1",
             "filter-1",
+            "vpc-1",
             mock.ANY,
             virtual_network=1234
         )
