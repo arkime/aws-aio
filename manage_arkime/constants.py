@@ -80,3 +80,11 @@ def get_vpc_mirror_setup_stack_name(cluster_name: str, vpc_id: str) -> str:
 
 def get_vpc_ssm_param_name(cluster_name: str, vpc_id: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}"
+
+# =================================================================================================
+# These constants are only used on the Python side of the solution.
+# =================================================================================================
+
+VNI_DEFAULT = 123
+VNI_MIN = 1 # 0 is reserved for the default network segment
+VNI_MAX = 16777215 # 2^24 - 1

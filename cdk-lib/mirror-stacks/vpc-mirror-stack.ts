@@ -13,6 +13,7 @@ export interface VpcMirrorStackProps extends StackProps {
     readonly vpcId: string;
     readonly vpcSsmParamName: string;
     readonly vpceServiceId: string;
+    readonly mirrorVni: string;
 }
 
 /**
@@ -107,7 +108,7 @@ export class VpcMirrorStack extends Stack {
         });
 
         // This SSM parameter will enable us share the details of our VPC-specific Capture setup
-        const vpcParamValue: VpcSsmValue = {mirrorFilterId: filter.ref, vpcId: props.vpcId}
+        const vpcParamValue: VpcSsmValue = {mirrorFilterId: filter.ref, mirrorVni: props.mirrorVni, vpcId: props.vpcId}
         const vpcParam = new ssm.StringParameter(this, `VpcParam-${props.vpcId}`, {
             allowedPattern: '.*',
             description: 'The VPC\'s details',

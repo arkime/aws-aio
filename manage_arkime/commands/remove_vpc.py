@@ -23,8 +23,8 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     try:
         vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
     except ssm_ops.ParamDoesNotExist:
-        logger.warning(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
-        logger.warning("Aborting operation...")
+        logger.error(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
+        logger.warning("Aborting...")
         return
 
     # Pull all our deployed configuration from SSM and tear down the ENI-specific resources

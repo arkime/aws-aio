@@ -25,7 +25,7 @@ def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, moc
     mock_provider = mock.Mock()
 
     # Run our test
-    _mirror_enis_in_subnet("cluster-1", "vpc-1", "subnet-1", "filter-1", mock_provider)
+    _mirror_enis_in_subnet("cluster-1", "vpc-1", "subnet-1", "filter-1", 1234, mock_provider)
 
     # Check our results
     expected_mirror_calls = [
@@ -34,14 +34,14 @@ def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, moc
             "target-1",
             "filter-1",
             mock.ANY,
-            virtual_network=123
+            virtual_network=1234
         ),
         mock.call(
             eni_2,
             "target-1",
             "filter-1",
             mock.ANY,
-            virtual_network=123
+            virtual_network=1234
         ),
     ]
     assert expected_mirror_calls == mock_ec2i.mirror_eni.call_args_list
@@ -86,7 +86,7 @@ def test_WHEN_mirror_enis_in_subnet_called_AND_already_mirrored_THEN_skips(mock_
     mock_provider = mock.Mock()
 
     # Run our test
-    _mirror_enis_in_subnet("cluster-1", "vpc-1", "subnet-1", "filter-1", mock_provider)
+    _mirror_enis_in_subnet("cluster-1", "vpc-1", "subnet-1", "filter-1", 1234, mock_provider)
 
     # Check our results
     expected_mirror_calls = [
@@ -95,7 +95,7 @@ def test_WHEN_mirror_enis_in_subnet_called_AND_already_mirrored_THEN_skips(mock_
             "target-1",
             "filter-1",
             mock.ANY,
-            virtual_network=123
+            virtual_network=1234
         )
     ]
     assert expected_mirror_calls == mock_ec2i.mirror_eni.call_args_list
@@ -131,7 +131,7 @@ def test_WHEN_cmd_add_vpc_called_THEN_sets_up_mirroring(mock_cdk_client_cls, moc
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1")
+    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", 1234)
 
     # Check our results
     expected_cdk_calls = [
@@ -146,6 +146,7 @@ def test_WHEN_cmd_add_vpc_called_THEN_sets_up_mirroring(mock_cdk_client_cls, moc
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
                     "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
+                    "idVni": str(1234),
                     "idVpc": "vpc-1",
                     "idVpceService": "service-1",
                     "listSubnetIds": subnet_ids,
@@ -157,9 +158,61 @@ def test_WHEN_cmd_add_vpc_called_THEN_sets_up_mirroring(mock_cdk_client_cls, moc
     assert expected_cdk_calls == mock_cdk.deploy.call_args_list
 
     expected_mirror_calls = [
-        mock.call("cluster-1", "vpc-1", "subnet-1", "filter-1", mock.ANY),
-        mock.call("cluster-1", "vpc-1", "subnet-2", "filter-1", mock.ANY)
+        mock.call("cluster-1", "vpc-1", "subnet-1", "filter-1", 1234, mock.ANY),
+        mock.call("cluster-1", "vpc-1", "subnet-2", "filter-1", 1234, mock.ANY)
     ]
+    assert expected_mirror_calls == mock_mirror.call_args_list
+
+@mock.patch("manage_arkime.commands.add_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("manage_arkime.commands.add_vpc._mirror_enis_in_subnet")
+@mock.patch("manage_arkime.commands.add_vpc.ssm_ops")
+@mock.patch("manage_arkime.commands.add_vpc.ec2i")
+@mock.patch("manage_arkime.commands.add_vpc.CdkClient")
+def test_WHEN_cmd_add_vpc_called_AND_vni_too_small_THEN_aborts(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror):
+    # Set up our mock
+    subnet_ids = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
+
+    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1"]
+
+    mock_cdk = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_cdk
+
+    # Run our test
+    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", constants.VNI_MIN - 1)
+
+    # Check our results
+    expected_cdk_calls = []
+    assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_mirror_calls = []
+    assert expected_mirror_calls == mock_mirror.call_args_list
+
+@mock.patch("manage_arkime.commands.add_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("manage_arkime.commands.add_vpc._mirror_enis_in_subnet")
+@mock.patch("manage_arkime.commands.add_vpc.ssm_ops")
+@mock.patch("manage_arkime.commands.add_vpc.ec2i")
+@mock.patch("manage_arkime.commands.add_vpc.CdkClient")
+def test_WHEN_cmd_add_vpc_called_AND_vni_too_large_THEN_aborts(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror):
+    # Set up our mock
+    subnet_ids = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
+
+    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1"]
+
+    mock_cdk = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_cdk
+
+    # Run our test
+    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", constants.VNI_MAX + 1)
+
+    # Check our results
+    expected_cdk_calls = []
+    assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_mirror_calls = []
     assert expected_mirror_calls == mock_mirror.call_args_list
 
 @mock.patch("manage_arkime.commands.add_vpc.AwsClientProvider", mock.Mock())
@@ -175,7 +228,7 @@ def test_WHEN_cmd_add_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_c
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1")
+    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", 1234)
 
     # Check our results
     expected_cdk_calls = []
@@ -200,7 +253,7 @@ def test_WHEN_cmd_add_vpc_called_AND_vpc_doesnt_exist_THEN_skips(mock_cdk_client
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1")
+    cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", 1234)
 
     # Check our results
     expected_cdk_calls = []

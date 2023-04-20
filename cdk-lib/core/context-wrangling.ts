@@ -114,6 +114,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 awsRegion: args.awsRegion,
                 nameVpcMirrorStack: rawMirrorMgmtParamsObj.nameVpcMirrorStack,
                 nameVpcSsmParam: rawMirrorMgmtParamsObj.nameVpcSsmParam,
+                idVni: rawMirrorMgmtParamsObj.idVni,
                 idVpc: rawMirrorMgmtParamsObj.idVpc,
                 idVpceService: rawMirrorMgmtParamsObj.idVpceService,
                 listSubnetIds: rawMirrorMgmtParamsObj.listSubnetIds,

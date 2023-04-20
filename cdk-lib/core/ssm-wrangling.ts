@@ -17,5 +17,6 @@ export interface SubnetSsmValue {
 
 export interface VpcSsmValue {
     readonly mirrorFilterId: string;
+    readonly mirrorVni: string;
     readonly vpcId: string;
 }

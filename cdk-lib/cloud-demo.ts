@@ -76,7 +76,8 @@ switch(params.type) {
             subnetSsmParamNames: params.listSubnetSsmParams,
             vpcId: params.idVpc,
             vpcSsmParamName: params.nameVpcSsmParam,
-            vpceServiceId: params.idVpceService
+            vpceServiceId: params.idVpceService,
+            mirrorVni: params.idVni
         })
         break;
     case 'DeployDemoTrafficParams':

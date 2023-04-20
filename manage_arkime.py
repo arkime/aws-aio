@@ -11,6 +11,7 @@ from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
 from manage_arkime.commands.get_login_details import cmd_get_login_details
 from manage_arkime.commands.list_clusters import cmd_list_clusters
 from manage_arkime.commands.remove_vpc import cmd_remove_vpc
+import manage_arkime.constants as constants
 from manage_arkime.logging_wrangler import LoggingWrangler
 
 logger = logging.getLogger(__name__)
@@ -96,11 +97,13 @@ cli.add_command(list_clusters)
 @click.command(help="Sets up the specified VPC to have its traffic monitored by the specified, existing Arkime Cluster")
 @click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
 @click.option("--vpc-id", help="The VPC ID to begin monitoring.  Must be in the same account/region as the Cluster.", required=True)
+@click.option("--vni", help="The Virtual Network Interface ID (24-bit int) to assign to the VPC.  Can be used to uniquely identify the VPC on the capture side.",
+        default=constants.VNI_DEFAULT, type=int)
 @click.pass_context
-def add_vpc(ctx, cluster_name, vpc_id):
+def add_vpc(ctx, cluster_name, vpc_id, vni):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_add_vpc(profile, region, cluster_name, vpc_id)
+    cmd_add_vpc(profile, region, cluster_name, vpc_id, vni)
 cli.add_command(add_vpc)
 
 @click.command(help="Removes traffic monitoring from the specified VPC being performed by the specified Arkime Cluster")
