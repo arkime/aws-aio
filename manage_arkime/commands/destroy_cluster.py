@@ -18,7 +18,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
     vpcs_search_path = f"{constants.get_cluster_ssm_param_name(name)}/vpcs"
     monitored_vpcs = get_ssm_names_by_path(vpcs_search_path, aws_provider)
     if monitored_vpcs:
-        logger.warning("Your cluster is currently monitoring VPCs.  Please stop monitoring these VPCs using the"
+        logger.error("Your cluster is currently monitoring VPCs.  Please stop monitoring these VPCs using the"
             + f" remove-vpc command before destroying your cluster:\n{monitored_vpcs}")
         logger.warning("Aborting...")
         return

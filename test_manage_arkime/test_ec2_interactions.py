@@ -123,7 +123,7 @@ def test_WHEN_mirror_eni_called_THEN_sets_up_session():
 
     # Run our test
     test_eni = ec2i.NetworkInterface("eni-1", "type-1")
-    result = ec2i.mirror_eni(test_eni, "target-1", "filter-1", mock_aws_provider, virtual_network=1234)
+    result = ec2i.mirror_eni(test_eni, "target-1", "filter-1", "vpc-1", mock_aws_provider, virtual_network=1234)
 
     # Check our results
     expected_create_calls = [
@@ -132,7 +132,18 @@ def test_WHEN_mirror_eni_called_THEN_sets_up_session():
             TrafficMirrorTargetId="target-1",
             TrafficMirrorFilterId="filter-1",
             SessionNumber=1,
-            VirtualNetworkId=1234
+            VirtualNetworkId=1234,
+            TagSpecifications=[
+                {
+                    "ResourceType": "traffic-mirror-session",
+                    "Tags": [
+                        {
+                            "Key": "Name",
+                            "Value": "vpc-1-eni-1"
+                        },
+                    ]
+                },
+            ],
         )
     ]
     assert expected_create_calls == mock_ec2_client.create_traffic_mirror_session.call_args_list
@@ -149,7 +160,7 @@ def test_WHEN_mirror_eni_called_AND_excluded_type_THEN_raises():
     # Run our test
     test_eni = ec2i.NetworkInterface("eni-1", ec2i.NON_MIRRORABLE_ENI_TYPES[0])
     with pytest.raises(ec2i.NonMirrorableEniType):
-        ec2i.mirror_eni(test_eni, "target-1", "filter-1", mock_aws_provider, virtual_network=1234)
+        ec2i.mirror_eni(test_eni, "target-1", "filter-1", "vpc-1", mock_aws_provider, virtual_network=1234)
 
     # Check our results
     expected_create_calls = []

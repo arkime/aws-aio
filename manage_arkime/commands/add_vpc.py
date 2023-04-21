@@ -10,25 +10,31 @@ import manage_arkime.cdk_context as context
 
 logger = logging.getLogger(__name__)
 
-def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
+def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, vni: int):
     logger.debug(f"Invoking add-vpc with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+
+    # Confirm the VNI is valid
+    if (vni <= constants.VNI_MIN) or (constants.VNI_MAX < vni):
+        logger.error(f"VNI {vni} is outside the acceptable range of {constants.VNI_MIN} to {constants.VNI_MAX} (inclusive)")
+        logger.warning("Aborting...")
+        return
 
     # Confirm the Cluster exists before proceeding
     try:
         ssm_ops.get_ssm_param_value(constants.get_cluster_ssm_param_name(cluster_name), aws_provider)
     except ssm_ops.ParamDoesNotExist:
-        logger.warning(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
-        logger.warning("Aborting operation...")
+        logger.error(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
+        logger.warning("Aborting...")
         return
 
     # Get all the subnets in the VPC
     try:
         subnet_ids = ec2i.get_subnets_of_vpc(vpc_id, aws_provider)
     except ec2i.VpcDoesNotExist as ex:
-        logger.warning(f"The VPC {vpc_id} does not exist in the account/region")
-        logger.warning("Aborting operation...")
+        logger.error(f"The VPC {vpc_id} does not exist in the account/region")
+        logger.warning("Aborting...")
         return
 
     # Get the VPCE Service ID we set up with our Capture VPC
@@ -39,7 +45,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)
+    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, vni)
 
     cdk_client = CdkClient()
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=add_vpc_context)
@@ -57,9 +63,9 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
     
     for subnet_id in subnet_ids:
-        _mirror_enis_in_subnet(cluster_name, vpc_id, subnet_id, traffic_filter_id, aws_provider)
+        _mirror_enis_in_subnet(cluster_name, vpc_id, subnet_id, traffic_filter_id, vni, aws_provider)
 
-def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, aws_provider: AwsClientProvider):
+def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, vni: int, aws_provider: AwsClientProvider):
     enis = ec2i.get_enis_of_subnet(subnet_id, aws_provider)
 
     for eni in enis:
@@ -82,8 +88,9 @@ def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traff
                 eni,
                 traffic_target_id,
                 traffic_filter_id,
+                vpc_id,
                 aws_provider,
-                virtual_network=123
+                virtual_network=vni
             )
         except ec2i.NonMirrorableEniType as ex:
             logger.info(f"Eni {eni.id} is of unsupported type {eni.type}; skipping")

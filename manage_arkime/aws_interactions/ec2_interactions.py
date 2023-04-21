@@ -75,7 +75,7 @@ class NonMirrorableEniType(Exception):
 Sets up a VPC Traffic Mirroring Session on a given ENI towards the specified Traffic Target using the specified
 Traffic Filter and returns the Traffic Session ID.
 """
-def mirror_eni(eni: NetworkInterface, traffic_target: str, traffic_filter: str, aws_provider: AwsClientProvider, virtual_network: int = 123) -> str:
+def mirror_eni(eni: NetworkInterface, traffic_target: str, traffic_filter: str, vpc_id: str, aws_provider: AwsClientProvider, virtual_network: int = 123) -> str:
     if eni.type in NON_MIRRORABLE_ENI_TYPES:
         raise NonMirrorableEniType(eni)
 
@@ -85,7 +85,18 @@ def mirror_eni(eni: NetworkInterface, traffic_target: str, traffic_filter: str, 
         TrafficMirrorTargetId=traffic_target,
         TrafficMirrorFilterId=traffic_filter,
         SessionNumber=1,
-        VirtualNetworkId=virtual_network
+        VirtualNetworkId=virtual_network,
+        TagSpecifications=[
+            {
+                "ResourceType": "traffic-mirror-session",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": f"{vpc_id}-{eni.id}"
+                    },
+                ]
+            },
+        ],
     )
 
     return create_session_response["TrafficMirrorSession"]["TrafficMirrorSessionId"]
@@ -104,7 +115,7 @@ def delete_eni_mirroring(traffic_session: str, aws_provider: AwsClientProvider) 
             TrafficMirrorSessionId=traffic_session
         )
     except ClientError as exc:
-        if exc.response['Error']['Code'] == 'InvalidTrafficMirrorSessionId.NotFound':
+        if exc.response["Error"]["Code"] == "InvalidTrafficMirrorSessionId.NotFound":
             raise MirrorDoesntExist(traffic_session)
         else:
             raise
