@@ -27,22 +27,23 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
             return
 
     # Confirm the user-supplied VNI is available
-    try:
-        if user_vni and not vni_provider.is_vni_available(user_vni):
-            logger.error(f"VNI {user_vni} is already in use and cannot be used again.  Use list-clusters to see the VNIs"
-                           + " assigned to your clusters.")
+    else:
+        next_vni = user_vni
+
+        try:
+            if not vni_provider.is_vni_available(next_vni):
+                logger.error(f"VNI {next_vni} is already in use and cannot be used again.  Use list-clusters to see the VNIs"
+                            + " assigned to your clusters.")
+                logger.warning("Aborting...")
+                return            
+        except VniAlreadyUsed:
+            logger.error(f"VNI {next_vni} is already in use; you can use the list-clusters command to see which VPC it is assigned to.")
             logger.warning("Aborting...")
             return
-        elif user_vni:
-            next_vni = user_vni
-    except VniAlreadyUsed:
-        logger.error(f"VNI {user_vni} is already in use; you can use the list-clusters command to see which VPC it is assigned to.")
-        logger.warning("Aborting...")
-        return
-    except VniOutsideRange:
-        logger.error(f"VNI {user_vni} is outside the acceptable range of {constants.VNI_MIN} to {constants.VNI_MAX} (inclusive)")
-        logger.warning("Aborting...")
-        return
+        except VniOutsideRange:
+            logger.error(f"VNI {next_vni} is outside the acceptable range of {constants.VNI_MIN} to {constants.VNI_MAX} (inclusive)")
+            logger.warning("Aborting...")
+            return
 
     # Confirm the Cluster exists before proceeding
     try:
@@ -91,7 +92,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     # Register the VNI as used.  The VNI's usage is tied to the ENI-specific configuration, so we perform this
     # after that is set up.
     if user_vni:
-        vni_provider.register_user_vni(next_vni)
+        vni_provider.register_user_vni(next_vni, vpc_id)
     else:
         vni_provider.use_next_vni(next_vni)
 

@@ -115,9 +115,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
     ]
     assert expected_remove_calls == mock_remove.call_args_list
 
-    expected_vni_calls = [
-        mock.call(1337),
-    ]
+    expected_vni_calls = [mock.call(1337, "vpc-1")]
     assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
 
 @mock.patch("manage_arkime.commands.remove_vpc.AwsClientProvider", mock.Mock())

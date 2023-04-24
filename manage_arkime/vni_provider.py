@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import json
 import logging
-from typing import List
+from typing import Dict, List
 
 import manage_arkime.constants as constants
 from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
@@ -55,10 +55,9 @@ class VniProvider(ABC):
 """
 Uses SSM Parameter Store to manage VNI state.
 
-It tracks three different pieces of state:
+It tracks two different pieces of state:
 * An incrementing integer that allows us to find the next, unused VNI when the user doesn't specify one
-* The list of all VNIs the user specified
-* A list of any previously-relinquished VNIs that we can recycle
+* The mapping of all VNIs the user specified to the VPCs they're associated with
 """
 class SsmVniProvider(VniProvider):
     def __init__(self, cluster_name: str, aws_provider: AwsClientProvider):
@@ -66,16 +65,10 @@ class SsmVniProvider(VniProvider):
         self.aws_provider = aws_provider
 
     """
-    Get the next available VNI that's not already assigned, preferring a recycled one if possible
+    Get the next available VNI that's not already assigned
     """
     def get_next_vni(self) -> int:
-        # Use a recycled VNI if possible
-        recycled_vnis = self._get_recycled_vnis()
-        if recycled_vnis:
-            unique_vni = recycled_vnis.pop()
-            return unique_vni
-
-        # Otherwise, get the next unused VNI
+        # Get the next unused VNI
         user_vnis = self._get_user_vnis()
         current_autogen_vni = self._get_current_autogen_vni()
         next_vni = current_autogen_vni + 1
@@ -98,12 +91,6 @@ class SsmVniProvider(VniProvider):
         # Raise if outside acceptable range
         if (vni < constants.VNI_MIN) or (vni > constants.VNI_MAX):
             raise VniOutsideRange(vni)
-        
-        # Remove from list of recycled VNIs if it's in there
-        recycled_vnis = self._get_recycled_vnis()
-        if vni in recycled_vnis:
-            recycled_vnis.remove(vni)
-            self._update_recycled_vnis(recycled_vnis)
 
         # Update our current VNI counter if appropriate
         current_autogen_vni = self._get_current_autogen_vni()
@@ -111,70 +98,52 @@ class SsmVniProvider(VniProvider):
             self._update_current_autogen_vni(vni)
 
     """
-    Mark a user-specified VNI as in-use, as long as it hasn't already been assigned
+    Mark a user-specified VNI as in-use
     """
-    def register_user_vni(self, vni: int):
+    def register_user_vni(self, vni: int, vpc_id: str):
         # Raise if outside acceptable range
         if (vni < constants.VNI_MIN) or (vni > constants.VNI_MAX):
             raise VniOutsideRange(vni)
 
         # Get existing state
-        recycled_vnis = self._get_recycled_vnis()
-        user_vnis = self._get_user_vnis()
-        current_autogen_vni = self._get_current_autogen_vni()
+        user_vnis_map = self._get_user_vnis_mapping()
 
-        # Raise if we've already used this VNI
-        is_recycled = vni in recycled_vnis # Free to re-use
-        is_user_assigned = vni in user_vnis # Collision
-        is_previous_autogen = vni <= current_autogen_vni # Collision
-        if not is_recycled and (is_user_assigned or is_previous_autogen):
-            raise VniAlreadyUsed(vni)
-
-        # Update our list of user VNIs
-        user_vnis.append(vni)
-        self._update_user_vnis(user_vnis)
-
-        # If it was in the recycled list, update that too
-        if is_recycled:
-            recycled_vnis.remove(vni)
-            self._update_recycled_vnis(recycled_vnis)
+        # Add to the mapping
+        if vni in user_vnis_map:
+            user_vnis_map[vni].append(vpc_id)
+        else:
+            user_vnis_map[vni] = [vpc_id]
+        self._update_user_vnis_mapping(user_vnis_map)
 
     def is_vni_available(self, vni: int):
         # Raise if outside acceptable range
         if (vni < constants.VNI_MIN) or (vni > constants.VNI_MAX):
             raise VniOutsideRange(vni)
 
-        recycled_vnis = self._get_recycled_vnis()
-        user_vnis = self._get_user_vnis()
-        current_autogen_vni = self._get_current_autogen_vni()
-
-        is_in_use = (vni in user_vnis) or ((vni <= current_autogen_vni) and vni not in recycled_vnis)
-
-        return not is_in_use
+        return True
 
     """
-    Remove a VNI from use.  Remove from the user-specified list if relevant.  Add to list of recycled VNIs if
-    appropriate.
+    Remove a VNI from use.  Remove from the user-specified list if relevant.
     """
-    def relinquish_vni(self, vni: int):
+    def relinquish_vni(self, vni: int, vpc_id: str):
         # Raise if outside acceptable range
         if (vni < constants.VNI_MIN) or (vni > constants.VNI_MAX):
             raise VniOutsideRange(vni)
 
         # Get existing state
-        recycled_vnis = self._get_recycled_vnis()
-        user_vnis = self._get_user_vnis()
-        current_autogen_vni = self._get_current_autogen_vni()
+        user_vnis_map = self._get_user_vnis_mapping()
         
         # Remove from user-list if in there
-        if vni in user_vnis:
-            user_vnis.remove(vni)
-            self._update_user_vnis(user_vnis)
+        if vni in user_vnis_map:
+            vpcs_for_vni = user_vnis_map[vni]
+            vpcs_for_vni.remove(vpc_id)
 
-        # Add to our list of available VNIs if we'd otherwise miss it with auto assignment
-        if (vni >= constants.VNI_MIN) and (vni <= current_autogen_vni):
-            recycled_vnis.append(vni)
-            self._update_recycled_vnis(recycled_vnis)
+            if not vpcs_for_vni:
+                user_vnis_map.pop(vni)
+            else:
+                user_vnis_map[vni] = vpcs_for_vni
+            
+            self._update_user_vnis_mapping(user_vnis_map)
 
     def _update_current_autogen_vni(self, new_value: int) -> int:
         ssm_ops.put_ssm_param(
@@ -213,20 +182,25 @@ class SsmVniProvider(VniProvider):
         except ssm_ops.ParamDoesNotExist:
             return self._update_recycled_vnis([])
 
-    def _update_user_vnis(self, new_value: List[int]) -> List[int]:
+    def _update_user_vnis_mapping(self, new_value: Dict[int, List[str]]) -> Dict[int, List[str]]:
         ssm_ops.put_ssm_param(
             constants.get_vnis_user_ssm_param_name(self.cluster_name),
             json.dumps(new_value),
             self.aws_provider,
-            description=f"User-specified list of VNIs currently mapped to VPCs monitored by cluster {self.cluster_name}",
+            description=f"User-specified mapping of the VNIs associated with VPCs monitored by cluster {self.cluster_name}",
             overwrite=True
         )
         return new_value
 
-    def _get_user_vnis(self) -> List[int]:
+    def _get_user_vnis_mapping(self) -> Dict[int, List[str]]:
         ssm_param_name = constants.get_vnis_user_ssm_param_name(self.cluster_name)
         try:
             raw_value = ssm_ops.get_ssm_param_value(ssm_param_name, self.aws_provider)
-            return json.loads(raw_value)
+            raw_mapping: Dict[str, List[str]] = json.loads(raw_value) # This our VNI ints will be strings; need to convert back
+            return {int(k): v for k, v in raw_mapping.items()}
         except ssm_ops.ParamDoesNotExist:
-            return self._update_user_vnis([])
+            return self._update_user_vnis_mapping({})
+
+    def _get_user_vnis(self) -> List[int]:
+        mapping = self._get_user_vnis_mapping()
+        return list(mapping.keys())

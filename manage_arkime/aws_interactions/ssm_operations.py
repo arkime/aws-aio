@@ -22,7 +22,7 @@ def _get_ssm_param(param_name: str, aws_client_provider: AwsClientProvider) -> D
     ssm_client = aws_client_provider.get_ssm()
 
     try:
-        logger.info(f"Pulling SSM Parameter {param_name}...")
+        logger.debug(f"Pulling SSM Parameter {param_name}...")
         return ssm_client.get_parameter(Name=param_name)["Parameter"]
     except ClientError as exc:
         if exc.response['Error']['Code'] == 'ParameterNotFound':
@@ -32,7 +32,7 @@ def _get_ssm_param(param_name: str, aws_client_provider: AwsClientProvider) -> D
 def get_ssm_params_by_path(param_path: str, aws_client_provider: AwsClientProvider) -> List[Dict[str, str]]:
     ssm_client = aws_client_provider.get_ssm()
 
-    logger.info(f"Pulling SSM Parameters for Path {param_path}...")
+    logger.debug(f"Pulling SSM Parameters for Path {param_path}...")
     response: Dict = ssm_client.get_parameters_by_path(Path=param_path)
 
     if not response: # Will be [] if no params or path doesn't exist
@@ -55,20 +55,27 @@ def get_ssm_names_by_path(param_path: str, aws_client_provider: AwsClientProvide
 
 def put_ssm_param(param_name: str, param_value: str, aws_client_provider: AwsClientProvider, description: str = None, 
         pattern: str = None, overwrite=False):
-    ssm_client = aws_client_provider.get_ssm()
 
+    if not pattern:
+        pattern = ".*"
+
+    logger.debug(f"Putting SSM Parameter {param_name}; overwrite enabled: {overwrite}.  Value: {param_value}")
+
+    ssm_client = aws_client_provider.get_ssm()
     ssm_client.put_parameter(
         Name=param_name,
         Description=description,
         Value=param_value,
         Type="String",
-        AllowedPattern=".*",
+        AllowedPattern=pattern,
         Tier='Standard',
         Overwrite=overwrite
     )
 
 def delete_ssm_param(param_name: str, aws_client_provider: AwsClientProvider):
     ssm_client = aws_client_provider.get_ssm()
+
+    logger.debug(f"Deleting SSM Parameter {param_name}...")
 
     ssm_client.delete_parameter(
         Name=param_name

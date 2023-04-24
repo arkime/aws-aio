@@ -45,7 +45,7 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     # AWS resources rather than the CDK-generated ones, so we perform this before our CDK operation in case it fails.
     vpc_vni = ssm_ops.get_ssm_param_json_value(vpc_ssm_param, "mirrorVni", aws_provider)
     vni_provider = SsmVniProvider(cluster_name, aws_provider)
-    vni_provider.relinquish_vni(int(vpc_vni))
+    vni_provider.relinquish_vni(int(vpc_vni), vpc_id)
 
     # Destroy the VPC-specific mirroring components in CloudFormation
     logger.info("Tearing down shared mirroring components via CDK...")
@@ -56,9 +56,6 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
 
     cdk_client = CdkClient()
     cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=add_vpc_context)
-
-
-
 
 def _remove_mirroring_for_eni(cluster_name: str, vpc_id: str, subnet_id: str, eni_id: str, aws_provider: AwsClientProvider):
     eni_param = constants.get_eni_ssm_param_name(cluster_name, vpc_id, subnet_id, eni_id)

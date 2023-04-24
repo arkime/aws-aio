@@ -260,7 +260,7 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
     ]
     assert expected_mirror_calls == mock_mirror.call_args_list
 
-    expected_vni_calls = [mock.call(1234)]
+    expected_vni_calls = [mock.call(1234, "vpc-1")]
     assert expected_vni_calls == mock_vni_provider.register_user_vni.call_args_list
 
 @mock.patch("manage_arkime.commands.add_vpc.AwsClientProvider", mock.Mock())
