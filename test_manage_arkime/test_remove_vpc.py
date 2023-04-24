@@ -62,13 +62,17 @@ def test_WHEN_remove_mirroring_for_eni_called_AND_session_doesnt_exist_THEN_hand
     assert expected_delete_ssm_calls == mock_ssm_ops.delete_ssm_param.call_args_list
 
 @mock.patch("manage_arkime.commands.remove_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("manage_arkime.commands.remove_vpc.SsmVniProvider")
 @mock.patch("manage_arkime.commands.remove_vpc._remove_mirroring_for_eni")
 @mock.patch("manage_arkime.commands.remove_vpc.ssm_ops")
 @mock.patch("manage_arkime.commands.remove_vpc.ec2i")
 @mock.patch("manage_arkime.commands.remove_vpc.CdkClient")
-def test_WHEN_cmd_remove_vpc_called_THEN_sets_up_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_remove):
+def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_remove, mock_vni_provider_cls):
     # Set up our mock
-    mock_ssm.get_ssm_param_json_value.return_value = "service-1"
+    mock_vni_provider = mock.Mock()
+    mock_vni_provider_cls.return_value = mock_vni_provider
+
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", 1337]
     mock_ssm.get_ssm_params_by_path.return_value = [
         {"Name": "param-1", "Value": json.dumps({"subnetId": "subnet-1"})},
         {"Name": "param-2", "Value": json.dumps({"subnetId": "subnet-2"})},
@@ -111,13 +115,20 @@ def test_WHEN_cmd_remove_vpc_called_THEN_sets_up_mirroring(mock_cdk_client_cls, 
     ]
     assert expected_remove_calls == mock_remove.call_args_list
 
+    expected_vni_calls = [mock.call(1337, "vpc-1")]
+    assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
+
 @mock.patch("manage_arkime.commands.remove_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("manage_arkime.commands.remove_vpc.SsmVniProvider")
 @mock.patch("manage_arkime.commands.remove_vpc._remove_mirroring_for_eni")
 @mock.patch("manage_arkime.commands.remove_vpc.ssm_ops")
 @mock.patch("manage_arkime.commands.remove_vpc.ec2i")
 @mock.patch("manage_arkime.commands.remove_vpc.CdkClient")
-def test_WHEN_cmd_remove_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_remove):
+def test_WHEN_cmd_remove_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_remove, mock_vni_provider_cls):
     # Set up our mock
+    mock_vni_provider = mock.Mock()
+    mock_vni_provider_cls.return_value = mock_vni_provider
+
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist
     mock_ssm.get_ssm_param_json_value.side_effect = ParamDoesNotExist("param-1")
 
@@ -133,3 +144,6 @@ def test_WHEN_cmd_remove_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cd
 
     expected_remove_calls = []
     assert expected_remove_calls == mock_remove.call_args_list
+
+    expected_vni_calls = []
+    assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list

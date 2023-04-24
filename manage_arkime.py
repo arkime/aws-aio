@@ -94,16 +94,19 @@ def list_clusters(ctx):
     cmd_list_clusters(profile, region)
 cli.add_command(list_clusters)
 
-@click.command(help="Sets up the specified VPC to have its traffic monitored by the specified, existing Arkime Cluster")
+@click.command(help=("Sets up the specified VPC to have its traffic monitored by the specified, existing Arkime Cluster."
+                    + "  By default, each VPC is assigned a Virtual Network Interface ID (VNI) unused by any other VPC"
+                    + f" in the Cluster to uniquely identify it.  The starting default value is {constants.VNI_MIN}."))
 @click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
 @click.option("--vpc-id", help="The VPC ID to begin monitoring.  Must be in the same account/region as the Cluster.", required=True)
-@click.option("--vni", help="The Virtual Network Interface ID (24-bit int) to assign to the VPC.  Can be used to uniquely identify the VPC on the capture side.",
-        default=constants.VNI_DEFAULT, type=int)
+@click.option("--force-vni", help=("POWER USER OPTION.  Forcefully assign the VPC to use a specific VNI.  This can"
+              + " result in multiple VPCs using the same VNI, and VNIs to potentially be re-used long after they are"
+              + " relinquished."), default=None, type=int)
 @click.pass_context
-def add_vpc(ctx, cluster_name, vpc_id, vni):
+def add_vpc(ctx, cluster_name, vpc_id, force_vni):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_add_vpc(profile, region, cluster_name, vpc_id, vni)
+    cmd_add_vpc(profile, region, cluster_name, vpc_id, force_vni)
 cli.add_command(add_vpc)
 
 @click.command(help="Removes traffic monitoring from the specified VPC being performed by the specified Arkime Cluster")

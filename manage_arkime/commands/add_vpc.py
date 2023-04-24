@@ -7,19 +7,43 @@ import aws_interactions.ssm_operations as ssm_ops
 from manage_arkime.cdk_client import CdkClient
 import manage_arkime.constants as constants
 import manage_arkime.cdk_context as context
+from manage_arkime.vni_provider import SsmVniProvider, VniAlreadyUsed, VniOutsideRange, VniPoolExhausted
 
 logger = logging.getLogger(__name__)
 
-def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, vni: int):
+def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_vni: int):
     logger.debug(f"Invoking add-vpc with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    vni_provider = SsmVniProvider(cluster_name, aws_provider)
 
-    # Confirm the VNI is valid
-    if (vni <= constants.VNI_MIN) or (constants.VNI_MAX < vni):
-        logger.error(f"VNI {vni} is outside the acceptable range of {constants.VNI_MIN} to {constants.VNI_MAX} (inclusive)")
-        logger.warning("Aborting...")
-        return
+    # If the user didn't supply a VNI, try to find one
+    if not user_vni:
+        try:
+            next_vni = vni_provider.get_next_vni()
+        except VniPoolExhausted:
+            logger.error(f"There are no remaining VNIs in the range {constants.VNI_MIN} to {constants.VNI_MAX} to assign for this cluster")
+            logger.warning("Aborting...")
+            return
+
+    # Confirm the user-supplied VNI is available
+    else:
+        next_vni = user_vni
+
+        try:
+            if not vni_provider.is_vni_available(next_vni):
+                logger.error(f"VNI {next_vni} is already in use and cannot be used again.  Use list-clusters to see the VNIs"
+                            + " assigned to your clusters.")
+                logger.warning("Aborting...")
+                return            
+        except VniAlreadyUsed:
+            logger.error(f"VNI {next_vni} is already in use; you can use the list-clusters command to see which VPC it is assigned to.")
+            logger.warning("Aborting...")
+            return
+        except VniOutsideRange:
+            logger.error(f"VNI {next_vni} is outside the acceptable range of {constants.VNI_MIN} to {constants.VNI_MAX} (inclusive)")
+            logger.warning("Aborting...")
+            return
 
     # Confirm the Cluster exists before proceeding
     try:
@@ -45,7 +69,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, vni: 
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, vni)
+    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, next_vni)
 
     cdk_client = CdkClient()
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=add_vpc_context)
@@ -63,7 +87,14 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, vni: 
     traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
     
     for subnet_id in subnet_ids:
-        _mirror_enis_in_subnet(cluster_name, vpc_id, subnet_id, traffic_filter_id, vni, aws_provider)
+        _mirror_enis_in_subnet(cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)
+
+    # Register the VNI as used.  The VNI's usage is tied to the ENI-specific configuration, so we perform this
+    # after that is set up.
+    if user_vni:
+        vni_provider.register_user_vni(next_vni, vpc_id)
+    else:
+        vni_provider.use_next_vni(next_vni)
 
 def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, vni: int, aws_provider: AwsClientProvider):
     enis = ec2i.get_enis_of_subnet(subnet_id, aws_provider)
