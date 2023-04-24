@@ -51,9 +51,6 @@ def get_capture_vpc_stack_name(cluster_name: str) -> str:
 def get_cluster_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
 
-def get_eni_ssm_param_name(cluster_name: str, vpc_id: str, subnet_id: str, eni_id) -> str:
-    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}/subnets/{subnet_id}/enis/{eni_id}"
-
 def get_opensearch_domain_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-OSDomain"
 
@@ -85,6 +82,18 @@ def get_vpc_ssm_param_name(cluster_name: str, vpc_id: str) -> str:
 # These constants are only used on the Python side of the solution.
 # =================================================================================================
 
+def get_eni_ssm_param_name(cluster_name: str, vpc_id: str, subnet_id: str, eni_id: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}/subnets/{subnet_id}/enis/{eni_id}"
+
 VNI_DEFAULT = 123
 VNI_MIN = 1 # 0 is reserved for the default network segment
 VNI_MAX = 16777215 # 2^24 - 1
+
+def get_vnis_recycled_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vnis-recycled"
+
+def get_vnis_user_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vnis-user"
+
+def get_vni_current_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vni-current"

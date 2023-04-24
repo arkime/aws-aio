@@ -98,7 +98,7 @@ cli.add_command(list_clusters)
 @click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
 @click.option("--vpc-id", help="The VPC ID to begin monitoring.  Must be in the same account/region as the Cluster.", required=True)
 @click.option("--vni", help="The Virtual Network Interface ID (24-bit int) to assign to the VPC.  Can be used to uniquely identify the VPC on the capture side.",
-        default=constants.VNI_DEFAULT, type=int)
+        default=None, type=int)
 @click.pass_context
 def add_vpc(ctx, cluster_name, vpc_id, vni):
     profile = ctx.obj.get("profile")

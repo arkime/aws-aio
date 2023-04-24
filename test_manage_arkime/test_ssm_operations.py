@@ -141,7 +141,7 @@ def test_WHEN_put_ssm_param_called_THEN_puts_it():
     mock_aws_provider.get_ssm.return_value = mock_ssm_client    
 
     # Run our test
-    ssm.put_ssm_param("my-param", "param-value", mock_aws_provider, description="param-desc", pattern=".*")
+    ssm.put_ssm_param("my-param", "param-value", mock_aws_provider, description="param-desc", pattern=".*", overwrite=True)
 
     # Check our results
     expected_put_calls = [
@@ -151,7 +151,8 @@ def test_WHEN_put_ssm_param_called_THEN_puts_it():
             Value="param-value",
             Type="String",
             AllowedPattern=".*",
-            Tier='Standard'
+            Tier='Standard',
+            Overwrite=True
         )
     ]
     assert expected_put_calls == mock_ssm_client.put_parameter.call_args_list

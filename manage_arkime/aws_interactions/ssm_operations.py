@@ -53,7 +53,8 @@ def get_ssm_names_by_path(param_path: str, aws_client_provider: AwsClientProvide
     raw_params = get_ssm_params_by_path(param_path, aws_client_provider)
     return [param["Name"].split("/")[-1] for param in raw_params]
 
-def put_ssm_param(param_name: str, param_value: str, aws_client_provider: AwsClientProvider, description: str = None, pattern: str = None):
+def put_ssm_param(param_name: str, param_value: str, aws_client_provider: AwsClientProvider, description: str = None, 
+        pattern: str = None, overwrite=False):
     ssm_client = aws_client_provider.get_ssm()
 
     ssm_client.put_parameter(
@@ -63,6 +64,7 @@ def put_ssm_param(param_name: str, param_value: str, aws_client_provider: AwsCli
         Type="String",
         AllowedPattern=".*",
         Tier='Standard',
+        Overwrite=overwrite
     )
 
 def delete_ssm_param(param_name: str, aws_client_provider: AwsClientProvider):

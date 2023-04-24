@@ -4,15 +4,17 @@ import logging
 from botocore.exceptions import ClientError
 
 from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
-from manage_arkime.aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
-from manage_arkime.aws_interactions.destroy_s3_bucket import destroy_s3_bucket
 import manage_arkime.aws_interactions.ec2_interactions as ec2i
 import manage_arkime.aws_interactions.ssm_operations as ssm_ops
 from manage_arkime.cdk_client import CdkClient
 import manage_arkime.constants as constants
 import manage_arkime.cdk_context as context
+from manage_arkime.vni_provider import SsmVniProvider
 
 logger = logging.getLogger(__name__)
+
+
+# vni = ssm_ops.get_ssm_param_json_value(vpc_ssm_param, "mirrorVni", aws_provider)
 
 def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     logger.debug(f"Invoking remove-vpc with profile '{profile}' and region '{region}'")
@@ -28,7 +30,8 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
         return
 
     # Pull all our deployed configuration from SSM and tear down the ENI-specific resources
-    subnet_search_path = f"{constants.get_vpc_ssm_param_name(cluster_name, vpc_id)}/subnets"
+    vpc_ssm_param = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
+    subnet_search_path = f"{vpc_ssm_param}/subnets"
     subnet_configs = [json.loads(config["Value"]) for config in ssm_ops.get_ssm_params_by_path(subnet_search_path, aws_provider)]
     subnet_ids = [config['subnetId'] for config in subnet_configs]
     for subnet_id in subnet_ids:
@@ -37,6 +40,12 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
         
         for eni_id in eni_ids:
             _remove_mirroring_for_eni(cluster_name, vpc_id, subnet_id, eni_id, aws_provider)
+
+    # Make the VNI available to for re-use by another VPC.  Technically, the VNI's usage is tied to the ENI-specific
+    # AWS resources rather than the CDK-generated ones, so we perform this before our CDK operation in case it fails.
+    vpc_vni = ssm_ops.get_ssm_param_json_value(vpc_ssm_param, "mirrorVni", aws_provider)
+    vni_provider = SsmVniProvider(cluster_name, aws_provider)
+    vni_provider.relinquish_vni(int(vpc_vni))
 
     # Destroy the VPC-specific mirroring components in CloudFormation
     logger.info("Tearing down shared mirroring components via CDK...")
@@ -47,6 +56,8 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
 
     cdk_client = CdkClient()
     cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=add_vpc_context)
+
+
 
 
 def _remove_mirroring_for_eni(cluster_name: str, vpc_id: str, subnet_id: str, eni_id: str, aws_provider: AwsClientProvider):
