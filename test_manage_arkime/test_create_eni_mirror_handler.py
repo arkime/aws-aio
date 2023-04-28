@@ -3,7 +3,6 @@ import unittest.mock as mock
 
 from lambda_create_eni_mirror.create_eni_mirror_handler import CreateEniMirrorHandler
 import aws_interactions.ec2_interactions as ec2i
-import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
 import constants as constants
 
@@ -21,8 +20,8 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_THEN_sets_up_mirroring(mock_e
 
     # Run our test
     test_event = {
-        "detail-type": "CreateEniMirror",
-        "source": "arkime",
+        "detail-type": constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR,
+        "source": constants.EVENT_SOURCE,
         "detail": {
             "cluster_name": "cluster-1",
             "vpc_id": "vpc-1",
@@ -76,8 +75,8 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_AND_already_mirrored_THEN_abo
 
     # Run our test
     test_event = {
-        "detail-type": "CreateEniMirror",
-        "source": "arkime",
+        "detail-type": constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR,
+        "source": constants.EVENT_SOURCE,
         "detail": {
             "cluster_name": "cluster-1",
             "vpc_id": "vpc-1",
@@ -116,8 +115,8 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_AND_wrong_type_THEN_aborts(mo
 
     # Run our test
     test_event = {
-        "detail-type": "CreateEniMirror",
-        "source": "arkime",
+        "detail-type": constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR,
+        "source": constants.EVENT_SOURCE,
         "detail": {
             "cluster_name": "cluster-1",
             "vpc_id": "vpc-1",

@@ -198,6 +198,40 @@ export class VpcMirrorStack extends Stack {
         });
         createRule.node.addDependency(clusterBus);
 
+        // Create the Lambda that will tear down the traffic mirroring for ENIs in our VPC
+        const destroyLambda = new lambda.Function(this, 'DestroyEniMirrorLambda', {
+            functionName: `DestroyEniMirror-${props.vpcId}`,
+            runtime: lambda.Runtime.PYTHON_3_9,
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            handler: 'lambda_handlers.destroy_eni_mirror_handler',
+            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded            
+        });
+        destroyLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    // TODO: Should scope this down.
+                    // Just need ec2:DeleteTrafficMirroringSession, but failing similar to the Create Lambda
+                    'ec2:*',
+                ],
+                resources: [
+                    `arn:aws:ec2:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+        destroyLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'ssm:GetParameter',
+                    'ssm:DeleteParameter',
+                ],
+                resources: [
+                    `arn:aws:ssm:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+
         // Create a rule to funnel appropriate events to our teardwon lambda
         const destroyRule = new events.Rule(this, 'RuleDestroyEniMirror', {
             eventBus: clusterBus,
@@ -207,7 +241,8 @@ export class VpcMirrorStack extends Stack {
                 detail: {
                     'vpc_id': events.Match.exactString(props.vpcId)
                 }
-            }
+            },
+            targets: [new targets.LambdaFunction(destroyLambda)]
         });
         destroyRule.node.addDependency(clusterBus);
     }
