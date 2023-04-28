@@ -2,14 +2,14 @@ import json
 import shlex
 import unittest.mock as mock
 
-from manage_arkime.commands.remove_vpc import cmd_remove_vpc, _remove_mirroring_for_eni
-import manage_arkime.aws_interactions.ec2_interactions as ec2i
-from manage_arkime.aws_interactions.ssm_operations import ParamDoesNotExist
-import manage_arkime.constants as constants
+from commands.remove_vpc import cmd_remove_vpc, _remove_mirroring_for_eni
+import aws_interactions.ec2_interactions as ec2i
+from aws_interactions.ssm_operations import ParamDoesNotExist
+import constants as constants
 
 
-@mock.patch("manage_arkime.commands.remove_vpc.ssm_ops")
-@mock.patch("manage_arkime.commands.remove_vpc.ec2i")
+@mock.patch("commands.remove_vpc.ssm_ops")
+@mock.patch("commands.remove_vpc.ec2i")
 def test_WHEN_remove_mirroring_for_eni_called_THEN_removes_it(mock_ec2i, mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.get_ssm_param_json_value.return_value = "session-1"
@@ -33,8 +33,8 @@ def test_WHEN_remove_mirroring_for_eni_called_THEN_removes_it(mock_ec2i, mock_ss
     ]
     assert expected_delete_ssm_calls == mock_ssm_ops.delete_ssm_param.call_args_list
 
-@mock.patch("manage_arkime.commands.remove_vpc.ssm_ops")
-@mock.patch("manage_arkime.commands.remove_vpc.ec2i")
+@mock.patch("commands.remove_vpc.ssm_ops")
+@mock.patch("commands.remove_vpc.ec2i")
 def test_WHEN_remove_mirroring_for_eni_called_AND_session_doesnt_exist_THEN_handles_gracefully(mock_ec2i, mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.get_ssm_param_json_value.return_value = "session-1"
@@ -61,18 +61,18 @@ def test_WHEN_remove_mirroring_for_eni_called_AND_session_doesnt_exist_THEN_hand
     ]
     assert expected_delete_ssm_calls == mock_ssm_ops.delete_ssm_param.call_args_list
 
-@mock.patch("manage_arkime.commands.remove_vpc.AwsClientProvider", mock.Mock())
-@mock.patch("manage_arkime.commands.remove_vpc.SsmVniProvider")
-@mock.patch("manage_arkime.commands.remove_vpc._remove_mirroring_for_eni")
-@mock.patch("manage_arkime.commands.remove_vpc.ssm_ops")
-@mock.patch("manage_arkime.commands.remove_vpc.ec2i")
-@mock.patch("manage_arkime.commands.remove_vpc.CdkClient")
+@mock.patch("commands.remove_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("commands.remove_vpc.SsmVniProvider")
+@mock.patch("commands.remove_vpc._remove_mirroring_for_eni")
+@mock.patch("commands.remove_vpc.ssm_ops")
+@mock.patch("commands.remove_vpc.ec2i")
+@mock.patch("commands.remove_vpc.CdkClient")
 def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_remove, mock_vni_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider_cls.return_value = mock_vni_provider
 
-    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", 1337]
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", 1337]
     mock_ssm.get_ssm_params_by_path.return_value = [
         {"Name": "param-1", "Value": json.dumps({"subnetId": "subnet-1"})},
         {"Name": "param-2", "Value": json.dumps({"subnetId": "subnet-2"})},
@@ -96,6 +96,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_REMOVE_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+                    "arnEventBus": "bus-1",
                     "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
                     "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
                     "idVni": str(constants.VNI_DEFAULT),
@@ -118,12 +119,12 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
     expected_vni_calls = [mock.call(1337, "vpc-1")]
     assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
 
-@mock.patch("manage_arkime.commands.remove_vpc.AwsClientProvider", mock.Mock())
-@mock.patch("manage_arkime.commands.remove_vpc.SsmVniProvider")
-@mock.patch("manage_arkime.commands.remove_vpc._remove_mirroring_for_eni")
-@mock.patch("manage_arkime.commands.remove_vpc.ssm_ops")
-@mock.patch("manage_arkime.commands.remove_vpc.ec2i")
-@mock.patch("manage_arkime.commands.remove_vpc.CdkClient")
+@mock.patch("commands.remove_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("commands.remove_vpc.SsmVniProvider")
+@mock.patch("commands.remove_vpc._remove_mirroring_for_eni")
+@mock.patch("commands.remove_vpc.ssm_ops")
+@mock.patch("commands.remove_vpc.ec2i")
+@mock.patch("commands.remove_vpc.CdkClient")
 def test_WHEN_cmd_remove_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_remove, mock_vni_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()

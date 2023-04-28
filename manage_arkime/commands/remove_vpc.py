@@ -3,13 +3,13 @@ import logging
 
 from botocore.exceptions import ClientError
 
-from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
-import manage_arkime.aws_interactions.ec2_interactions as ec2i
-import manage_arkime.aws_interactions.ssm_operations as ssm_ops
-from manage_arkime.cdk_client import CdkClient
-import manage_arkime.constants as constants
-import manage_arkime.cdk_context as context
-from manage_arkime.vni_provider import SsmVniProvider
+from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.ec2_interactions as ec2i
+import aws_interactions.ssm_operations as ssm_ops
+from cdk_interactions.cdk_client import CdkClient
+import constants as constants
+import cdk_interactions.cdk_context as context
+from vni_provider import SsmVniProvider
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     # Confirm the Cluster exists before proceeding
     try:
         vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
+        event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
     except ssm_ops.ParamDoesNotExist:
         logger.error(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
         logger.warning("Aborting...")
@@ -52,7 +53,7 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     stacks_to_destroy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    add_vpc_context = context.generate_remove_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)
+    add_vpc_context = context.generate_remove_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn)
 
     cdk_client = CdkClient()
     cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=add_vpc_context)

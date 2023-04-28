@@ -1,13 +1,14 @@
 import json
 import logging
 
-from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
+from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ec2_interactions as ec2i
+import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
-from manage_arkime.cdk_client import CdkClient
-import manage_arkime.constants as constants
-import manage_arkime.cdk_context as context
-from manage_arkime.vni_provider import SsmVniProvider, VniAlreadyUsed, VniOutsideRange, VniPoolExhausted
+from cdk_interactions.cdk_client import CdkClient
+import constants as constants
+import cdk_interactions.cdk_context as context
+from vni_provider import SsmVniProvider, VniAlreadyUsed, VniOutsideRange, VniPoolExhausted
 
 logger = logging.getLogger(__name__)
 
@@ -63,13 +64,14 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
 
     # Get the VPCE Service ID we set up with our Capture VPC
     vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
+    event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
 
     # Deploy the resources we need in the user's VPC and Subnets
     logger.info("Deploying shared mirroring components via CDK...")
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, next_vni)
+    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn, next_vni)
 
     cdk_client = CdkClient()
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=add_vpc_context)
@@ -87,7 +89,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
     
     for subnet_id in subnet_ids:
-        _mirror_enis_in_subnet(cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)
+        _mirror_enis_in_subnet(event_bus_arn, cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)
 
     # Register the VNI as used.  The VNI's usage is tied to the ENI-specific configuration, so we perform this
     # after that is set up.
@@ -96,41 +98,18 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     else:
         vni_provider.use_next_vni(next_vni)
 
-def _mirror_enis_in_subnet(cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, vni: int, aws_provider: AwsClientProvider):
+def _mirror_enis_in_subnet(event_bus_arn: str, cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, vni: int, aws_provider: AwsClientProvider):
     enis = ec2i.get_enis_of_subnet(subnet_id, aws_provider)
 
     for eni in enis:
-        eni_param_name = constants.get_eni_ssm_param_name(cluster_name, vpc_id, subnet_id, eni.id)
+        # TODO: Instead of blindly emitting events for each ENI and letting our Lambda Handler figure out if it should
+        # actually create the mirroring configuration, we should pre-screen (hasn't already been mirrored; right eni
+        # type).
 
-        try:
-            ssm_ops.get_ssm_param_value(eni_param_name, aws_provider)
-            logger.info(f"Mirroring already configured for ENI {eni.id}")
-            continue
-        except ssm_ops.ParamDoesNotExist:
-            pass
+        logger.info(f"Initiating creation of mirroring session for ENI {eni.id}")
 
-        logger.info(f"Creating mirroring session for ENI {eni.id}")
-
-        subnet_param_name = constants.get_subnet_ssm_param_name(cluster_name, vpc_id, subnet_id)
-        traffic_target_id = ssm_ops.get_ssm_param_json_value(subnet_param_name, "mirrorTargetId", aws_provider)
-
-        try:
-            traffic_session_id = ec2i.mirror_eni(
-                eni,
-                traffic_target_id,
-                traffic_filter_id,
-                vpc_id,
-                aws_provider,
-                virtual_network=vni
-            )
-        except ec2i.NonMirrorableEniType as ex:
-            logger.info(f"Eni {eni.id} is of unsupported type {eni.type}; skipping")
-            continue
-
-        ssm_ops.put_ssm_param(
-            eni_param_name, 
-            json.dumps({"eniId": eni.id, "trafficSessionId": traffic_session_id}),
-            aws_provider,
-            description=f"Mirroring details for {eni.id}",
-            pattern=".*"
+        events.put_events(
+            [events.CreateEniMirrorEvent(cluster_name, vpc_id, subnet_id, eni.id, eni.type, traffic_filter_id, vni)],
+            event_bus_arn,
+            aws_provider
         )

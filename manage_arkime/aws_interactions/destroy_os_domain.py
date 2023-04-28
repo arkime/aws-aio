@@ -3,7 +3,7 @@ import time
 
 from botocore.exceptions import ClientError
 
-from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
+from aws_interactions.aws_client_provider import AwsClientProvider
 
 logger = logging.getLogger(__name__)
 

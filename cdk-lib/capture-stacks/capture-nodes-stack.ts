@@ -2,9 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
@@ -12,6 +15,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
 
+import * as constants from '../core/constants'
 import {ClusterSsmValue} from '../core/ssm-wrangling'
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
@@ -195,8 +199,43 @@ export class CaptureNodesStack extends cdk.Stack {
             allowedPrincipals: [`arn:aws:iam::${this.account}:root`],
         });
 
-        // This SSM parameter will enable us share the details of our Capture setup.
-        const clusterParamValue: ClusterSsmValue = {clusterName: props.clusterName, vpceServiceId: gwlbEndpointService.ref}
+        /**
+         * Set up shared resources for event-based management of mirroring.
+         */
+        const clusterBus = new events.EventBus(this, 'ClusterBus', {})
+
+        // Store a copy of the Arkime events that occur for later replay
+        clusterBus.archive('Archive', {
+            archiveName: `Arkime-${props.clusterName}`,
+            description: `Archive of Arkime events for Cluster ${props.clusterName}`,
+            eventPattern: {
+                source: [constants.EVENT_SOURCE],
+            },
+            retention: cdk.Duration.days(365), // Arbitrarily chosen
+        });
+
+        // Make a human-readable log of the Arkime events that occur on the bus
+        const clusterLogGroup = new logs.LogGroup(this, 'LogGroup', {
+            logGroupName: `Arkime-${props.clusterName}`,
+            removalPolicy: cdk.RemovalPolicy.DESTROY // The archive contains the real events
+        });
+        const logClusterEventsRule = new events.Rule(this, 'RuleLogClusterEvents', {
+            eventBus: clusterBus,
+            eventPattern: {
+                source: [constants.EVENT_SOURCE],
+            },
+            targets: [new targets.CloudWatchLogGroup(clusterLogGroup)]
+        });
+        
+        /**
+         * This SSM parameter will enable us share the details of our Capture setup.
+         */
+        const clusterParamValue: ClusterSsmValue = {
+            busArn: clusterBus.eventBusArn,
+            busName: clusterBus.eventBusName,
+            clusterName: props.clusterName, 
+            vpceServiceId: gwlbEndpointService.ref
+        }
         const clusterParam = new ssm.StringParameter(this, 'ClusterParam', {
             allowedPattern: '.*',
             description: 'The Cluster\'s details',
@@ -204,6 +243,7 @@ export class CaptureNodesStack extends cdk.Stack {
             stringValue: JSON.stringify(clusterParamValue),
             tier: ssm.ParameterTier.STANDARD,
         });
-        clusterParam.node.addDependency(gwlbEndpointService);        
+        clusterParam.node.addDependency(gwlbEndpointService);
+        clusterParam.node.addDependency(clusterBus);
     }
 }

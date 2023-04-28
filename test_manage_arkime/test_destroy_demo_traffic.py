@@ -1,9 +1,9 @@
 import unittest.mock as mock
 
-from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
-import manage_arkime.constants as constants
+from commands.destroy_demo_traffic import cmd_destroy_demo_traffic
+import constants as constants
 
-@mock.patch("manage_arkime.commands.destroy_demo_traffic.CdkClient")
+@mock.patch("commands.destroy_demo_traffic.CdkClient")
 def test_WHEN_cmd_destroy_demo_traffic_called_THEN_cdk_command_correct(mock_cdk_client_cls):
     # Set up our mock
     mock_client = mock.Mock()

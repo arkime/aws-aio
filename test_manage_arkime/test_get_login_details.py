@@ -1,11 +1,11 @@
 import unittest.mock as mock
 
-from manage_arkime.commands.get_login_details import cmd_get_login_details, LoginDetails, DEFAULT_UNKNOWN_VAL
-from manage_arkime.aws_interactions.ssm_operations import ParamDoesNotExist
-import manage_arkime.constants as constants
+from commands.get_login_details import cmd_get_login_details, LoginDetails, DEFAULT_UNKNOWN_VAL
+from aws_interactions.ssm_operations import ParamDoesNotExist
+import constants as constants
 
-@mock.patch("manage_arkime.commands.get_login_details.AwsClientProvider")
-@mock.patch("manage_arkime.commands.get_login_details.ssm_ops")
+@mock.patch("commands.get_login_details.AwsClientProvider")
+@mock.patch("commands.get_login_details.ssm_ops")
 def test_WHEN_cmd_get_login_details_called_THEN_retrieves_them(mock_ssm_ops, mock_provider_cls):
     # Set up our mock
     mock_secrets_client = mock.Mock()
@@ -28,8 +28,8 @@ def test_WHEN_cmd_get_login_details_called_THEN_retrieves_them(mock_ssm_ops, moc
     expected_result = LoginDetails(password="password", username="username", url="url")
     assert expected_result == result
 
-@mock.patch("manage_arkime.commands.get_login_details.AwsClientProvider")
-@mock.patch("manage_arkime.commands.get_login_details.ssm_ops")
+@mock.patch("commands.get_login_details.AwsClientProvider")
+@mock.patch("commands.get_login_details.ssm_ops")
 def test_WHEN_cmd_get_login_details_called_AND_cant_retrieve_THEN_handles_gracefully(mock_ssm_ops, mock_provider_cls):
     # Set up our mock
     mock_secrets_client = mock.Mock()

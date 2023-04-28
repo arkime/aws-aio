@@ -1,7 +1,7 @@
 import pytest
 import unittest.mock as mock
 
-import manage_arkime.cdk_exceptions as exceptions
+import cdk_interactions.cdk_exceptions as exceptions
 
 
 def test_WHEN_expired_credentials_THEN_raises():

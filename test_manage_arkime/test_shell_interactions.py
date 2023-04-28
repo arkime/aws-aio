@@ -1,7 +1,7 @@
 import pytest
 import unittest.mock as mock
 
-import manage_arkime.shell_interactions as shell
+import shell_interactions as shell
 
 
 class EndTestExpectedException(Exception):
@@ -30,7 +30,7 @@ class MockPexpectProcess(mock.Mock):
         return return_value
 
 
-@mock.patch('manage_arkime.shell_interactions.pexpect')
+@mock.patch('shell_interactions.pexpect')
 def test_WHEN_call_shell_command_called_THEN_process_spawned_as_expected(mock_pexpect):
     # Set up our mock
     mock_pexpect.spawn.side_effect = EndTestExpectedException()
@@ -44,7 +44,7 @@ def test_WHEN_call_shell_command_called_THEN_process_spawned_as_expected(mock_pe
     assert expected_calls == mock_pexpect.spawn.call_args_list
 
 
-@mock.patch('manage_arkime.shell_interactions.pexpect')
+@mock.patch('shell_interactions.pexpect')
 def test_WHEN_call_shell_command_called_AND_cwd_provided_AND_env_provided_THEN_process_spawned_as_expected(
         mock_pexpect):
     # Set up our mock
@@ -59,7 +59,7 @@ def test_WHEN_call_shell_command_called_AND_cwd_provided_AND_env_provided_THEN_p
     assert expected_calls == mock_pexpect.spawn.call_args_list
 
 
-@mock.patch('manage_arkime.shell_interactions.pexpect')
+@mock.patch('shell_interactions.pexpect')
 def test_WHEN_call_shell_command_called_AND_I_want_100_percent_coverage_THEN_I_do_this(mock_pexpect):
     # Set up our mock
     mock_pexpect.spawn.side_effect = EndTestExpectedException()
@@ -73,7 +73,7 @@ def test_WHEN_call_shell_command_called_AND_I_want_100_percent_coverage_THEN_I_d
     assert expected_calls == mock_pexpect.spawn.call_args_list
 
 
-@mock.patch('manage_arkime.shell_interactions.pexpect')
+@mock.patch('shell_interactions.pexpect')
 def test_WHEN_call_shell_command_called_THEN_returns_expected_values(mock_pexpect):
     # Set up our mock
     mock_process = MockPexpectProcess(before_values=[b'Feanor\n', b'Fingolfin\n', b'Finarfin'], expect_values=[0, 0, 1])
@@ -91,7 +91,7 @@ def test_WHEN_call_shell_command_called_THEN_returns_expected_values(mock_pexpec
     assert mock_process.close.called
 
 
-@mock.patch('manage_arkime.shell_interactions.pexpect')
+@mock.patch('shell_interactions.pexpect')
 def test_WHEN_call_shell_command_called_AND_special_logger_THEN_uses_it(mock_pexpect):
     # Set up our mock
     mock_process = MockPexpectProcess(before_values=[b'Feanor\n', b'Fingolfin\n', b'Finarfin'], expect_values=[0, 0, 1])
@@ -113,7 +113,7 @@ def test_WHEN_call_shell_command_called_AND_special_logger_THEN_uses_it(mock_pex
     assert expected_logger_call_args == mock_logger.call_args_list
 
 
-@mock.patch('manage_arkime.shell_interactions.pexpect')
+@mock.patch('shell_interactions.pexpect')
 def test_WHEN_call_shell_command_called_AND_request_response_pairs_provided_THEN_returns_expected_values_AND_sends_values(  # noqa E501
         mock_pexpect):
     # Test values

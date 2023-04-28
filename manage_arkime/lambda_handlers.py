@@ -1,0 +1,3 @@
+from lambda_create_eni_mirror.create_eni_mirror_handler import CreateEniMirrorHandler
+
+create_eni_mirror_handler = CreateEniMirrorHandler().handler

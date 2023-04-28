@@ -2,10 +2,10 @@ import json
 import shlex
 import unittest.mock as mock
 
-from manage_arkime.commands.create_cluster import cmd_create_cluster
-import manage_arkime.constants as constants
+from commands.create_cluster import cmd_create_cluster
+import constants as constants
 
-@mock.patch("manage_arkime.commands.create_cluster.CdkClient")
+@mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls):
     # Set up our mock
     mock_client = mock.Mock()

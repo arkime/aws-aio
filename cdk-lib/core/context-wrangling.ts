@@ -110,6 +110,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
             const rawMirrorMgmtParamsObj: prms.MirrorMgmtParamsRaw = JSON.parse(args.cmdParamsRaw)
             const mirrorMgmtParams: prms.MirrorMgmtParams = {
                 type: 'MirrorMgmtParams',
+                arnEventBus: rawMirrorMgmtParamsObj.arnEventBus,
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
                 nameVpcMirrorStack: rawMirrorMgmtParamsObj.nameVpcMirrorStack,

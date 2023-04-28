@@ -1,8 +1,8 @@
 import unittest.mock as mock
 
-import manage_arkime.cdk_environment as cdk_env
+import cdk_interactions.cdk_environment as cdk_env
 
-@mock.patch('manage_arkime.cdk_environment.AwsClientProvider')
+@mock.patch('cdk_interactions.cdk_environment.AwsClientProvider')
 def test_WHEN_get_cdk_env_called_AND_no_args_THEN_gens_correctly(mock_provider_cls):
     # Set up our mock
     mock_meta = mock.Mock()
@@ -26,7 +26,7 @@ def test_WHEN_get_cdk_env_called_AND_no_args_THEN_gens_correctly(mock_provider_c
     assert "XXXXXXXXXXXX" == result.aws_account
     assert "my-region-1" == result.aws_region
 
-@mock.patch('manage_arkime.cdk_environment.AwsClientProvider')
+@mock.patch('cdk_interactions.cdk_environment.AwsClientProvider')
 def test_WHEN_get_cdk_env_called_AND_region_supplied_THEN_gens_correctly(mock_provider_cls):
     # Set up our mock
     mock_sts_client = mock.Mock()
@@ -47,7 +47,7 @@ def test_WHEN_get_cdk_env_called_AND_region_supplied_THEN_gens_correctly(mock_pr
     assert "XXXXXXXXXXXX" == result.aws_account
     assert "my-region-1" == result.aws_region
 
-@mock.patch('manage_arkime.cdk_environment.AwsClientProvider')
+@mock.patch('cdk_interactions.cdk_environment.AwsClientProvider')
 def test_WHEN_get_cdk_env_called_AND_profile_supplied_THEN_gens_correctly(mock_provider_cls):
     # Set up our mock
     mock_meta = mock.Mock()
