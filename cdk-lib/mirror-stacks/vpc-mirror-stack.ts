@@ -234,12 +234,22 @@ export class VpcMirrorStack extends Stack {
             new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
                 actions: [
-                    'cloudwatch:PutMetricData',
                     'ssm:GetParameter',
                     'ssm:DeleteParameter',
                 ],
                 resources: [
                     `arn:aws:ssm:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+        destroyLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'cloudwatch:PutMetricData',
+                ],
+                resources: [
+                    "*"
                 ]
             })
         );

@@ -202,7 +202,7 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_AND_wrong_type_THEN_aborts(mo
 @mock.patch("lambda_create_eni_mirror.create_eni_mirror_handler.cwi")
 @mock.patch("lambda_create_eni_mirror.create_eni_mirror_handler.ssm_ops")
 @mock.patch("lambda_create_eni_mirror.create_eni_mirror_handler.ec2i")
-def test_WHEN_CreateEniMirrorHandler_handle_called_AND_unhandled_ex_THEN_aborts(mock_ec2i, mock_ssm_ops, mock_cwi):
+def test_WHEN_CreateEniMirrorHandler_handle_called_AND_unhandled_ex_THEN_handles_gracefully(mock_ec2i, mock_ssm_ops, mock_cwi):
     # Set up our mock
     mock_cwi.CreateEniMirrorEventMetrics = cwi.CreateEniMirrorEventMetrics
     mock_cwi.CreateEniMirrorEventOutcome = cwi.CreateEniMirrorEventOutcome

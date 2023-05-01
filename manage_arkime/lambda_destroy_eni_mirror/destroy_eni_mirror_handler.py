@@ -3,6 +3,7 @@ import logging
 from typing import Dict
 
 from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.cloudwatch_interactions as cwi
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
@@ -45,10 +46,27 @@ class DestroyEniMirrorHandler:
             self.logger.info(f"Deleting SSM parameter for ENI {destroy_event.eni_id}: {eni_param}")
             ssm_ops.delete_ssm_param(eni_param, aws_provider)
 
+            cwi.put_event_metrics(
+                cwi.DestroyEniMirrorEventMetrics(
+                    destroy_event.cluster_name, 
+                    destroy_event.vpc_id,
+                    cwi.DestroyEniMirrorEventOutcome.SUCCESS
+                ),
+                aws_provider
+            )
             return {"statusCode": 200}
 
         except Exception as ex:
             # This should only handle completely unexpected exceptions, not "expected" failures (which should 
             # be handled and return a 200)
             self.logger.error(ex, exc_info=True)
+
+            cwi.put_event_metrics(
+                cwi.DestroyEniMirrorEventMetrics(
+                    destroy_event.cluster_name, 
+                    destroy_event.vpc_id,
+                    cwi.DestroyEniMirrorEventOutcome.FAILURE
+                ),
+                aws_provider
+            )
             return {"statusCode": 500}

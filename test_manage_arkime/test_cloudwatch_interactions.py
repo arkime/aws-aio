@@ -197,6 +197,66 @@ def test_WHEN_CreateEniMirrorEventMetrics_created_AND_failure_THEN_correct_metri
     ]
     assert expected_metric_data == actual_value.metric_data
 
+def test_WHEN_DestroyEniMirrorEventMetrics_created_AND_success_THEN_correct_metrics():
+    # Run our test
+    actual_value = cwi.DestroyEniMirrorEventMetrics("cluster-1", "vpc-1", cwi.DestroyEniMirrorEventOutcome.SUCCESS)
+
+    # Check our results
+    expected_namespace = cwi.CW_ARKIME_EVENT_NAMESPACE
+    assert expected_namespace == actual_value.namespace
+
+    expected_metric_data = [
+        {
+            "MetricName": cwi.DestroyEniMirrorEventOutcome.SUCCESS.value,
+            "Value": 1,
+            "Dimensions": [
+                {"Name": "ClusterName", "Value": "cluster-1"},
+                {"Name": "VpcId", "Value": "vpc-1"},
+                {"Name": "EventType", "Value": constants.EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR},
+            ]
+        },
+        {
+            "MetricName": cwi.DestroyEniMirrorEventOutcome.FAILURE.value,
+            "Value": 0,
+            "Dimensions": [
+                {"Name": "ClusterName", "Value": "cluster-1"},
+                {"Name": "VpcId", "Value": "vpc-1"},
+                {"Name": "EventType", "Value": constants.EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR},
+            ]
+        },
+    ]
+    assert expected_metric_data == actual_value.metric_data
+
+def test_WHEN_DestroyEniMirrorEventMetrics_created_AND_failure_THEN_correct_metrics():
+    # Run our test
+    actual_value = cwi.DestroyEniMirrorEventMetrics("cluster-1", "vpc-1", cwi.DestroyEniMirrorEventOutcome.FAILURE)
+
+    # Check our results
+    expected_namespace = cwi.CW_ARKIME_EVENT_NAMESPACE
+    assert expected_namespace == actual_value.namespace
+
+    expected_metric_data = [
+        {
+            "MetricName": cwi.DestroyEniMirrorEventOutcome.SUCCESS.value,
+            "Value": 0,
+            "Dimensions": [
+                {"Name": "ClusterName", "Value": "cluster-1"},
+                {"Name": "VpcId", "Value": "vpc-1"},
+                {"Name": "EventType", "Value": constants.EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR},
+            ]
+        },
+        {
+            "MetricName": cwi.DestroyEniMirrorEventOutcome.FAILURE.value,
+            "Value": 1,
+            "Dimensions": [
+                {"Name": "ClusterName", "Value": "cluster-1"},
+                {"Name": "VpcId", "Value": "vpc-1"},
+                {"Name": "EventType", "Value": constants.EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR},
+            ]
+        },
+    ]
+    assert expected_metric_data == actual_value.metric_data
+
 
 def test_WHEN_put_event_metrics_called_THEN_metrics_are_put():
     # Set up our mock
