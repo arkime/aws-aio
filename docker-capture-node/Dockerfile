@@ -15,8 +15,13 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 # Install/configure Arkime.  WARNING - this uses the development tip and therefore version floats
 RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu20_amd64.deb && \
     apt-get install -y ./arkime.deb && \
-    rm -rf ./arkime.deb 
+    rm -rf ./arkime.deb
+
+# Download the rir & oui files
+RUN /opt/arkime/bin/arkime_update_geo.sh
+
 COPY ./arkime_config.ini /opt/arkime/etc/config.ini
+COPY ./default.rules /opt/arkime/etc/default.rules
 
 COPY ./run_capture_node.sh /run_capture_node.sh
 CMD ["/run_capture_node.sh"]
