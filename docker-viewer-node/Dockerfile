@@ -15,7 +15,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 # Install/configure Arkime.  WARNING - this uses the development tip and therefore version floats
 RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu20_amd64.deb && \
     apt-get install -y ./arkime.deb && \
-    rm -rf ./arkime.deb 
+    rm -rf ./arkime.deb
 COPY ./arkime_config.ini /opt/arkime/etc/config.ini
 
 COPY ./run_viewer_node.sh /run_viewer_node.sh
