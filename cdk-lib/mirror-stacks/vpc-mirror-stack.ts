@@ -183,6 +183,17 @@ export class VpcMirrorStack extends Stack {
                 ]
             })
         );
+        createLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'cloudwatch:PutMetricData',
+                ],
+                resources: [
+                    "*"
+                ]
+            })
+        );
 
         // Create a rule to funnel appropriate events to our setup lambda
         const createRule = new events.Rule(this, 'RuleCreateEniMirror', {
@@ -223,6 +234,7 @@ export class VpcMirrorStack extends Stack {
             new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
                 actions: [
+                    'cloudwatch:PutMetricData',
                     'ssm:GetParameter',
                     'ssm:DeleteParameter',
                 ],

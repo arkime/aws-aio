@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Dict
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ec2_interactions as ec2i
@@ -16,7 +17,7 @@ class DestroyEniMirrorHandler:
         console_handler = logging.StreamHandler()
         self.logger.addHandler(console_handler)
 
-    def handler(self, event, context):
+    def handler(self, event: Dict[str, any], context):
         # Log the triggering event; first thing every Lambda should do
         self.logger.info("Event:")
         self.logger.info(json.dumps(event, indent=2))
@@ -47,14 +48,7 @@ class DestroyEniMirrorHandler:
             return {"statusCode": 200}
 
         except Exception as ex:
-            # This should only handle completely unexpected exceptions, not "expected" failures
-            self.logger.error(str(ex))
+            # This should only handle completely unexpected exceptions, not "expected" failures (which should 
+            # be handled and return a 200)
+            self.logger.error(ex, exc_info=True)
             return {"statusCode": 500}
-
-        
-
-            
-
-
-
-        

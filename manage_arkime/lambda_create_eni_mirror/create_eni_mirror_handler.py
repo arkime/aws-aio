@@ -1,7 +1,9 @@
 import json
 import logging
+from typing import Dict
 
 from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.cloudwatch_interactions as cwi
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
@@ -16,7 +18,7 @@ class CreateEniMirrorHandler:
         console_handler = logging.StreamHandler()
         self.logger.addHandler(console_handler)
 
-    def handler(self, event, context):
+    def handler(self, event: Dict[str, any], context):
         # Log the triggering event; first thing every Lambda should do
         self.logger.info("Event:")
         self.logger.info(json.dumps(event, indent=2))
@@ -34,12 +36,20 @@ class CreateEniMirrorHandler:
                 create_event.eni_id
             )
 
-            aws_provider = AwsClientProvider(aws_profile=None)
+            aws_provider = AwsClientProvider(aws_compute=True)
 
             # If the SSM parameter exists for this ENI, we assume the Mirroring Session already exists
             try:
                 ssm_ops.get_ssm_param_value(eni_param_name, aws_provider)
                 self.logger.info(f"Mirroring already configured for ENI {create_event.eni_id}; aborting...")
+                cwi.put_event_metrics(
+                    cwi.CreateEniMirrorEventMetrics(
+                        create_event.cluster_name, 
+                        create_event.vpc_id,
+                        cwi.CreateEniMirrorEventOutcome.ABORTED_EXISTS
+                    ),
+                    aws_provider
+                )
                 return {"statusCode": 200}
             except ssm_ops.ParamDoesNotExist:
                 self.logger.info(f"Confirmed SSM Param does not exist for ENI {create_event.eni_id}")
@@ -61,6 +71,14 @@ class CreateEniMirrorHandler:
                 )
             except ec2i.NonMirrorableEniType as ex:
                 self.logger.warning(f"Eni {eni.id} is of unsupported type {eni.type}; aborting...")
+                cwi.put_event_metrics(
+                    cwi.CreateEniMirrorEventMetrics(
+                        create_event.cluster_name, 
+                        create_event.vpc_id,
+                        cwi.CreateEniMirrorEventOutcome.ABORTED_ENI_TYPE
+                    ),
+                    aws_provider
+                )
                 return {"statusCode": 200}
 
             self.logger.info(f"Creating SSM Parameter: {eni_param_name}")
@@ -72,17 +90,28 @@ class CreateEniMirrorHandler:
                 pattern=".*"
             )
 
+            cwi.put_event_metrics(
+                cwi.CreateEniMirrorEventMetrics(
+                    create_event.cluster_name, 
+                    create_event.vpc_id,
+                    cwi.CreateEniMirrorEventOutcome.SUCCESS
+                ),
+                aws_provider
+            )
             return {"statusCode": 200}
 
         except Exception as ex:
-            # This should only handle completely unexpected exceptions, not "expected" failures
-            self.logger.error(str(ex))
+            # This should only handle completely unexpected exceptions, not "expected failures" (which should 
+            # be handled and return a 200)
+            self.logger.error(ex, exc_info=True)
+
+            cwi.put_event_metrics(
+                cwi.CreateEniMirrorEventMetrics(
+                    create_event.cluster_name, 
+                    create_event.vpc_id,
+                    cwi.CreateEniMirrorEventOutcome.FAILURE
+                ),
+                aws_provider
+            )
             return {"statusCode": 500}
 
-        
-
-            
-
-
-
-        
