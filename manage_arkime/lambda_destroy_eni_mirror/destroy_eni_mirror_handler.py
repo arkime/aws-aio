@@ -21,7 +21,7 @@ class DestroyEniMirrorHandler:
     def handler(self, event: Dict[str, any], context):
         # Log the triggering event; first thing every Lambda should do
         self.logger.info("Event:")
-        self.logger.info(json.dumps(event, indent=2))
+        self.logger.info(json.dumps(event))
 
         # Ensure our Lambda will always return a status code
         try:

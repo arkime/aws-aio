@@ -51,6 +51,7 @@ def generate_remove_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str,
 def _generate_mirroring_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str, vni: int) -> Dict[str, str]:
     cmd_params = {
         "arnEventBus": bus_arn,
+        "nameCluster": cluster_name,
         "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id),
         "nameVpcSsmParam": constants.get_vpc_ssm_param_name(cluster_name, vpc_id),
         "idVni": str(vni),

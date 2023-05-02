@@ -1,12 +1,13 @@
 import assert = require('assert');
 
 import { Construct } from 'constructs';
-import { Duration, Stack, StackProps } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 
@@ -14,6 +15,7 @@ import {SubnetSsmValue, VpcSsmValue} from '../core/ssm-wrangling'
 import * as constants from '../core/constants'
 
 export interface VpcMirrorStackProps extends StackProps {
+    readonly clusterName: string;
     readonly eventBusArn: string;
     readonly subnetIds: string[];
     readonly subnetSsmParamNames: string[];
@@ -125,6 +127,68 @@ export class VpcMirrorStack extends Stack {
             tier: ssm.ParameterTier.STANDARD,
         });
         vpcParam.node.addDependency(filter);
+
+
+
+        /**
+         * Configure the resources to listen for raw AWS Service events in the User VPC Account/Region and convert
+         * those events into something more actionable for our system
+         */
+
+        // Create the Lambda that listen for AWS Service events on the default bus and transform them into events we
+        // can action
+        const listenerLambda = new lambda.Function(this, 'AwsEventListenerLambda', {
+            functionName: `AwsEventListener-${props.vpcId}`,
+            runtime: lambda.Runtime.PYTHON_3_9,
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            handler: 'lambda_handlers.aws_event_listener_handler',
+            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded,
+            environment: {
+                EVENT_BUS_ARN: props.eventBusArn,
+                CLUSTER_NAME: props.clusterName,
+                VPC_ID: props.vpcId,
+                TRAFFIC_FILTER_ID: filter.ref,
+                MIRROR_VNI: props.mirrorVni,
+            }
+        });
+        listenerLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'events:PutEvents'
+                ],
+                resources: [
+                    `${props.eventBusArn}`
+                ]
+            })
+        );
+
+        // Make a human-readable log of the raw AWS Service events we're proccessing
+        const vpcLogGroup = new logs.LogGroup(this, 'LogGroup', {
+            logGroupName: `ArkimeInputEvents-${props.vpcId}`,
+            removalPolicy: RemovalPolicy.DESTROY // This is intended for debugging
+        });
+        const fargateEventsRule = new events.Rule(this, 'RuleFargateEvents', {
+            eventBus: undefined, // We want to listen to the Account/Region's default bus
+            eventPattern: {
+                source: ["aws.ecs"],
+                detailType: ["ECS Task State Change"],
+                detail: {
+                    attachments: {
+                        details: {
+                            name: ["subnetId"],
+                            value: props.subnetIds // Only care about subnets in *this* User VPC
+                        }
+                    },
+                    launchType: ["FARGATE"],
+                    lastStatus: ["RUNNING", "STOPPED"]
+                }
+            },
+            targets: [
+                new targets.CloudWatchLogGroup(vpcLogGroup),
+                new targets.LambdaFunction(listenerLambda)
+            ]
+        });
 
         /**
          * Configure the resources required for event-based mirroring configuration

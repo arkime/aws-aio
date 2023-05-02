@@ -30,6 +30,7 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
 export interface MirrorMgmtParamsRaw extends CommandParamsRaw {
     type: 'MirrorMgmtParamsRaw';
     arnEventBus: string;
+    nameCluster: string;
     nameVpcMirrorStack: string;
     nameVpcSsmParam: string;
     idVni: string;
@@ -90,6 +91,7 @@ export interface ClusterMgmtParams extends CommandParams {
 export interface MirrorMgmtParams extends CommandParams {
     type: 'MirrorMgmtParams';
     arnEventBus: string;
+    nameCluster: string;
     nameVpcMirrorStack: string;
     nameVpcSsmParam: string;
     idVni: string;
