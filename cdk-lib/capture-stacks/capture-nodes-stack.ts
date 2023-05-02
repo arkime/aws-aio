@@ -57,7 +57,7 @@ export class CaptureNodesStack extends cdk.Stack {
             healthCheckProtocol: 'TCP',
             healthCheckPort: healthCheckPort.toString(),
         });
-        
+
         const gwlbListener = new elbv2.CfnListener(this, 'GWLBListener', {
             loadBalancerArn: gwlb.ref,
             defaultActions: [
@@ -69,7 +69,7 @@ export class CaptureNodesStack extends cdk.Stack {
         });
         gwlbListener.node.addDependency(gwlb);
         gwlbListener.node.addDependency(gwlbTargetGroup);
-        
+
         /**
          * Define our ECS Cluster and its associated resources
          */
@@ -84,7 +84,7 @@ export class CaptureNodesStack extends cdk.Stack {
             minCapacity: 1,
             maxCapacity: 10 // Arbitrarily chosen
         });
-        
+
         const asgSecurityGroup = new ec2.SecurityGroup(this, 'ASGSecurityGroup', {
             vpc: props.captureVpc,
             description: 'Control traffic to the Capture Nodes',
@@ -109,12 +109,12 @@ export class CaptureNodesStack extends cdk.Stack {
         const ksmEncryptionKey = new kms.Key(this, 'ECSClusterKey', {
             enableKeyRotation: true,
         });
-        
+
         const cluster = new ecs.Cluster(this, 'Cluster', {
             vpc: props.captureVpc,
             executeCommandConfiguration: { kmsKey: ksmEncryptionKey }
         });
-        
+
         const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
             autoScalingGroup,
         });
@@ -125,9 +125,9 @@ export class CaptureNodesStack extends cdk.Stack {
             // instances at their host-level IP/PORT.  To enable our ECS Container to receive traffic from the LB (and
             // respond to its health checks), we need to directly map the instance's ports to our containers.  That
             // means we can use either the HOST or BRIDGE modes here, but not VPC (as far as I know).
-            // 
+            //
             // See: https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/networking-networkmode.html
-            networkMode: ecs.NetworkMode.HOST,
+            networkMode: ecs.NetworkMode.BRIDGE,
         });
         taskDefinition.addToTaskRolePolicy(
             new iam.PolicyStatement({
@@ -139,7 +139,15 @@ export class CaptureNodesStack extends cdk.Stack {
         props.osPassword.grantRead(taskDefinition.taskRole);
         props.captureBucket.grantReadWrite(taskDefinition.taskRole);
         props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);
-        
+
+        // Enable NET_ADMIN capability so we use ip commands and /dev/net items work
+        const kernelCapabilitiesProperty: ecs.CfnTaskDefinition.KernelCapabilitiesProperty = {
+            add: ['NET_ADMIN'],
+        };
+
+        const linuxParameters = new ecs.LinuxParameters(this, 'LinuxParameters');
+        linuxParameters.addCapabilities(ecs.Capability.NET_ADMIN);
+
         const container = taskDefinition.addContainer('CaptureContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-capture-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'CaptureNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
@@ -162,8 +170,9 @@ export class CaptureNodesStack extends cdk.Stack {
                 { containerPort: 6081, hostPort: 6081, protocol: ecs.Protocol.UDP},
                 { containerPort: healthCheckPort, hostPort: healthCheckPort, protocol: ecs.Protocol.TCP},
             ],
+            linuxParameters: linuxParameters,
         });
-        
+
         const service = new ecs.Ec2Service(this, 'Service', {
             cluster,
             taskDefinition,
@@ -171,7 +180,7 @@ export class CaptureNodesStack extends cdk.Stack {
             minHealthyPercent: 0, // TODO: Speeds up test deployments but need to change to something safer
             enableExecuteCommand: true
         });
-        
+
         // TODO: Fix autoscaling.  We need our ECS Tasks to scale together with our EC2 fleet since we are only placing
         // a single container on each instance due to using the HOST network mode.
         // See: https://stackoverflow.com/questions/72839842/aws-ecs-auto-scaling-an-ec2-auto-scaling-group-with-single-container-hosts

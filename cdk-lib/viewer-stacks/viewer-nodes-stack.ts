@@ -93,7 +93,7 @@ export class ViewerNodesStack extends cdk.Stack {
             enableExecuteCommand: true
         });        
 
-        const scaling = service.autoScaleTaskCount({ maxCapacity: 10, minCapacity: 4 });
+        const scaling = service.autoScaleTaskCount({ maxCapacity: 4, minCapacity: 2 });
         scaling.scaleOnCpuUtilization('CpuScaling', {
             targetUtilizationPercent: 60,
         });
