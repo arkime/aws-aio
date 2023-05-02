@@ -2,10 +2,10 @@ import logging
 import re
 from typing import Dict, List
 
-import manage_arkime.shell_interactions as shell
-from manage_arkime.cdk_environment import get_cdk_env
-import manage_arkime.cdk_exceptions as exceptions
-import manage_arkime.constants as constants
+import shell_interactions as shell
+from cdk_interactions.cdk_environment import get_cdk_env
+import cdk_interactions.cdk_exceptions as exceptions
+import constants as constants
 
 logger = logging.getLogger(__name__)
 

@@ -3,16 +3,16 @@ import logging
 
 import click
 
-from manage_arkime.commands.add_vpc import cmd_add_vpc
-from manage_arkime.commands.create_cluster import cmd_create_cluster
-from manage_arkime.commands.destroy_cluster import cmd_destroy_cluster
-from manage_arkime.commands.deploy_demo_traffic import cmd_deploy_demo_traffic
-from manage_arkime.commands.destroy_demo_traffic import cmd_destroy_demo_traffic
-from manage_arkime.commands.get_login_details import cmd_get_login_details
-from manage_arkime.commands.list_clusters import cmd_list_clusters
-from manage_arkime.commands.remove_vpc import cmd_remove_vpc
-import manage_arkime.constants as constants
-from manage_arkime.logging_wrangler import LoggingWrangler
+from commands.add_vpc import cmd_add_vpc
+from commands.create_cluster import cmd_create_cluster
+from commands.destroy_cluster import cmd_destroy_cluster
+from commands.deploy_demo_traffic import cmd_deploy_demo_traffic
+from commands.destroy_demo_traffic import cmd_destroy_demo_traffic
+from commands.get_login_details import cmd_get_login_details
+from commands.list_clusters import cmd_list_clusters
+from commands.remove_vpc import cmd_remove_vpc
+import constants as constants
+from logging_wrangler import LoggingWrangler, set_boto_log_level
 
 logger = logging.getLogger(__name__)
 
@@ -127,4 +127,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    with set_boto_log_level("WARNING"): # Prevent overwhelming boto spam in our debug log
+        main()

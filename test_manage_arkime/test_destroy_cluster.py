@@ -2,15 +2,15 @@ import json
 import shlex
 import unittest.mock as mock
 
-from manage_arkime.commands.destroy_cluster import cmd_destroy_cluster
-import manage_arkime.constants as constants
+from commands.destroy_cluster import cmd_destroy_cluster
+import constants as constants
 
 TEST_CLUSTER = "my-cluster"
 
-@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_names_by_path")
-@mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
-@mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
+@mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
+@mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
+@mock.patch("commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain, mock_ssm_get):
     # Set up our mock
     mock_ssm_get.return_value = []
@@ -54,12 +54,12 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
     ]
     assert expected_calls == mock_client.destroy.call_args_list
 
-@mock.patch("manage_arkime.commands.destroy_cluster.AwsClientProvider", mock.Mock())
-@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_names_by_path")
-@mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
-@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_param_value")
-@mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
+@mock.patch("commands.destroy_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
+@mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
+@mock.patch("commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("commands.destroy_cluster.get_ssm_param_value")
+@mock.patch("commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket, mock_destroy_domain, mock_ssm_names):
     # Set up our mock
     mock_ssm_names.return_value = []
@@ -125,10 +125,10 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
     ]
     assert expected_cdk_calls == mock_client.destroy.call_args_list
 
-@mock.patch("manage_arkime.commands.destroy_cluster.get_ssm_names_by_path")
-@mock.patch("manage_arkime.commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("manage_arkime.commands.destroy_cluster.destroy_s3_bucket")
-@mock.patch("manage_arkime.commands.destroy_cluster.CdkClient")
+@mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
+@mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
+@mock.patch("commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_existing_captures_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain, mock_ssm_names):
     # Set up our mock
     mock_ssm_names.return_value = ["vpc-1", "vpc-2"]

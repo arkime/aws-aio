@@ -29,6 +29,11 @@ CMD_REMOVE_VPC = "RemoveVpc"
 NAME_DEMO_STACK_1: str = "DemoTrafficGen01"
 NAME_DEMO_STACK_2: str = "DemoTrafficGen02"
 
+# The names of EventBridge items and fields
+EVENT_SOURCE = "arkime"
+EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR = "CreateEniMirror"
+EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR = "DestroyEniMirror"
+
 # =================================================================================================
 # These names cross the boundary between the Python and CDK sides of the solution, but are not hardcoded on the
 # CDK side as well.  They are defined on the Python side because we need to know in-Python the names of the CDK stacks

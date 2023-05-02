@@ -1,0 +1,5 @@
+from lambda_create_eni_mirror.create_eni_mirror_handler import CreateEniMirrorHandler
+from lambda_destroy_eni_mirror.destroy_eni_mirror_handler import DestroyEniMirrorHandler
+
+create_eni_mirror_handler = CreateEniMirrorHandler().handler
+destroy_eni_mirror_handler = DestroyEniMirrorHandler().handler

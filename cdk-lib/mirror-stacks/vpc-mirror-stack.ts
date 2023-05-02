@@ -1,13 +1,20 @@
 import assert = require('assert');
 
 import { Construct } from 'constructs';
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as path from 'path'
 
 import {SubnetSsmValue, VpcSsmValue} from '../core/ssm-wrangling'
+import * as constants from '../core/constants'
 
 export interface VpcMirrorStackProps extends StackProps {
+    readonly eventBusArn: string;
     readonly subnetIds: string[];
     readonly subnetSsmParamNames: string[];
     readonly vpcId: string;
@@ -68,7 +75,7 @@ export class VpcMirrorStack extends Stack {
         // See: https://docs.aws.amazon.com/vpc/latest/mirroring/tm-example-non-vpc.html
         const filter = new ec2.CfnTrafficMirrorFilter(this, `Filter`, {
             description: 'Mirror non-local VPC traffic',
-            tags: [{key: "Name", value: props.vpcId}]
+            tags: [{key: 'Name', value: props.vpcId}]
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalOutbound`, {
             destinationCidrBlock: '10.0.0.0/16', // TODO: Need to figure this out instead of hardcode
@@ -118,5 +125,147 @@ export class VpcMirrorStack extends Stack {
             tier: ssm.ParameterTier.STANDARD,
         });
         vpcParam.node.addDependency(filter);
+
+        /**
+         * Configure the resources required for event-based mirroring configuration
+         */
+        // Get a handle to the cluster event bus
+        const clusterBus = events.EventBus.fromEventBusArn(this, 'ClusterBus', props.eventBusArn);
+
+        // Archive Arkime events related to this User VPC to enable replay, with a focus on shorter-term debugging
+        clusterBus.archive('Archive', {
+            archiveName: `Arkime-${props.vpcId}`,
+            description: `Archive of Arkime events for VPC ${props.vpcId}`,
+            eventPattern: {
+                source: [constants.EVENT_SOURCE],
+                detail: {
+                    'vpc_id': events.Match.exactString(props.vpcId)
+                }
+            },
+            retention: Duration.days(30),
+        });
+
+        // Create the Lambda that will set up the traffic mirroring for ENIs in our VPC
+        const createLambda = new lambda.Function(this, 'CreateEniMirrorLambda', {
+            functionName: `CreateEniMirror-${props.vpcId}`,
+            runtime: lambda.Runtime.PYTHON_3_9,
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            handler: 'lambda_handlers.create_eni_mirror_handler',
+            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded            
+        });
+        createLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    // TODO: Should scope this down.
+                    // We need ec2:CreateTrafficMirrorSession in order to set up our session, but whenever I add *just*
+                    // that, I get an UnauthorizedOperation.  The docs say that's all that should be required, but the
+                    // documentation appears wrong or there's something extra mysterious going on here.  Even CloudTrail
+                    // indicates the only call being made is CreateTrafficMirrorSession, but it's still failing.  The
+                    // exception also doesn't indicate otherwise.
+                    // See: https://docs.aws.amazon.com/vpc/latest/mirroring/traffic-mirroring-security.html
+                    'ec2:*',
+                ],
+                resources: [
+                    `arn:aws:ec2:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+        createLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'ssm:GetParameter',
+                    'ssm:PutParameter',
+                ],
+                resources: [
+                    `arn:aws:ssm:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+        createLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'cloudwatch:PutMetricData',
+                ],
+                resources: [
+                    "*"
+                ]
+            })
+        );
+
+        // Create a rule to funnel appropriate events to our setup lambda
+        const createRule = new events.Rule(this, 'RuleCreateEniMirror', {
+            eventBus: clusterBus,
+            eventPattern: {
+                source: [constants.EVENT_SOURCE],
+                detailType: [constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR],
+                detail: {
+                    'vpc_id': events.Match.exactString(props.vpcId)
+                }
+            },
+            targets: [new targets.LambdaFunction(createLambda)]
+        });
+        createRule.node.addDependency(clusterBus);
+
+        // Create the Lambda that will tear down the traffic mirroring for ENIs in our VPC
+        const destroyLambda = new lambda.Function(this, 'DestroyEniMirrorLambda', {
+            functionName: `DestroyEniMirror-${props.vpcId}`,
+            runtime: lambda.Runtime.PYTHON_3_9,
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            handler: 'lambda_handlers.destroy_eni_mirror_handler',
+            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded            
+        });
+        destroyLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    // TODO: Should scope this down.
+                    // Just need ec2:DeleteTrafficMirroringSession, but failing similar to the Create Lambda
+                    'ec2:*',
+                ],
+                resources: [
+                    `arn:aws:ec2:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+        destroyLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'ssm:GetParameter',
+                    'ssm:DeleteParameter',
+                ],
+                resources: [
+                    `arn:aws:ssm:${this.region}:${this.account}:*`
+                ]
+            })
+        );
+        destroyLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'cloudwatch:PutMetricData',
+                ],
+                resources: [
+                    "*"
+                ]
+            })
+        );
+
+        // Create a rule to funnel appropriate events to our teardwon lambda
+        const destroyRule = new events.Rule(this, 'RuleDestroyEniMirror', {
+            eventBus: clusterBus,
+            eventPattern: {
+                source: [constants.EVENT_SOURCE],
+                detailType: [constants.EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR],
+                detail: {
+                    'vpc_id': events.Match.exactString(props.vpcId)
+                }
+            },
+            targets: [new targets.LambdaFunction(destroyLambda)]
+        });
+        destroyRule.node.addDependency(clusterBus);
     }
 }

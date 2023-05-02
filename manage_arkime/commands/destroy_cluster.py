@@ -1,12 +1,12 @@
 import logging
 
-from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
-from manage_arkime.aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
-from manage_arkime.aws_interactions.destroy_s3_bucket import destroy_s3_bucket
+from aws_interactions.aws_client_provider import AwsClientProvider
+from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
+from aws_interactions.destroy_s3_bucket import destroy_s3_bucket
 from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path
-from manage_arkime.cdk_client import CdkClient
-import manage_arkime.constants as constants
-import manage_arkime.cdk_context as context
+from cdk_interactions.cdk_client import CdkClient
+import constants as constants
+import cdk_interactions.cdk_context as context
 
 logger = logging.getLogger(__name__)
 

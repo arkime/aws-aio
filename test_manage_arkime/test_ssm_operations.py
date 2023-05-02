@@ -4,7 +4,7 @@ import unittest.mock as mock
 
 from botocore.exceptions import ClientError
 
-import manage_arkime.aws_interactions.ssm_operations as ssm
+import aws_interactions.ssm_operations as ssm
 
 
 def test_WHEN_get_ssm_param_value_called_AND_exists_THEN_gets_it():
@@ -111,7 +111,7 @@ def test_WHEN_get_ssm_params_by_path_called_AND_doesnt_exists_THEN_empty_result(
     expected_value = []
     assert expected_value == actual_value
 
-@mock.patch("manage_arkime.aws_interactions.ssm_operations.get_ssm_params_by_path")
+@mock.patch("aws_interactions.ssm_operations.get_ssm_params_by_path")
 def test_WHEN_get_ssm_names_by_path_called_THEN_gets_them(mock_get_params):
     # Set up our mock
     mock_get_params.return_value = [

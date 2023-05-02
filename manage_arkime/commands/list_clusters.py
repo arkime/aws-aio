@@ -2,9 +2,9 @@ import json
 import logging
 from typing import Dict, List
 
-from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
+from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
-import manage_arkime.constants as constants
+import constants as constants
 
 logger = logging.getLogger(__name__)
 

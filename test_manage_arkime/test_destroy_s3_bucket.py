@@ -1,6 +1,6 @@
 import unittest.mock as mock
 
-from manage_arkime.aws_interactions.destroy_s3_bucket import destroy_s3_bucket
+from aws_interactions.destroy_s3_bucket import destroy_s3_bucket
 
 def test_WHEN_destroy_s3_bucket_called_AND_exists_THEN_destroys_it():
     # Set up our mock

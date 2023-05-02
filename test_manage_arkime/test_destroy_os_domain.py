@@ -2,9 +2,9 @@ import unittest.mock as mock
 
 from botocore.exceptions import ClientError
 
-from manage_arkime.aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
+from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
 
-@mock.patch("manage_arkime.aws_interactions.destroy_os_domain.time")
+@mock.patch("aws_interactions.destroy_os_domain.time")
 def test_WHEN_destroy_os_domain_and_wait_called_AND_exists_THEN_destroys_it(mock_time):
     # Set up our mock
     mock_os_client = mock.Mock()
@@ -28,7 +28,7 @@ def test_WHEN_destroy_os_domain_and_wait_called_AND_exists_THEN_destroys_it(mock
     assert expected_delete_calls == mock_os_client.delete_domain.call_args_list
     assert 3 == mock_time.sleep.call_count
 
-@mock.patch("manage_arkime.aws_interactions.destroy_os_domain.time")
+@mock.patch("aws_interactions.destroy_os_domain.time")
 def test_WHEN_destroy_os_domain_and_wait_called_AND_doesnt_exist_THEN_skips_destruction(mock_time):
     # Set up our mock
     mock_os_client = mock.Mock()

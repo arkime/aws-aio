@@ -5,6 +5,8 @@
  */
 
 export interface ClusterSsmValue {
+    readonly busArn: string;
+    readonly busName: string;
     readonly clusterName: string;
     readonly vpceServiceId: string;
 }

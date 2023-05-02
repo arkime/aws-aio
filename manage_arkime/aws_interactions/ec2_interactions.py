@@ -4,11 +4,7 @@ from typing import List
 
 from botocore.exceptions import ClientError
 
-from manage_arkime.aws_interactions.aws_client_provider import AwsClientProvider
-import aws_interactions.ssm_operations as ssm_ops
-from manage_arkime.cdk_client import CdkClient
-import manage_arkime.constants as constants
-import manage_arkime.cdk_context as context
+from aws_interactions.aws_client_provider import AwsClientProvider
 
 logger = logging.getLogger(__name__)
 

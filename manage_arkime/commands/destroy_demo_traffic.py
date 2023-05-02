@@ -1,7 +1,7 @@
 import logging
 
-from manage_arkime.cdk_client import CdkClient
-import manage_arkime.constants as constants
+from cdk_interactions.cdk_client import CdkClient
+import constants as constants
 
 logger = logging.getLogger(__name__)
 
