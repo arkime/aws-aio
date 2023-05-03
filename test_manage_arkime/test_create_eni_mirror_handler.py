@@ -46,7 +46,7 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_THEN_sets_up_mirroring(mock_e
 
     expected_mirror_calls = [
         mock.call(
-            ec2i.NetworkInterface("eni-1", "eni-type-1"),
+            ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "eni-type-1"),
             "target-1",
             "filter-1",
             "vpc-1",
@@ -144,7 +144,7 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_AND_wrong_type_THEN_aborts(mo
 
     mock_ec2i.NetworkInterface = ec2i.NetworkInterface
     mock_ec2i.NonMirrorableEniType = ec2i.NonMirrorableEniType
-    mock_ec2i.mirror_eni.side_effect = ec2i.NonMirrorableEniType(ec2i.NetworkInterface("eni-1", "eni-type-1"))
+    mock_ec2i.mirror_eni.side_effect = ec2i.NonMirrorableEniType(ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "eni-type-1"))
 
     mock_ssm_ops.ParamDoesNotExist = ParamDoesNotExist
     mock_ssm_ops.get_ssm_param_value.side_effect = ParamDoesNotExist("")
@@ -173,7 +173,7 @@ def test_WHEN_CreateEniMirrorHandler_handle_called_AND_wrong_type_THEN_aborts(mo
 
     expected_mirror_calls = [
         mock.call(
-            ec2i.NetworkInterface("eni-1", "eni-type-1"),
+            ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "eni-type-1"),
             "target-1",
             "filter-1",
             "vpc-1",

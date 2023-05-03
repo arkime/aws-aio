@@ -50,21 +50,63 @@ def test_WHEN_get_subnets_of_vpc_called_AND_doesnt_exist_THEN_raises():
     with pytest.raises(ec2i.VpcDoesNotExist):
         result = ec2i.get_subnets_of_vpc("my-vpc", mock_aws_provider)
 
+def test_WHEN_get_enis_of_instance_called_THEN_returns_them():
+    # Set up our mock
+    mock_ec2_client = mock.Mock()
+    mock_ec2_client.describe_instances.return_value = {
+        'Reservations': [{
+            'Instances': [{
+                'NetworkInterfaces': [
+                    {
+                        'NetworkInterfaceId': 'eni-1',
+                        'SubnetId': 'subnet-1',
+                        'VpcId': 'vpc-1',
+                        'InterfaceType': 'type-1'
+                    },
+                    {
+                        'NetworkInterfaceId': 'eni-2',
+                        'SubnetId': 'subnet-1',
+                        'VpcId': 'vpc-1',
+                        'InterfaceType': 'type-2'
+                    }
+                ]
+            }],
+        }]
+    }
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ec2.return_value = mock_ec2_client
+
+    # Run our test
+    result = ec2i.get_enis_of_instance("i-1", mock_aws_provider)
+
+    # Check our results
+    expected_describe_calls = [
+        mock.call(InstanceIds=["i-1"]),
+    ]
+    assert expected_describe_calls == mock_ec2_client.describe_instances.call_args_list
+
+    expected_result = [
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-2", "type-2"),
+    ]
+    assert expected_result == result
+
 def test_WHEN_get_enis_of_subnet_called_THEN_returns_them():
     # Set up our mock
     mock_ec2_client = mock.Mock()
     mock_ec2_client.describe_network_interfaces.side_effect = [
         {
             "NetworkInterfaces": [
-                {"NetworkInterfaceId": "eni-1", "InterfaceType": "type-1"},
-                {"NetworkInterfaceId": "eni-2", "InterfaceType": "type-2"},
+                {"NetworkInterfaceId": "eni-1", "InterfaceType": "type-1", "VpcId": "vpc-1", "SubnetId": "subnet-1"},
+                {"NetworkInterfaceId": "eni-2", "InterfaceType": "type-2", "VpcId": "vpc-1", "SubnetId": "subnet-1"},
             ],
             "NextToken": "next-1",
         },
         {
             "NetworkInterfaces": [
-                {"NetworkInterfaceId": "eni-3", "InterfaceType": "type-3"},
-                {"NetworkInterfaceId": "eni-4", "InterfaceType": "type-4"},
+                {"NetworkInterfaceId": "eni-3", "InterfaceType": "type-3", "VpcId": "vpc-1", "SubnetId": "subnet-1"},
+                {"NetworkInterfaceId": "eni-4", "InterfaceType": "type-4", "VpcId": "vpc-1", "SubnetId": "subnet-1"},
             ],
         }
     ]
@@ -83,10 +125,10 @@ def test_WHEN_get_enis_of_subnet_called_THEN_returns_them():
     assert expected_describe_calls == mock_ec2_client.describe_network_interfaces.call_args_list
 
     expected_result = [
-        ec2i.NetworkInterface("eni-1", "type-1"),
-        ec2i.NetworkInterface("eni-2", "type-2"),
-        ec2i.NetworkInterface("eni-3", "type-3"),
-        ec2i.NetworkInterface("eni-4", "type-4"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-2", "type-2"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-3", "type-3"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-4", "type-4"),
     ]
     assert expected_result == result
 
@@ -122,7 +164,7 @@ def test_WHEN_mirror_eni_called_THEN_sets_up_session():
     mock_aws_provider.get_ec2.return_value = mock_ec2_client
 
     # Run our test
-    test_eni = ec2i.NetworkInterface("eni-1", "type-1")
+    test_eni = ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1")
     result = ec2i.mirror_eni(test_eni, "target-1", "filter-1", "vpc-1", mock_aws_provider, virtual_network=1234)
 
     # Check our results
@@ -158,7 +200,7 @@ def test_WHEN_mirror_eni_called_AND_excluded_type_THEN_raises():
     mock_aws_provider.get_ec2.return_value = mock_ec2_client
 
     # Run our test
-    test_eni = ec2i.NetworkInterface("eni-1", ec2i.NON_MIRRORABLE_ENI_TYPES[0])
+    test_eni = ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", ec2i.NON_MIRRORABLE_ENI_TYPES[0])
     with pytest.raises(ec2i.NonMirrorableEniType):
         ec2i.mirror_eni(test_eni, "target-1", "filter-1", "vpc-1", mock_aws_provider, virtual_network=1234)
 
