@@ -2,8 +2,65 @@ import json
 import unittest.mock as mock
 
 from lambda_aws_event_listener.aws_event_listener_handler import AwsEventListenerHandler
+import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import constants as constants
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.os")
+def test_WHEN_AwsEventListenerHandler_handle_called_AND_ec2_running_THEN_invokes_correct_subhandler(mock_os):
+    # Set up our mock
+    mock_os.environ = {
+        "EVENT_BUS_ARN": "bus-1",
+        "CLUSTER_NAME": "cluster-1",
+        "VPC_ID": "vpc-1",
+        "TRAFFIC_FILTER_ID": "filter-1",
+        "MIRROR_VNI": "1234",
+    }
+
+    mock_subhandler = mock.Mock()
+    mock_subhandler.return_value = {"statusCode": 200}
+    test_handler = AwsEventListenerHandler()
+    test_handler._handle_ec2_running = mock_subhandler
+
+    # Run our test
+    actual_return = test_handler.handler(TEST_EVENT_EC2_RUNNING, {})
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_subhandler_calls = [
+        mock.call(TEST_EVENT_EC2_RUNNING, "bus-1", "cluster-1", "vpc-1", "filter-1", 1234),
+    ]
+    assert expected_subhandler_calls == mock_subhandler.call_args_list
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.os")
+def test_WHEN_AwsEventListenerHandler_handle_called_AND_ec2_shutting_down_THEN_invokes_correct_subhandler(mock_os):
+    # Set up our mock
+    mock_os.environ = {
+        "EVENT_BUS_ARN": "bus-1",
+        "CLUSTER_NAME": "cluster-1",
+        "VPC_ID": "vpc-1",
+        "TRAFFIC_FILTER_ID": "filter-1",
+        "MIRROR_VNI": "1234",
+    }
+
+    mock_subhandler = mock.Mock()
+    mock_subhandler.return_value = {"statusCode": 200}
+    test_handler = AwsEventListenerHandler()
+    test_handler._handle_ec2_shutting_down = mock_subhandler
+
+    # Run our test
+    actual_return = test_handler.handler(TEST_EVENT_EC2_SHUTTING_DOWN, {})
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_subhandler_calls = [
+        mock.call(TEST_EVENT_EC2_SHUTTING_DOWN, "bus-1", "cluster-1", "vpc-1"),
+    ]
+    assert expected_subhandler_calls == mock_subhandler.call_args_list
 
 @mock.patch("lambda_aws_event_listener.aws_event_listener_handler.os")
 def test_WHEN_AwsEventListenerHandler_handle_called_AND_fargate_running_THEN_invokes_correct_subhandler(mock_os):
@@ -102,6 +159,195 @@ def test_WHEN_AwsEventListenerHandler_handle_called_AND_wacky_error_THEN_handles
     # Check our results
     expected_return = {"statusCode": 500}
     assert expected_return == actual_return
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.AwsClientProvider", mock.Mock())
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.ec2i")
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.events")
+def test_WHEN_handle_ec2_running_called_THEN_as_expected(mock_events, mock_ec2i):
+    # Set up our mock
+    mock_ec2i.get_enis_of_instance.return_value = [
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-2", "type-1"),
+    ]
+
+    mock_events.CreateEniMirrorEvent = events.CreateEniMirrorEvent
+
+    # Run our test
+    actual_return = AwsEventListenerHandler()._handle_ec2_running(
+        TEST_EVENT_EC2_RUNNING,
+        "bus-1",
+        "cluster-1",
+        "vpc-1",
+        "filter-1",
+        1234
+    )
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_get_enis_calls = [
+        mock.call(TEST_EVENT_EC2_RUNNING["detail"]["instance-id"], mock.ANY),
+    ]
+    assert expected_get_enis_calls == mock_ec2i.get_enis_of_instance.call_args_list
+
+    expected_put_events_calls = [
+        mock.call(
+            [
+                events.CreateEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-1", "type-1", "filter-1", 1234),
+                events.CreateEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-2", "type-1", "filter-1", 1234),
+            ],
+            "bus-1",
+            mock.ANY
+        ),
+    ]
+    assert expected_put_events_calls == mock_events.put_events.call_args_list
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.AwsClientProvider", mock.Mock())
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.ec2i")
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.events")
+def test_WHEN_handle_ec2_running_called_AND_wrong_vpc_THEN_handles_gracefully(mock_events, mock_ec2i):
+    # Set up our mock
+    mock_ec2i.get_enis_of_instance.return_value = [
+        ec2i.NetworkInterface("vpc-2", "subnet-1", "eni-1", "type-1")
+    ]
+
+    mock_events.CreateEniMirrorEvent = events.CreateEniMirrorEvent
+
+    # Run our test
+    actual_return = AwsEventListenerHandler()._handle_ec2_running(
+        TEST_EVENT_EC2_RUNNING,
+        "bus-1",
+        "cluster-1",
+        "vpc-1",
+        "filter-1",
+        1234
+    )
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_get_enis_calls = [
+        mock.call(TEST_EVENT_EC2_RUNNING["detail"]["instance-id"], mock.ANY),
+    ]
+    assert expected_get_enis_calls == mock_ec2i.get_enis_of_instance.call_args_list
+
+    expected_put_events_calls = []
+    assert expected_put_events_calls == mock_events.put_events.call_args_list
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.AwsClientProvider", mock.Mock())
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.ec2i")
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.events")
+def test_WHEN_handle_ec2_shutting_down_called_THEN_as_expected(mock_events, mock_ec2i):
+    # Set up our mock
+    mock_ec2i.get_enis_of_instance.return_value = [
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-2", "type-1"),
+    ]
+
+    mock_events.DestroyEniMirrorEvent = events.CreateEniMirrorEvent
+
+    # Run our test
+    actual_return = AwsEventListenerHandler()._handle_ec2_shutting_down(
+        TEST_EVENT_EC2_RUNNING,
+        "bus-1",
+        "cluster-1",
+        "vpc-1"
+    )
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_get_enis_calls = [
+        mock.call(TEST_EVENT_EC2_RUNNING["detail"]["instance-id"], mock.ANY),
+    ]
+    assert expected_get_enis_calls == mock_ec2i.get_enis_of_instance.call_args_list
+
+    expected_put_events_calls = [
+        mock.call(
+            [
+                events.DestroyEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-1"),
+                events.DestroyEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-2"),
+            ],
+            "bus-1",
+            mock.ANY
+        ),
+    ]
+    assert expected_put_events_calls == mock_events.put_events.call_args_list
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.AwsClientProvider", mock.Mock())
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.ec2i")
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.events")
+def test_WHEN_handle_ec2_shutting_down_called_THEN_as_expected(mock_events, mock_ec2i):
+    # Set up our mock
+    mock_ec2i.get_enis_of_instance.return_value = [
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1"),
+        ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-2", "type-1"),
+    ]
+
+    mock_events.DestroyEniMirrorEvent = events.DestroyEniMirrorEvent
+
+    # Run our test
+    actual_return = AwsEventListenerHandler()._handle_ec2_shutting_down(
+        TEST_EVENT_EC2_SHUTTING_DOWN,
+        "bus-1",
+        "cluster-1",
+        "vpc-1"
+    )
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_get_enis_calls = [
+        mock.call(TEST_EVENT_EC2_SHUTTING_DOWN["detail"]["instance-id"], mock.ANY),
+    ]
+    assert expected_get_enis_calls == mock_ec2i.get_enis_of_instance.call_args_list
+
+    expected_put_events_calls = [
+        mock.call(
+            [
+                events.DestroyEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-1"),
+                events.DestroyEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-2"),
+            ],
+            "bus-1",
+            mock.ANY
+        ),
+    ]
+    assert expected_put_events_calls == mock_events.put_events.call_args_list
+
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.AwsClientProvider", mock.Mock())
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.ec2i")
+@mock.patch("lambda_aws_event_listener.aws_event_listener_handler.events")
+def test_WHEN_handle_ec2_shutting_down_called_AND_wrong_vpc_THEN_handles_gracefully(mock_events, mock_ec2i):
+    # Set up our mock
+    mock_ec2i.get_enis_of_instance.return_value = [
+        ec2i.NetworkInterface("vpc-2", "subnet-1", "eni-1", "type-1"),
+    ]
+
+    mock_events.DestroyEniMirrorEvent = events.DestroyEniMirrorEvent
+
+    # Run our test
+    actual_return = AwsEventListenerHandler()._handle_ec2_shutting_down(
+        TEST_EVENT_EC2_SHUTTING_DOWN,
+        "bus-1",
+        "cluster-1",
+        "vpc-1"
+    )
+
+    # Check our results
+    expected_return = {"statusCode": 200}
+    assert expected_return == actual_return
+
+    expected_get_enis_calls = [
+        mock.call(TEST_EVENT_EC2_SHUTTING_DOWN["detail"]["instance-id"], mock.ANY),
+    ]
+    assert expected_get_enis_calls == mock_ec2i.get_enis_of_instance.call_args_list
+
+    expected_put_events_calls = []
+    assert expected_put_events_calls == mock_events.put_events.call_args_list
 
 @mock.patch("lambda_aws_event_listener.aws_event_listener_handler.AwsClientProvider", mock.Mock())
 @mock.patch("lambda_aws_event_listener.aws_event_listener_handler.events")
@@ -469,5 +715,186 @@ TEST_EVENT_FARGATE_STOPPED = {
         "taskDefinitionArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task-definition/DemoTrafficGen01TaskDef59B414B2:10",
         "updatedAt": "2023-05-02T15:29:11.177Z",
         "version": 6
+    }
+}
+
+TEST_EVENT_ECS_RUNNING = {
+    "version": "0",
+    "id": "2c1f6fff-4d45-93c6-1448-839865057404",
+    "detail-type": "ECS Task State Change",
+    "source": "aws.ecs",
+    "account": "XXXXXXXXXXXX",
+    "time": "2023-05-03T15:18:04Z",
+    "region": "us-east-2",
+    "resources": [
+        "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0"
+    ],
+    "detail": {
+        "attachments": [],
+        "attributes": [
+            {
+                "name": "ecs.cpu-architecture",
+                "value": "x86_64"
+            }
+        ],
+        "availabilityZone": "us-east-2a",
+        "clusterArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:cluster/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO",
+        "connectivity": "CONNECTED",
+        "connectivityAt": "2023-05-03T15:18:01.844Z",
+        "containerInstanceArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:container-instance/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/c2df6e33804b4e12aab6ec6496fdef5d",
+        "containers": [
+            {
+                "containerArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:container/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0/e5be832e-643b-45a1-be93-b73313d8e0f5",
+                "lastStatus": "RUNNING",
+                "name": "EcsContainer",
+                "image": "XXXXXXXXXXXX.dkr.ecr.us-east-2.amazonaws.com/cdk-hnb659fds-container-assets-XXXXXXXXXXXX-us-east-2:4fccb469d9b434f1e2ef0fca061c015f1fafdd35ed4cbe1783c419c4905da49a",
+                "imageDigest": "sha256:4c8a9049915f437fcf5e8ef339e4109140cb92039dc0d3a78460623532c7c0cb",
+                "runtimeId": "3e549d9bf699aeb93c13aa0d95b9f4498010d57c1cbd2785a3caccffac675c41",
+                "taskArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0",
+                "networkInterfaces": [],
+                "cpu": "1536",
+                "memory": "768",
+                "managedAgents": [
+                    {
+                        "name": "ExecuteCommandAgent",
+                        "status": "PENDING"
+                    }
+                ]
+            }
+        ],
+        "cpu": "1536",
+        "createdAt": "2023-05-03T15:18:01.844Z",
+        "desiredStatus": "RUNNING",
+        "enableExecuteCommand": True,
+        "group": "service:DemoTrafficGen01-EcsService81FC6EF6-1MxpQy4jk934",
+        "launchType": "EC2",
+        "lastStatus": "RUNNING",
+        "memory": "768",
+        "overrides": {
+            "containerOverrides": [
+                {
+                    "name": "EcsContainer"
+                }
+            ]
+        },
+        "pullStartedAt": "2023-05-03T15:18:02.807Z",
+        "pullStoppedAt": "2023-05-03T15:18:02.93Z",
+        "startedAt": "2023-05-03T15:18:04.11Z",
+        "startedBy": "ecs-svc/9909299324976484585",
+        "taskArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0",
+        "taskDefinitionArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task-definition/DemoTrafficGen01EcsTaskDef7C0694E4:1",
+        "updatedAt": "2023-05-03T15:18:04.11Z",
+        "version": 2
+    }
+}
+
+TEST_EVENT_ECS_STOPPED = {
+    "version": "0",
+    "id": "10b56661-1a84-1b7f-d86c-3ccc32eccc78",
+    "detail-type": "ECS Task State Change",
+    "source": "aws.ecs",
+    "account": "XXXXXXXXXXXX",
+    "time": "2023-05-03T15:28:41Z",
+    "region": "us-east-2",
+    "resources": [
+        "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0"
+    ],
+    "detail": {
+        "attachments": [],
+        "attributes": [
+            {
+                "name": "ecs.cpu-architecture",
+                "value": "x86_64"
+            }
+        ],
+        "availabilityZone": "us-east-2a",
+        "clusterArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:cluster/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO",
+        "connectivity": "CONNECTED",
+        "connectivityAt": "2023-05-03T15:18:01.844Z",
+        "containerInstanceArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:container-instance/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/c2df6e33804b4e12aab6ec6496fdef5d",
+        "containers": [
+            {
+                "containerArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:container/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0/e5be832e-643b-45a1-be93-b73313d8e0f5",
+                "exitCode": 137,
+                "lastStatus": "STOPPED",
+                "name": "EcsContainer",
+                "image": "XXXXXXXXXXXX.dkr.ecr.us-east-2.amazonaws.com/cdk-hnb659fds-container-assets-XXXXXXXXXXXX-us-east-2:4fccb469d9b434f1e2ef0fca061c015f1fafdd35ed4cbe1783c419c4905da49a",
+                "imageDigest": "sha256:4c8a9049915f437fcf5e8ef339e4109140cb92039dc0d3a78460623532c7c0cb",
+                "runtimeId": "3e549d9bf699aeb93c13aa0d95b9f4498010d57c1cbd2785a3caccffac675c41",
+                "taskArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0",
+                "networkInterfaces": [],
+                "cpu": "1536",
+                "memory": "768",
+                "managedAgents": [
+                    {
+                        "name": "ExecuteCommandAgent",
+                        "status": "STOPPED",
+                        "reason": "Received Container Stopped event"
+                    }
+                ]
+            }
+        ],
+        "cpu": "1536",
+        "createdAt": "2023-05-03T15:18:01.844Z",
+        "desiredStatus": "STOPPED",
+        "enableExecuteCommand": True,
+        "executionStoppedAt": "2023-05-03T15:28:41.023Z",
+        "group": "service:DemoTrafficGen01-EcsService81FC6EF6-1MxpQy4jk934",
+        "launchType": "EC2",
+        "lastStatus": "STOPPED",
+        "memory": "768",
+        "overrides": {
+            "containerOverrides": [
+                {
+                    "name": "EcsContainer"
+                }
+            ]
+        },
+        "pullStartedAt": "2023-05-03T15:18:02.807Z",
+        "pullStoppedAt": "2023-05-03T15:18:02.93Z",
+        "startedAt": "2023-05-03T15:18:04.11Z",
+        "startedBy": "ecs-svc/9909299324976484585",
+        "stoppingAt": "2023-05-03T15:28:09.697Z",
+        "stoppedAt": "2023-05-03T15:28:41.041Z",
+        "stoppedReason": "Scaling activity initiated by (deployment ecs-svc/9909299324976484585)",
+        "stopCode": "ServiceSchedulerInitiated",
+        "taskArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task/DemoTrafficGen01-EcsCluster97242B84-u8PnqOAmk1tO/5f9900fd646345e9ab339c0e66e305a0",
+        "taskDefinitionArn": "arn:aws:ecs:us-east-2:XXXXXXXXXXXX:task-definition/DemoTrafficGen01EcsTaskDef7C0694E4:1",
+        "updatedAt": "2023-05-03T15:28:41.041Z",
+        "version": 4
+    }
+}
+
+TEST_EVENT_EC2_RUNNING = {
+    "version": "0",
+    "id": "59444e21-1551-617e-42f7-4ada553d3463",
+    "detail-type": "EC2 Instance State-change Notification",
+    "source": "aws.ec2",
+    "account": "XXXXXXXXXXXX",
+    "time": "2023-05-03T15:14:39Z",
+    "region": "us-east-2",
+    "resources": [
+        "arn:aws:ec2:us-east-2:XXXXXXXXXXXX:instance/i-0336e8c207d9eb69a"
+    ],
+    "detail": {
+        "instance-id": "i-0336e8c207d9eb69a",
+        "state": "running"
+    }
+}
+
+TEST_EVENT_EC2_SHUTTING_DOWN = {
+    "version": "0",
+    "id": "84b3f070-eb70-a8b3-bbfe-6e874f0d3acb",
+    "detail-type": "EC2 Instance State-change Notification",
+    "source": "aws.ec2",
+    "account": "XXXXXXXXXXXX",
+    "time": "2023-05-03T15:20:34Z",
+    "region": "us-east-2",
+    "resources": [
+        "arn:aws:ec2:us-east-2:XXXXXXXXXXXX:instance/i-0d917354353e9f7e8"
+    ],
+    "detail": {
+        "instance-id": "i-0d917354353e9f7e8",
+        "state": "shutting-down"
     }
 }

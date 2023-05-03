@@ -5,10 +5,13 @@ import os
 from typing import Dict, List
 
 from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import constants as constants
 
 class AwsEventType(Enum):
+    EC2_RUNNING="Ec2Running"
+    EC2_SHUTTING_DOWN="Ec2ShuttingDown"
     FARGATE_RUNNING="FargateRunning"
     FARGATE_STOPPED="FargateStopped"
     UNKNOWN="Unknown"
@@ -45,7 +48,13 @@ class AwsEventListenerHandler:
             self.logger.info(f"Parsing AWS Service Event...")
             event_type = self._get_event_type(event)
 
-            if event_type == AwsEventType.FARGATE_RUNNING:
+            if event_type == AwsEventType.EC2_RUNNING:
+                self.logger.info(f"Event Type: EC2 Instance Running")
+                return self._handle_ec2_running(event, event_bus_arn, cluster_name, vpc_id, traffic_filter_id, mirror_vni)
+            elif event_type == AwsEventType.EC2_SHUTTING_DOWN:
+                self.logger.info(f"Event Type: EC2 Instance Shutting Down")
+                return self._handle_ec2_shutting_down(event, event_bus_arn, cluster_name, vpc_id)
+            elif event_type == AwsEventType.FARGATE_RUNNING:
                 self.logger.info(f"Event Type: Fargate Task Running")
                 return self._handle_fargate_running(event, event_bus_arn, cluster_name, vpc_id, traffic_filter_id, mirror_vni)
             elif event_type == AwsEventType.FARGATE_STOPPED:
@@ -63,6 +72,60 @@ class AwsEventListenerHandler:
             self.logger.error(ex, exc_info=True)
 
             return {"statusCode": 500}
+
+    def _handle_ec2_running(self, raw_event: Dict[str, any], event_bus_arn: str, cluster_name: str, vpc_id: str, 
+            traffic_filter_id: str, mirror_vni: int) -> Dict[str, int]:
+
+        # Get the ENIs associated with the instance
+        instance_id = raw_event["detail"]["instance-id"]
+        self.logger.info(f"Processing EC2 Instance: {instance_id}")
+
+        aws_provider = AwsClientProvider(aws_compute=True)
+        enis = ec2i.get_enis_of_instance(instance_id, aws_provider)
+        self.logger.info(f"ENIs:\n{json.dumps([eni.to_dict() for eni in enis])}")
+
+        # We can't (currently) filter EC2 state-change events at the EventBridge Rule level, so it's possible this
+        # event belongs to a different VPC's instance
+        if enis and enis[0].vpc_id != vpc_id:
+            self.logger.info(f"EC2 instance {instance_id} is in another VPC ({enis[0].vpc_id}); aborting")
+            return {"statusCode": 200}  
+
+        create_events = []
+        for eni in enis:
+            create_event = events.CreateEniMirrorEvent(cluster_name, vpc_id, eni.subnet_id, eni.eni_id, eni.eni_type, traffic_filter_id, mirror_vni)
+            self.logger.info(f"Preparing CreateEniMirrorEvent: {create_event}")
+            create_events.append(create_event)
+
+        self.logger.info(f"Initiating creation of mirroring session(s) for {len(create_events)} ENI(s)")
+        events.put_events(create_events, event_bus_arn, aws_provider)
+
+        return {"statusCode": 200}        
+
+    def _handle_ec2_shutting_down(self, raw_event: Dict[str, any], event_bus_arn: str, cluster_name: str, vpc_id: str) -> Dict[str, int]:        
+         # Get the ENIs associated with the instance
+        instance_id = raw_event["detail"]["instance-id"]
+        self.logger.info(f"Processing EC2 Instance: {instance_id}")
+
+        aws_provider = AwsClientProvider(aws_compute=True)
+        enis = ec2i.get_enis_of_instance(instance_id, aws_provider)
+        self.logger.info(f"ENIs:\n{json.dumps([eni.to_dict() for eni in enis])}")
+
+        # We can't (currently) filter EC2 state-change events at the EventBridge Rule level, so it's possible this
+        # event belongs to a different VPC's instance
+        if enis and enis[0].vpc_id != vpc_id:
+            self.logger.info(f"EC2 instance {instance_id} is in another VPC ({enis[0].vpc_id}); aborting")
+            return {"statusCode": 200}  
+        
+        destroy_events = []
+        for eni in enis:
+            destroy_event = events.DestroyEniMirrorEvent(cluster_name, vpc_id, eni.subnet_id, eni.eni_id)
+            self.logger.info(f"Preparing DestroyEniMirrorEvent: {destroy_event}")
+            destroy_events.append(destroy_event)
+
+        self.logger.info(f"Initiating destruction of mirroring session(s) for {len(destroy_events)} ENI(s)")
+        events.put_events(destroy_events, event_bus_arn, aws_provider)
+
+        return {"statusCode": 200}
 
     def _handle_fargate_running(self, raw_event: Dict[str, any], event_bus_arn: str, cluster_name: str, vpc_id: str, 
             traffic_filter_id: str, mirror_vni: int) -> Dict[str, int]:
@@ -124,9 +187,20 @@ class AwsEventListenerHandler:
 
 
     def _handle_unknown(self, raw_event: Dict[str, any]) -> Dict[str, int]:
-        pass
+        self.logger.info("Unknown event type; aborting")
+        return {"statusCode": 200}
 
     def _get_event_type(self, raw_event: Dict[str, any]) -> AwsEventType:
+        if self._is_ec2_instance_event(raw_event):
+            state = raw_event["detail"]["state"]
+            
+            if state == "running":
+                return AwsEventType.EC2_RUNNING
+            elif state == "shutting-down":
+                return AwsEventType.EC2_SHUTTING_DOWN
+            else:
+                return AwsEventType.UNKNOWN
+
         if self._is_ecs_event(raw_event):
             if self._is_fargate_event(raw_event):
                 last_status = raw_event["detail"]["lastStatus"]
@@ -139,6 +213,11 @@ class AwsEventListenerHandler:
                     return AwsEventType.UNKNOWN
 
         return AwsEventType.UNKNOWN
+
+    def _is_ec2_instance_event(self, raw_event: Dict[str, any]) -> bool:
+        is_right_source = raw_event["source"] == "aws.ec2"
+        is_right_detail_type = raw_event["detail-type"] == "EC2 Instance State-change Notification"
+        return is_right_source and is_right_detail_type
 
     def _is_ecs_event(self, raw_event: Dict[str, any]) -> bool:
         return raw_event["source"] == "aws.ecs"

@@ -162,12 +162,23 @@ export class VpcMirrorStack extends Stack {
                 ]
             })
         );
+        listenerLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'ec2:DescribeInstances'
+                ],
+                resources: ["*"]
+            })
+        );
 
         // Make a human-readable log of the raw AWS Service events we're proccessing
         const vpcLogGroup = new logs.LogGroup(this, 'LogGroup', {
             logGroupName: `ArkimeInputEvents-${props.vpcId}`,
             removalPolicy: RemovalPolicy.DESTROY // This is intended for debugging
         });
+
+        // Capture Fargate stop/start events for processing
         const fargateEventsRule = new events.Rule(this, 'RuleFargateEvents', {
             eventBus: undefined, // We want to listen to the Account/Region's default bus
             eventPattern: {
@@ -182,6 +193,27 @@ export class VpcMirrorStack extends Stack {
                     },
                     launchType: ["FARGATE"],
                     lastStatus: ["RUNNING", "STOPPED"]
+                }
+            },
+            targets: [
+                new targets.CloudWatchLogGroup(vpcLogGroup),
+                new targets.LambdaFunction(listenerLambda)
+            ]
+        });
+
+        // Capture EC2 instance start/stop events.  This should cover one-off instance creation, EC2 Autoscaling
+        // activities, and ECS-on-EC2.  All three of those situations map to an ENI being created or destroyed when
+        // a concrete instance starts/stops, regardless of how many other steps/events are involved in the process.
+        // 
+        // Unfortunately, this event does not give us the information we need to pre-screen it at the Rule level so
+        // we have to check if it applies to our VPC in our Lambda code.
+        const ec2EventsRule = new events.Rule(this, 'RuleEc2Events', {
+            eventBus: undefined, // We want to listen to the Account/Region's default bus
+            eventPattern: {
+                source: ["aws.ec2"],
+                detailType: ["EC2 Instance State-change Notification"],
+                detail: {
+                    state: ["running", "shutting-down"]
                 }
             },
             targets: [

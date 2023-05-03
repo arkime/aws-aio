@@ -59,7 +59,7 @@ class CreateEniMirrorHandler:
             traffic_target_id = ssm_ops.get_ssm_param_json_value(subnet_param_name, "mirrorTargetId", aws_provider)
 
             self.logger.info(f"Creating Mirroring Session...")
-            eni = ec2i.NetworkInterface(create_event.eni_id, create_event.eni_type)
+            eni = ec2i.NetworkInterface(create_event.vpc_id, create_event.subnet_id, create_event.eni_id, create_event.eni_type)
             try:
                 traffic_session_id = ec2i.mirror_eni(
                     eni,
@@ -70,7 +70,7 @@ class CreateEniMirrorHandler:
                     virtual_network=create_event.vni
                 )
             except ec2i.NonMirrorableEniType as ex:
-                self.logger.warning(f"Eni {eni.id} is of unsupported type {eni.type}; aborting...")
+                self.logger.warning(f"Eni {eni.eni_id} is of unsupported type {eni.eni_type}; aborting...")
                 cwi.put_event_metrics(
                     cwi.CreateEniMirrorEventMetrics(
                         create_event.cluster_name, 
@@ -84,9 +84,9 @@ class CreateEniMirrorHandler:
             self.logger.info(f"Creating SSM Parameter: {eni_param_name}")
             ssm_ops.put_ssm_param(
                 eni_param_name, 
-                json.dumps({"eniId": eni.id, "trafficSessionId": traffic_session_id}),
+                json.dumps({"eniId": eni.eni_id, "trafficSessionId": traffic_session_id}),
                 aws_provider,
-                description=f"Mirroring details for {eni.id}",
+                description=f"Mirroring details for {eni.eni_id}",
                 pattern=".*"
             )
 

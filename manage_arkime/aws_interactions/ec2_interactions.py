@@ -38,15 +38,44 @@ def get_subnets_of_vpc(vpc_id: str, aws_provider: AwsClientProvider) -> List[str
 
 @dataclass
 class NetworkInterface:
-    id: str
-    type: str
+    vpc_id: str
+    subnet_id: str
+    eni_id: str
+    eni_type: str
+
+    def to_dict(self):
+        return {
+            'vpc_id': self.vpc_id,
+            'subnet_id': self.subnet_id,
+            'eni_id': self.eni_id,
+            'eni_type': self.eni_type,
+        }
+
+def get_enis_of_instance(instance_id: str, aws_provider: AwsClientProvider) -> List[NetworkInterface]:
+    ec2_client = aws_provider.get_ec2()
+    describe_instance_response = ec2_client.describe_instances(
+        InstanceIds=[instance_id]
+    )
+    instance_details = describe_instance_response["Reservations"][0]["Instances"][0]
+
+    network_interfaces = []
+    for eni in instance_details.get("NetworkInterfaces", []):
+        network_interfaces.append(
+            NetworkInterface(eni["VpcId"], eni["SubnetId"], eni["NetworkInterfaceId"], eni["InterfaceType"])
+        )
+
+    return network_interfaces
 
 def get_enis_of_subnet(subnet_id: str, aws_provider: AwsClientProvider) -> List[NetworkInterface]:
     ec2_client = aws_provider.get_ec2()
     describe_eni_response = ec2_client.describe_network_interfaces(
             Filters=[{"Name": "subnet-id", "Values": [subnet_id]}]
     )
-    network_inferfaces = [NetworkInterface(eni["NetworkInterfaceId"], eni["InterfaceType"]) for eni in describe_eni_response.get("NetworkInterfaces", [])]
+    network_interfaces = []
+    for eni in describe_eni_response.get("NetworkInterfaces", []):
+        network_interfaces.append(
+            NetworkInterface(eni["VpcId"], eni["SubnetId"], eni["NetworkInterfaceId"], eni["InterfaceType"])
+        )
 
     next_token = describe_eni_response.get("NextToken")
     while next_token:
@@ -54,30 +83,34 @@ def get_enis_of_subnet(subnet_id: str, aws_provider: AwsClientProvider) -> List[
             Filters=[{"Name": "subnet-id", "Values": [subnet_id]}],
             NextToken=next_token
         )
-        next_interfaces = [NetworkInterface(eni["NetworkInterfaceId"], eni["InterfaceType"]) for eni in describe_eni_response.get("NetworkInterfaces", [])]
-        network_inferfaces.extend(next_interfaces)
+        next_interfaces = []
+        for eni in describe_eni_response.get("NetworkInterfaces", []):
+            next_interfaces.append(
+                NetworkInterface(eni["VpcId"], eni["SubnetId"], eni["NetworkInterfaceId"], eni["InterfaceType"])
+            )
+        network_interfaces.extend(next_interfaces)
         next_token = describe_eni_response.get("NextToken")
 
-    return network_inferfaces
+    return network_interfaces
 
 NON_MIRRORABLE_ENI_TYPES = ["gateway_load_balancer_endpoint", "nat_gateway"]
 
 class NonMirrorableEniType(Exception):
     def __init__(self, eni: NetworkInterface):
         self.eni = eni
-        super().__init__(f"The ENI {eni.id} is of type {eni.type}, which is not mirrorable")
+        super().__init__(f"The ENI {eni.eni_id} is of type {eni.eni_type}, which is not mirrorable")
 
 """
 Sets up a VPC Traffic Mirroring Session on a given ENI towards the specified Traffic Target using the specified
 Traffic Filter and returns the Traffic Session ID.
 """
 def mirror_eni(eni: NetworkInterface, traffic_target: str, traffic_filter: str, vpc_id: str, aws_provider: AwsClientProvider, virtual_network: int = 123) -> str:
-    if eni.type in NON_MIRRORABLE_ENI_TYPES:
+    if eni.eni_type in NON_MIRRORABLE_ENI_TYPES:
         raise NonMirrorableEniType(eni)
 
     ec2_client = aws_provider.get_ec2()
     create_session_response = ec2_client.create_traffic_mirror_session(
-        NetworkInterfaceId=eni.id,
+        NetworkInterfaceId=eni.eni_id,
         TrafficMirrorTargetId=traffic_target,
         TrafficMirrorFilterId=traffic_filter,
         SessionNumber=1,
@@ -88,7 +121,7 @@ def mirror_eni(eni: NetworkInterface, traffic_target: str, traffic_filter: str, 
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": f"{vpc_id}-{eni.id}"
+                        "Value": f"{vpc_id}-{eni.eni_id}"
                     },
                 ]
             },

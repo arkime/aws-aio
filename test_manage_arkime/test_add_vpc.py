@@ -14,8 +14,8 @@ import vni_provider as vnis
 @mock.patch("commands.add_vpc.ec2i")
 def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, mock_events):
     # Set up our mock
-    eni_1 = ec2i.NetworkInterface("eni-1", "type-1")
-    eni_2 = ec2i.NetworkInterface("eni-2", "type-2")
+    eni_1 = ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-1", "type-1")
+    eni_2 = ec2i.NetworkInterface("vpc-1", "subnet-1", "eni-2", "type-2")
 
     mock_ec2i.get_enis_of_subnet.return_value = [eni_1, eni_2]
 

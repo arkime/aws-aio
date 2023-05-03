@@ -106,10 +106,10 @@ def _mirror_enis_in_subnet(event_bus_arn: str, cluster_name: str, vpc_id: str, s
         # actually create the mirroring configuration, we should pre-screen (hasn't already been mirrored; right eni
         # type).
 
-        logger.info(f"Initiating creation of mirroring session for ENI {eni.id}")
+        logger.info(f"Initiating creation of mirroring session for ENI {eni.eni_id}")
 
         events.put_events(
-            [events.CreateEniMirrorEvent(cluster_name, vpc_id, subnet_id, eni.id, eni.type, traffic_filter_id, vni)],
+            [events.CreateEniMirrorEvent(cluster_name, vpc_id, subnet_id, eni.eni_id, eni.eni_type, traffic_filter_id, vni)],
             event_bus_arn,
             aws_provider
         )
