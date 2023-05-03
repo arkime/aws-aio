@@ -45,6 +45,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_REMOVE_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "arnEventBus": "bus-1",
+                    "nameCluster": "cluster-1",
                     "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
                     "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
                     "idVni": str(constants.VNI_DEFAULT),
