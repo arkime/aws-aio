@@ -60,7 +60,7 @@ npm run start
 npm run stop
 ```
 
-You can deploy a AWS Fargate-backed copy of this container to your AWS Account like so.  First, set up your Python virtual environment:
+You can deploy copies of this container to your AWS Account like so.  First, set up your Python virtual environment:
 
 ```
 python3 -m venv .venv
@@ -80,7 +80,7 @@ Finally, invoke the management CLI.  It will use your default AWS Credentials an
 ./manage_arkime.py deploy-demo-traffic
 ```
 
-You can tear down the demo Fargate stacks using an additional command:
+You can tear down the demo stacks using an additional command:
 
 ```
 ./manage_arkime.py deploy-demo-traffic
