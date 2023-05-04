@@ -9,7 +9,15 @@ The AWS Cloud Development Kit (CDK) is used to perform infrastructure specificat
 
 This tool provides a Python CLI which the user can interact with to manage the Arkime installation(s) in their account.  The Python CLI wraps a CDK App.  The CLI provides orchestration; the CDK App provides the CloudFormation Templates based on inputs from the CLI and performs CloudFormation create/update/destroy operations.  State about the user's deployed Arkime Clusters is stored in the user's AWS Account using [the AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html).  The capture itself is performed by using [VPC Traffic Mirroring](https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html) to mirror traffic to/from [the elastic network interfaces](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html) in the user's VPC through [a Gateway Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html) and into another VPC (the Capture VPC), created by the CLI, in the user's account.  The Arkime Capture Nodes live in the Capture VPC.
 
-**Figure 1:** Current design of the Arkime Cloud Demo
+When a VPC is added to a Cluster with the `add-vpc` command, we attempt to set up monitoring for all network interfaces in the target VPC.  After initial this setup, we listen for changes in the VPC [using AWS EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) and attempt to automatically create/destroy mirroring accordingly.  This should enable the user's fleet to scale naturally while still having its traffic captured/monitored by Arkime.  We currently provide automated, on-going monitoring of the following resource types:
+* EC2 Instances
+* EC2 Autoscaling Groups
+* ECS-on-EC2 Container Instances
+* Fargate Tasks
+
+Resources of those types should have capture configured for them when they are brought online and taken offline.
+
+**Figure 1:** Current high level design of the Arkime Cloud Demo
 
 ![Alt text](./cloud_arkime_design.png?raw=true)
 
@@ -52,7 +60,7 @@ npm run start
 npm run stop
 ```
 
-You can deploy a AWS Fargate-backed copy of this container to your AWS Account like so.  First, set up your Python virtual environment:
+You can deploy copies of this container to your AWS Account like so.  First, set up your Python virtual environment:
 
 ```
 python3 -m venv .venv
@@ -72,7 +80,7 @@ Finally, invoke the management CLI.  It will use your default AWS Credentials an
 ./manage_arkime.py deploy-demo-traffic
 ```
 
-You can tear down the demo Fargate stacks using an additional command:
+You can tear down the demo stacks using an additional command:
 
 ```
 ./manage_arkime.py deploy-demo-traffic
@@ -198,14 +206,15 @@ cdk bootstrap
 In general, it should be assumed that this setup is intended for "light to medium usage".  In other words, don't expect to pour massive amounts of data through it.  The wording here is intentionally vague to encourage the reader to assess for themselves whether it will scale for their use-case.  Ideally, load testing will be performed on the setup to give a bit more specifity here but that is not guaranteed.
 
 Here are some scaling things that you'll want to consider:
-* The compute/memory capacity of individual Fargate Capture Nodes
-* The maximum scaling limit of the Fargate Service as well as the scaling conditions
+* The compute/memory capacity of individual Capture Nodes
+* The maximum scaling limit of the Capture Nodes ECS Service as well as the scaling conditions
 * The number of availability zones the setup launches in, and whether specific zones are required
 * The max throughput of a single Gateway Load Balancer Endpoint is 100 Gbps, and we provision one per User subnet
 
 Here are some account limits you'll want to watch out for:
 * Number of EIPs per region is small, and we spin up several for each Arkime Cluster
-* There's a max of 10,000 Traffic Mirroring Sessions and Standard SSM Parameters/region, and we use ~1 of each for every User ENI
+* There's a max of 10,000 Traffic Mirroring Sessions.  We use one per traffic source.
+* There's a max of 10,000 Standard SSM Parameters per account/region.  We use at least one for each User ENI, several for each Subnet in a User VPC, and several for each User VPC and Cluster.
 
 
 ## Generally useful NPM/CDK commands
