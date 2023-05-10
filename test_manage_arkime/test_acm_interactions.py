@@ -1,7 +1,7 @@
 from datetime import timedelta
 import unittest.mock as mock
 
-from aws_interactions.acm_interactions import import_self_signed_cert, upload_default_elb_cert, DEFAULT_ELB_DOMAIN
+from aws_interactions.acm_interactions import import_self_signed_cert, upload_default_elb_cert, DEFAULT_ELB_DOMAIN, destroy_cert
 
 
 def test_WHEN_import_self_signed_cert_called_THEN_imports():
@@ -61,4 +61,19 @@ def test_WHEN_upload_default_elb_cert_called_THEN_as_expected(mock_cert_cls, moc
         mock.call(mock_cert, mock_provider)
     ]
     assert expected_import_calls == mock_import.call_args_list
+
+def test_WHEN_destroy_cert_called_THEN_as_expected():
+    # Set up our mock
+    mock_client = mock.Mock()
+    mock_provider = mock.Mock()
+    mock_provider.get_acm.return_value = mock_client
+
+    # Run our test
+    destroy_cert("arn", mock_provider)
+
+    # Check our results
+    expected_destroy_cert_calls = [
+        mock.call(CertificateArn="arn")
+    ]
+    assert expected_destroy_cert_calls == mock_client.delete_certificate.call_args_list
 

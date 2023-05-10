@@ -55,6 +55,7 @@ switch(params.type) {
 
         const viewerNodesStack = new ViewerNodesStack(app, params.nameViewerNodesStack, {
             env: env,
+            arnViewerCert: params.nameViewerCertArn,
             captureBucket: captureBucketStack.bucket,
             viewerVpc: captureVpcStack.vpc,
             clusterName: params.nameCluster,

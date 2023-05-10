@@ -4,17 +4,21 @@ from typing import Dict
 
 import constants as constants
 
-def generate_create_cluster_context(name: str) -> Dict[str, str]:
-    create_context = _generate_cluster_context(name)
+def generate_create_cluster_context(name: str, viewer_cert_arn: str) -> Dict[str, str]:
+    create_context = _generate_cluster_context(name, viewer_cert_arn)
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_CREATE_CLUSTER
     return create_context
 
 def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
-    destroy_context = _generate_cluster_context(name)
+    # Hardcode this value because it saves us some implementation headaches and it doesn't matter what it is. Since
+    # we're tearing down the Cfn stack in which it would be used, the operation either succeeds and the arn is
+    # irrelevant or it fails/rolls back and the arn is irrelevant.
+    fake_arn = "N/A"
+    destroy_context = _generate_cluster_context(name, fake_arn)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER
     return destroy_context
 
-def _generate_cluster_context(name: str) -> Dict[str, str]:
+def _generate_cluster_context(name: str, viewer_cert_arn: str) -> Dict[str, str]:
     cmd_params = {
         "nameCluster": name,
         "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
@@ -24,6 +28,7 @@ def _generate_cluster_context(name: str) -> Dict[str, str]:
         "nameClusterSsmParam": constants.get_cluster_ssm_param_name(name),
         "nameOSDomainStack": constants.get_opensearch_domain_stack_name(name),
         "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(name),
+        "nameViewerCertArn": viewer_cert_arn,
         "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(name),
         "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(name),
         "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(name),

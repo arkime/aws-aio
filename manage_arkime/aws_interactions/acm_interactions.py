@@ -42,3 +42,13 @@ def upload_default_elb_cert(aws_provider: AwsClientProvider) -> str:
 
     acm_arn = import_self_signed_cert(cert, aws_provider)
     return acm_arn
+
+def destroy_cert(cert_arn: str, aws_provider: AwsClientProvider):
+    logger.debug(f"Destroying ACM Certificate: {cert_arn}")
+
+    acm_client = aws_provider.get_acm()
+    acm_client.delete_certificate(
+        CertificateArn=cert_arn
+    )
+
+    logger.debug("ACM Certificate destroyed ")
