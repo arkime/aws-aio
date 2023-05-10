@@ -124,6 +124,8 @@ You can log into your Viewer Dashboard using credentials from the `get-login-det
 ./manage_arkime.py get-login-details --name MyCluster
 ```
 
+**NOTE:** By default, we set up HTTPS using a self-signed certificate which your browser will give you a warning about when you visit the dashboard URL.  In \*most\* situations, you can just acknowledge the risk and click through.  However, if you're using Chrome on Mac OS you might not be allowed to click through ([see here](https://stackoverflow.com/questions/58802767/no-proceed-anyway-option-on-neterr-cert-invalid-in-chrome-on-macos)).  In that case, you'll need to click on the browser window so it's in focus and type the exact phrase `thisisunsafe` and it will let you through.
+
 ### Tearing down your Arkime Cluster
 
 You can destroy the Arkime Cluster in your AWS account by first turning off traffic capture for all VPCs:
