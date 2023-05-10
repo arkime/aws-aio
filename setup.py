@@ -11,8 +11,9 @@ setuptools.setup(
         "boto3",
         "click",
         "coloredlogs",
+        "cryptography",
         "pexpect",
         "pytest",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.9",
 )
