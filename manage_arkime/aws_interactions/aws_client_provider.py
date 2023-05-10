@@ -17,6 +17,11 @@ class AwsClientProvider:
         else:
             return boto3.Session(profile_name=self._aws_profile, region_name=self._aws_region)
 
+    def get_acm(self):
+        session = self._get_session()
+        client = session.client("acm")
+        return client
+
     def get_cloudwatch(self):
         session = self._get_session()
         client = session.client("cloudwatch")
