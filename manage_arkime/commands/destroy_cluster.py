@@ -1,9 +1,10 @@
 import logging
 
+from aws_interactions.acm_interactions import destroy_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
 from aws_interactions.destroy_s3_bucket import destroy_s3_bucket
-from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path
+from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
 import constants as constants
 import cdk_interactions.cdk_context as context
@@ -54,3 +55,20 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
 
     cdk_client = CdkClient()
     cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=destroy_context)
+
+    # Destroy our cert
+    _destroy_viewer_cert(name, aws_provider)
+
+def _destroy_viewer_cert(cluster_name: str, aws_provider: AwsClientProvider):
+    # Only destroy up the certificate if it exists
+    cert_ssm_param = constants.get_viewer_cert_ssm_param_name(cluster_name)
+    try:
+        cert_arn = get_ssm_param_value(cert_ssm_param, aws_provider)
+    except ParamDoesNotExist:        
+        logger.debug(f"Viewer certificate does not exist; skipping destruction")
+        return
+
+    # Destroy the cert and state
+    logger.debug("Destroying certificate and SSM parameter...")
+    destroy_cert(cert_arn, aws_provider) # destroy first so if op fails we still know the ARN
+    delete_ssm_param(cert_ssm_param, aws_provider)

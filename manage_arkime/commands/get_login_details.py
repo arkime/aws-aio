@@ -17,7 +17,7 @@ class LoginDetails:
     url: str
 
     def __str__(self):
-        return f"URL: {self.url}\nUsername: {self.username}\nPassword: {self.password}"
+        return f"URL: https://{self.url}\nUsername: {self.username}\nPassword: {self.password}"
 
 def cmd_get_login_details(profile: str, region: str, name: str) -> LoginDetails:
     logger.debug(f"Invoking get-login-details with profile '{profile}' and region '{region}'")

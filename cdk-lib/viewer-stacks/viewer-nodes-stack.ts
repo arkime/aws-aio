@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
@@ -12,6 +13,7 @@ import * as path from 'path'
 import { Construct } from 'constructs';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
+    readonly arnViewerCert: string;
     readonly captureBucket: s3.Bucket;
     readonly viewerVpc: ec2.Vpc;
     readonly clusterName: string;
@@ -113,6 +115,28 @@ export class ViewerNodesStack extends cdk.Stack {
         });
 
         listener.addTargets('TargetGroup', {
+            protocol: elbv2.ApplicationProtocol.HTTP,
+            port: viewerPort,
+            targets: [service.loadBalancerTarget({
+                containerName: container.containerName,
+                containerPort: viewerPort
+            })],
+            healthCheck: {
+                healthyHttpCodes: '200,401',
+                path: '/',
+                unhealthyThresholdCount: 2,
+                healthyThresholdCount: 5,
+                interval: cdk.Duration.seconds(30),
+            },
+        });
+
+        const certificate = acm.Certificate.fromCertificateArn(this, 'ViewerCert', props.arnViewerCert);
+        const httpsListener = lb.addListener('HttpsListener', {
+            port: 443,
+            protocol: elbv2.ApplicationProtocol.HTTPS,
+            certificates: [certificate],
+        });
+        httpsListener.addTargets('HttpsTargetGroup', {
             protocol: elbv2.ApplicationProtocol.HTTP,
             port: viewerPort,
             targets: [service.loadBalancerTarget({
