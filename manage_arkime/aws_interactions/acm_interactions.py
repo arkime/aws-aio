@@ -23,7 +23,7 @@ def import_self_signed_cert(cert: SelfSignedCert, aws_provider: AwsClientProvide
 
     return import_response["CertificateArn"]
 
-DEFAULT_ELB_DOMAIN = "*.elb.amazonaws.com"
+DEFAULT_ELB_DOMAIN = "localhost"
 
 def upload_default_elb_cert(aws_provider: AwsClientProvider) -> str:
     """
