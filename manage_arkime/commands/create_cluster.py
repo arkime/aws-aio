@@ -4,13 +4,16 @@ from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
-import constants as constants
 import cdk_interactions.cdk_context as context
+import constants as constants
+from core.capacity_planning import get_capture_node_capacity_plan
 
 logger = logging.getLogger(__name__)
 
-def cmd_create_cluster(profile: str, region: str, name: str):
+def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: int):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
+
+    capture_plan = get_capture_node_capacity_plan(expected_traffic)
 
     cert_arn = _set_up_viewer_cert(profile, region, name)
 
@@ -22,7 +25,7 @@ def cmd_create_cluster(profile: str, region: str, name: str):
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn)
+    create_context = context.generate_create_cluster_context(name, cert_arn, capture_plan)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
 def _set_up_viewer_cert(profile: str, region: str, name: str) -> str:

@@ -3,22 +3,25 @@ import shlex
 from typing import Dict
 
 import constants as constants
+from core.capacity_planning import CaptureNodesPlan, INSTANCE_TYPE_CAPTURE_NODE
 
-def generate_create_cluster_context(name: str, viewer_cert_arn: str) -> Dict[str, str]:
-    create_context = _generate_cluster_context(name, viewer_cert_arn)
+def generate_create_cluster_context(name: str, viewer_cert_arn: str, capture_plan: CaptureNodesPlan) -> Dict[str, str]:
+    create_context = _generate_cluster_context(name, viewer_cert_arn, capture_plan)
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_CREATE_CLUSTER
     return create_context
 
 def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
-    # Hardcode this value because it saves us some implementation headaches and it doesn't matter what it is. Since
-    # we're tearing down the Cfn stack in which it would be used, the operation either succeeds and the arn is
-    # irrelevant or it fails/rolls back and the arn is irrelevant.
+    # Hardcode these value because it saves us some implementation headaches and it doesn't matter what it is. Since
+    # we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are irrelevant
+    # or it fails/rolls back they are irrelevant.
     fake_arn = "N/A"
-    destroy_context = _generate_cluster_context(name, fake_arn)
+    fake_capture_capacity = CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2)
+
+    destroy_context = _generate_cluster_context(name, fake_arn, fake_capture_capacity)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER
     return destroy_context
 
-def _generate_cluster_context(name: str, viewer_cert_arn: str) -> Dict[str, str]:
+def _generate_cluster_context(name: str, viewer_cert_arn: str, capture_plan: CaptureNodesPlan) -> Dict[str, str]:
     cmd_params = {
         "nameCluster": name,
         "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
@@ -33,6 +36,7 @@ def _generate_cluster_context(name: str, viewer_cert_arn: str) -> Dict[str, str]
         "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(name),
         "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(name),
         "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(name),
+        "planCaptureNodes": json.dumps(capture_plan.to_dict())
     }
 
     return {

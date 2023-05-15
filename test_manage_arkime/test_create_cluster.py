@@ -5,7 +5,7 @@ import unittest.mock as mock
 import aws_interactions.ssm_operations as ssm_ops
 from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert
 import constants as constants
-
+from core.capacity_planning import CaptureNodesPlan
 
 @mock.patch("commands.create_cluster._set_up_viewer_cert")
 @mock.patch("commands.create_cluster.CdkClient")
@@ -17,7 +17,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     mock_cdk_client_cls.return_value = mock_client
 
     # Run our test
-    cmd_create_cluster("profile", "region", "my-cluster")
+    cmd_create_cluster("profile", "region", "my-cluster", 40)
 
     # Check our results
     expected_calls = [
@@ -47,6 +47,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name("my-cluster"),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name("my-cluster"),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name("my-cluster"),
+                    "planCaptureNodes": json.dumps(CaptureNodesPlan("m5.xlarge", 20, 25).to_dict())
                 }))
             }
         )
