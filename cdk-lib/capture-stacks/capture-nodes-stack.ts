@@ -15,8 +15,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
 
-import * as constants from '../core/constants'
-import {ClusterSsmValue} from '../core/ssm-wrangling'
+import * as constants from '../core/constants';
+import * as plan from '../core/capacity-plan';
+import {ClusterSsmValue} from '../core/ssm-wrangling';
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
@@ -25,6 +26,8 @@ export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
+    readonly planCaptureNodes: plan.CaptureNodesPlan;
+    readonly planEcsResources: plan.EcsSysResourcePlan;
     readonly ssmParamNameCluster: string;
 }
 
@@ -78,11 +81,11 @@ export class CaptureNodesStack extends cdk.Stack {
         // Load Balancers do not properly integrate with ECS Fargate.
         const autoScalingGroup = new autoscaling.AutoScalingGroup(this, 'ASG', {
             vpc: props.captureVpc,
-            instanceType: new ec2.InstanceType('m5.xlarge'), // Arbitrarily chosen
+            instanceType: new ec2.InstanceType(props.planCaptureNodes.instanceType),
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
-            desiredCapacity: 1,
-            minCapacity: 1,
-            maxCapacity: 10 // Arbitrarily chosen
+            desiredCapacity: props.planCaptureNodes.desiredCount,
+            minCapacity: props.planCaptureNodes.minCount,
+            maxCapacity: props.planCaptureNodes.maxCount
         });
 
         const asgSecurityGroup = new ec2.SecurityGroup(this, 'ASGSecurityGroup', {
@@ -159,13 +162,8 @@ export class CaptureNodesStack extends cdk.Stack {
                 'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
                 'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
             },
-            // We want the full capacity of our m5.xlarge because we're using HOST network type and therefore won't
-            // place multiple containers on a single host.  However, we can't ask for ALL of its resources (ostensibly,
-            // 4 vCPU and 16 GiB) because then ECS placement will fail.  We therefore ask for a slightly reduced
-            // amount.  This is the minimum amount we're requesting ECS to reserve, so it can't reserve more than
-            // exist.
-            cpu: 3584, // 3.5 vCPUs
-            memoryLimitMiB: 15360, // 15 GiB
+            cpu: props.planEcsResources.cpu,
+            memoryLimitMiB: props.planEcsResources.memory,
             portMappings: [
                 { containerPort: 6081, hostPort: 6081, protocol: ecs.Protocol.UDP},
                 { containerPort: healthCheckPort, hostPort: healthCheckPort, protocol: ecs.Protocol.TCP},
@@ -243,7 +241,9 @@ export class CaptureNodesStack extends cdk.Stack {
             busArn: clusterBus.eventBusArn,
             busName: clusterBus.eventBusName,
             clusterName: props.clusterName, 
-            vpceServiceId: gwlbEndpointService.ref
+            vpceServiceId: gwlbEndpointService.ref,
+            captureNodesPlan: props.planCaptureNodes,
+            ecsSysResourcePlan: props.planEcsResources
         }
         const clusterParam = new ssm.StringParameter(this, 'ClusterParam', {
             allowedPattern: '.*',

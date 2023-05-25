@@ -12,6 +12,7 @@ from commands.get_login_details import cmd_get_login_details
 from commands.list_clusters import cmd_list_clusters
 from commands.remove_vpc import cmd_remove_vpc
 import constants as constants
+from core.capacity_planning import MAX_TRAFFIC, MINIMUM_TRAFFIC
 from logging_wrangler import LoggingWrangler, set_boto_log_level
 
 logger = logging.getLogger(__name__)
@@ -54,11 +55,18 @@ cli.add_command(destroy_demo_traffic)
 
 @click.command(help="Creates an Arkime Cluster in your account")
 @click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have", required=True)
+@click.option(
+    "--expected-traffic", 
+    help=("The amount of traffic, in gigabits-per-second, you expect your Arkime Cluster to receive."
+        + f"Minimum: {MINIMUM_TRAFFIC} Gbps,  Maximum: {MAX_TRAFFIC} Gbps"),
+    default=None,
+    type=click.INT,
+    required=False)
 @click.pass_context
-def create_cluster(ctx, name):
+def create_cluster(ctx, name, expected_traffic):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_create_cluster(profile, region, name)
+    cmd_create_cluster(profile, region, name, expected_traffic)
 cli.add_command(create_cluster)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")

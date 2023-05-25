@@ -5,6 +5,7 @@ import unittest.mock as mock
 from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert
 import constants as constants
+from core.capacity_planning import CaptureNodesPlan, EcsSysResourcePlan
 
 TEST_CLUSTER = "my-cluster"
 
@@ -51,6 +52,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
+                    "planCaptureNodes": json.dumps(CaptureNodesPlan("m5.xlarge", 1, 2, 1).to_dict()),
+                    "planEcsResources": json.dumps(EcsSysResourcePlan(1, 1).to_dict())
                 }))
             }
         )
@@ -129,6 +132,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
+                    "planCaptureNodes": json.dumps(CaptureNodesPlan("m5.xlarge", 1, 2, 1).to_dict()),
+                    "planEcsResources": json.dumps(EcsSysResourcePlan(1, 1).to_dict())
                 }))
             }
         )

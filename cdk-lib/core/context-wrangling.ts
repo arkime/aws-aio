@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as plan from './capacity-plan';
 import * as prms from './command-params';
 import {CDK_CONTEXT_CMD_VAR, CDK_CONTEXT_REGION_VAR, CDK_CONTEXT_PARAMS_VAR, ManagementCmd} from './constants';
 
@@ -98,6 +99,8 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameViewerPassSsmParam: rawClusterMgmtParamsObj.nameViewerPassSsmParam,
                 nameViewerUserSsmParam: rawClusterMgmtParamsObj.nameViewerUserSsmParam,
                 nameViewerNodesStack: rawClusterMgmtParamsObj.nameViewerNodesStack,
+                planCaptureNodes:  JSON.parse(rawClusterMgmtParamsObj.planCaptureNodes),
+                planEcsResources:  JSON.parse(rawClusterMgmtParamsObj.planEcsResources),
             }
             return clusterMgmtParams;
         case ManagementCmd.AddVpc: // Add and Remove VPC use the same parameters

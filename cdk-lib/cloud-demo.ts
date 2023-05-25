@@ -47,6 +47,8 @@ switch(params.type) {
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
             osPassword: osDomainStack.osPassword,
+            planCaptureNodes: params.planCaptureNodes,
+            planEcsResources: params.planEcsResources,
             ssmParamNameCluster: params.nameClusterSsmParam
         });
         captureNodesStack.addDependency(captureBucketStack)
