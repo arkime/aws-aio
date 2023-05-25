@@ -6,14 +6,14 @@ logger = logging.getLogger(__name__)
 
 INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge" # Arbitrarily chosen
 TRAFFIC_PER_M5_XL = 2 # in Gbps, guestimate, should be updated with experimental data
-MAX_TRAFFIC_PER_CLUSTER = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
+MAX_TRAFFIC = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
 MINIMUM_NODES = 1 # We'll always have at least one capture node
 MINIMUM_TRAFFIC = MINIMUM_NODES * TRAFFIC_PER_M5_XL
 CAPACITY_BUFFER_FACTOR = 1.25 # Arbitrarily chosen
 
 class TooMuchTraffic(Exception):
     def __init__(self, expected_traffic: int):
-        super().__init__(f"User's expected traffic ({expected_traffic} Gbps) exceed the limit of a single cluster ({MAX_TRAFFIC_PER_CLUSTER})")
+        super().__init__(f"User's expected traffic ({expected_traffic} Gbps) exceed the limit of a single cluster ({MAX_TRAFFIC})")
 
 @dataclass
 class CaptureNodesPlan:
@@ -42,7 +42,7 @@ def get_capture_node_capacity_plan(expected_traffic: int) -> CaptureNodesPlan:
 
     if not expected_traffic or expected_traffic < TRAFFIC_PER_M5_XL:
         desired_instances = MINIMUM_NODES
-    elif expected_traffic > MAX_TRAFFIC_PER_CLUSTER:
+    elif expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
     else:
         desired_instances = math.ceil(expected_traffic/TRAFFIC_PER_M5_XL)

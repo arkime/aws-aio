@@ -27,7 +27,7 @@ def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
 
     # TEST 4: Max expected traffic number
 
-    actual_value = cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC_PER_CLUSTER)
+    actual_value = cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC)
     expected_value = cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 50, 63, 1)
 
     assert expected_value == actual_value
@@ -35,7 +35,7 @@ def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
     # TEST 5: Excessive expected traffic number
 
     with pytest.raises(cap.TooMuchTraffic):
-        cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC_PER_CLUSTER + 10)
+        cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC + 10)
 
 
 def test_WHEN_get_ecs_sys_resource_plan_called_THEN_as_expected():
