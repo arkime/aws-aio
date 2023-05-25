@@ -1,3 +1,5 @@
+import * as plan from './capacity-plan';
+
 /**
  * Base type for receiving arguments from the Python side of the app.  These directly match the interface on the Python
  * side for a given command and can be type-cast into using JSON.  It's expected these will only be used during the
@@ -23,6 +25,8 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
+    planCaptureNodes: string;
+    planEcsResources: string;
 }
 
 /**
@@ -85,6 +89,8 @@ export interface ClusterMgmtParams extends CommandParams {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
+    planCaptureNodes: plan.CaptureNodesPlan;
+    planEcsResources: plan.EcsSysResourcePlan;
 }
 
 /**

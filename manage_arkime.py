@@ -12,7 +12,7 @@ from commands.get_login_details import cmd_get_login_details
 from commands.list_clusters import cmd_list_clusters
 from commands.remove_vpc import cmd_remove_vpc
 import constants as constants
-from core.capacity_planning import MINIMUM_TRAFFIC, MAX_TRAFFIC_PER_CLUSTER
+from core.capacity_planning import MAX_TRAFFIC_PER_CLUSTER, MINIMUM_TRAFFIC
 from logging_wrangler import LoggingWrangler, set_boto_log_level
 
 logger = logging.getLogger(__name__)
@@ -58,9 +58,9 @@ cli.add_command(destroy_demo_traffic)
 @click.option(
     "--expected-traffic", 
     help=("The amount of traffic, in gigabits-per-second, you expect your Arkime Cluster to receive."
-        + f"  Maximum: {MAX_TRAFFIC_PER_CLUSTER} Gbps"),
-    show_default=True,
-    default=MINIMUM_TRAFFIC,
+        + f"Minimum: {MINIMUM_TRAFFIC} Gbps,  Maximum: {MAX_TRAFFIC_PER_CLUSTER} Gbps"),
+    default=None,
+    type=click.INT,
     required=False)
 @click.pass_context
 def create_cluster(ctx, name, expected_traffic):
