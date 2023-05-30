@@ -12,7 +12,7 @@ from core.capacity_planning import get_capture_node_capacity_plan, get_ecs_sys_r
 
 logger = logging.getLogger(__name__)
 
-def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: int):
+def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
@@ -32,7 +32,7 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: i
     create_context = context.generate_create_cluster_context(name, cert_arn, capture_plan, ecs_resource_plan)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
-def _get_capacity_plans(cluster_name: str, expected_traffic: int, aws_provider: AwsClientProvider) -> Tuple[CaptureNodesPlan, EcsSysResourcePlan]:
+def _get_capacity_plans(cluster_name: str, expected_traffic: float, aws_provider: AwsClientProvider) -> Tuple[CaptureNodesPlan, EcsSysResourcePlan]:
     
     if not expected_traffic:
         try:

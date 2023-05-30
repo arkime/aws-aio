@@ -60,7 +60,7 @@ cli.add_command(destroy_demo_traffic)
     help=("The amount of traffic, in gigabits-per-second, you expect your Arkime Cluster to receive."
         + f"Minimum: {MINIMUM_TRAFFIC} Gbps,  Maximum: {MAX_TRAFFIC} Gbps"),
     default=None,
-    type=click.INT,
+    type=click.FLOAT,
     required=False)
 @click.pass_context
 def create_cluster(ctx, name, expected_traffic):
