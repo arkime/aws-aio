@@ -99,8 +99,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameViewerPassSsmParam: rawClusterMgmtParamsObj.nameViewerPassSsmParam,
                 nameViewerUserSsmParam: rawClusterMgmtParamsObj.nameViewerUserSsmParam,
                 nameViewerNodesStack: rawClusterMgmtParamsObj.nameViewerNodesStack,
-                planCaptureNodes:  JSON.parse(rawClusterMgmtParamsObj.planCaptureNodes),
-                planEcsResources:  JSON.parse(rawClusterMgmtParamsObj.planEcsResources),
+                planCluster:  JSON.parse(rawClusterMgmtParamsObj.planCluster),
             }
             return clusterMgmtParams;
         case ManagementCmd.AddVpc: // Add and Remove VPC use the same parameters

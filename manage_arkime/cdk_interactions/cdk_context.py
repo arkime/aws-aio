@@ -3,10 +3,11 @@ import shlex
 from typing import Dict
 
 import constants as constants
-from core.capacity_planning import CaptureNodesPlan, INSTANCE_TYPE_CAPTURE_NODE, EcsSysResourcePlan
+from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan, 
+                                    MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS)
 
-def generate_create_cluster_context(name: str, viewer_cert_arn: str, capture_plan: CaptureNodesPlan, ecs_resource_plan: EcsSysResourcePlan) -> Dict[str, str]:
-    create_context = _generate_cluster_context(name, viewer_cert_arn, capture_plan, ecs_resource_plan)
+def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan) -> Dict[str, str]:
+    create_context = _generate_cluster_context(name, viewer_cert_arn, cluster_plan)
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_CREATE_CLUSTER
     return create_context
 
@@ -15,14 +16,18 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
     # we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are irrelevant
     # or it fails/rolls back they are irrelevant.
     fake_arn = "N/A"
-    fake_capture_capacity = CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1)
-    fake_resource_plan = EcsSysResourcePlan(1, 1)
+    fake_cluster_plan = ClusterPlan(
+        CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
+        CaptureVpcPlan(1),
+        EcsSysResourcePlan(1, 1),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
+    )
 
-    destroy_context = _generate_cluster_context(name, fake_arn, fake_capture_capacity, fake_resource_plan)
+    destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER
     return destroy_context
 
-def _generate_cluster_context(name: str, viewer_cert_arn: str, capture_plan: CaptureNodesPlan, ecs_resources_plan: EcsSysResourcePlan) -> Dict[str, str]:
+def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan) -> Dict[str, str]:
     cmd_params = {
         "nameCluster": name,
         "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
@@ -37,8 +42,7 @@ def _generate_cluster_context(name: str, viewer_cert_arn: str, capture_plan: Cap
         "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(name),
         "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(name),
         "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(name),
-        "planCaptureNodes": json.dumps(capture_plan.to_dict()),
-        "planEcsResources": json.dumps(ecs_resources_plan.to_dict())
+        "planCluster": json.dumps(cluster_plan.to_dict()),
     }
 
     return {

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 import math
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +10,12 @@ INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge" # Arbitrarily chosen
 TRAFFIC_PER_M5_XL = 2 # in Gbps, guestimate, should be updated with experimental data
 MAX_TRAFFIC = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
 MINIMUM_NODES = 1 # We'll always have at least one capture node
-MINIMUM_TRAFFIC = MINIMUM_NODES * TRAFFIC_PER_M5_XL
+MINIMUM_TRAFFIC = 0.01 # Gbps; arbitrarily chosen, but will yield a minimal cluster
 CAPACITY_BUFFER_FACTOR = 1.25 # Arbitrarily chosen
+MASTER_NODE_COUNT = 3 # Recommended number in docs
+DEFAULT_SPI_DAYS = 30 # How many days of SPI metadata to keep in the OS Domain
+DEFAULT_SPI_REPLICAS = 1 # How replicas of metadata to keep in the OS Domain
+DEFAULT_NUM_AZS = 2 # How many AWS Availability zones to utilize
 
 class TooMuchTraffic(Exception):
     def __init__(self, expected_traffic: int):
@@ -23,21 +27,21 @@ class NotEnoughStorage(Exception):
 
 @dataclass
 class CaptureNodesPlan:
-    instance_type: str
-    desired_count: int
-    max_count: int
-    min_count: int
+    instanceType: str
+    desiredCount: int
+    maxCount: int
+    minCount: int
 
     def __equal__(self, other):
-        return (self.instance_type == other.instance_type and self.desired_count == other.desired_count
-                and self.max_count == other.max_count and self.min_count == other.min_count)
+        return (self.instanceType == other.instance_type and self.desiredCount == other.desired_count
+                and self.maxCount == other.max_count and self.minCount == other.min_count)
 
     def to_dict(self) -> Dict[str, str]:
         return {
-            "instanceType": self.instance_type,
-            "desiredCount": self.desired_count,
-            "maxCount": self.max_count,
-            "minCount": self.min_count,
+            "instanceType": self.instanceType,
+            "desiredCount": self.desiredCount,
+            "maxCount": self.maxCount,
+            "minCount": self.minCount,
         }
 
 def get_capture_node_capacity_plan(expected_traffic: float) -> CaptureNodesPlan:
@@ -124,48 +128,56 @@ R6G_12XLARGE_SEARCH = DataNode("r6g.12xlarge.search", 12*1024)
 @dataclass
 class DataNodesPlan:
     count: int
-    type: str
-    vol_size: int # in GiB
+    instanceType: str
+    volumeSize: int # in GiB
 
     def __equal__(self, other):
-        return (self.count == other.count and self.type == other.type
-                and self.vol_size == other.vol_size)
+        return (self.count == other.count and self.instanceType == other.type
+                and self.volumeSize == other.vol_size)
 
     def to_dict(self) -> Dict[str, str]:
         return {
             "count": self.count,
-            "type": self.type,
-            "volSize": self.vol_size
+            "instanceType": self.instanceType,
+            "volumeSize": self.volumeSize
         }
     
 @dataclass
 class MasterNodesPlan:
     count: int
-    type: str
+    instanceType: str
 
     def __equal__(self, other):
-        return (self.count == other.count and self.type == other.type)
+        return (self.count == other.count and self.instanceType == other.type)
 
     def to_dict(self) -> Dict[str, str]:
         return {
             "count": self.count,
-            "type": self.type
+            "instanceType": self.instanceType
         }
+
+T_OSDomainPlan = TypeVar('T_OSDomainPlan', bound='OSDomainPlan')
 
 @dataclass
 class OSDomainPlan:
-    data_nodes: DataNodesPlan
-    master_nodes: MasterNodesPlan
+    dataNodes: DataNodesPlan
+    masterNodes: MasterNodesPlan
 
     def __equal__(self, other):
-        return (self.data_nodes == other.dataNodes
-                and self.master_nodes == other.masterNodes)
+        return (self.dataNodes == other.dataNodes
+                and self.masterNodes == other.masterNodes)
 
     def to_dict(self) -> Dict[str, str]:
         return {
-            "dataNodes": self.data_nodes.to_dict(),
-            "masterNodes": self.master_nodes.to_dict()
+            "dataNodes": self.dataNodes.to_dict(),
+            "masterNodes": self.masterNodes.to_dict()
         }
+    
+    @classmethod
+    def from_dict(cls: Type[T_OSDomainPlan], input: Dict[str, any]) -> T_OSDomainPlan:
+        data_nodes = DataNodesPlan(**input["dataNodes"])
+        master_nodes = MasterNodesPlan(**input["masterNodes"])
+        return cls(data_nodes, master_nodes)
     
 def _get_storage_per_replica(expected_traffic: float, spi_days: int) -> float:
     """
@@ -184,21 +196,25 @@ def _get_total_storage(expected_traffic: float, spi_days: int, replicas: int) ->
     spi_days: the number of days to retain the SPI data stored in the OpenSearch Domain
     replicas: the number of replicas to have of the data
     """
-    return _get_storage_per_replica(expected_traffic, spi_days) * replicas
+    return _get_storage_per_replica(expected_traffic, spi_days) * (1 + replicas)
 
-def _get_data_node_plan(total_storage: float) -> DataNodesPlan:
+def _get_data_node_plan(total_storage: float, num_azs: int) -> DataNodesPlan:
     """
     Per the OpenSearch Service limits doc [1], you can have a maximum of 10 T2/T3 data nodes or 80 of other types by
     default.  You can raise this limit up to 200.  To keep things simple, we will assume if the user needs more storage
     than 80 of the largest instance type can provide, they'll bump the limit out of band and just keep getting more of
-    that largest instance type.
+    that largest instance type. There's also an apparent incentive to have more, smaller nodes than fewer, larger
+    nodes [2].
+    
+    We ensure there are at least two data nodes of whichever type is selected for the
+    capacity plan.
 
-    There's also an apparent incentive to have more, smaller nodes than fewer, larger nodes [2]
+    An additional constraint is that you must have an even number of data nodes if you have two AZs.
 
     [1] https://docs.aws.amazon.com/opensearch-service/latest/developerguide/limits.html
     [2] https://github.com/arkime/aws-aio/issues/56#issuecomment-1563652060
 
-    total_storage: full stage requirement for all data, including replicas, in GiB
+    total_storage: full storage requirement for all data, including replicas, in GiB
     """
 
     if total_storage <= 10 * T3_SMALL_SEARCH.vol_size:
@@ -209,18 +225,24 @@ def _get_data_node_plan(total_storage: float) -> DataNodesPlan:
         node = R6G_4XLARGE_SEARCH
     elif total_storage <= 80 * R6G_12XLARGE_SEARCH.vol_size:
         node = R6G_12XLARGE_SEARCH
+    else:
+        node = R6G_12XLARGE_SEARCH # overflow with our largest instance type
+
+    num_of_nodes = max(math.ceil(total_storage / node.vol_size), 2)
+    if num_azs == 2:
+        num_of_nodes = math.ceil(num_of_nodes / 2) * 2 # The next largest even integer
 
     plan = DataNodesPlan(
-        count = math.ceil(total_storage / node.vol_size),
-        type = node.type,
-        vol_size = node.vol_size
+        count = num_of_nodes,
+        instanceType = node.type,
+        volumeSize = node.vol_size
     )
 
     return plan
 
-def _get_master_node_plan(storage_per_replica: float, data_node_count: int) -> MasterNodesPlan:
+def _get_master_node_plan(storage_per_replica: float, data_node_count: int, data_node_type: str) -> MasterNodesPlan:
     """
-    We follow the sizing recommendation in the docs [1].
+    We follow the sizing recommendation in the docs [1].  One complicating 
 
     [1] https://docs.aws.amazon.com/opensearch-service/latest/developerguide/managedomains-dedicatedmasternodes.html
 
@@ -232,7 +254,12 @@ def _get_master_node_plan(storage_per_replica: float, data_node_count: int) -> M
     storage_per_shard = 40 # GiB
     num_shards = math.ceil(storage_per_replica / storage_per_shard)
 
-    if num_shards <= 10000 and data_node_count <= 10:
+    if data_node_type == T3_SMALL_SEARCH.type:
+        # You can't mix graviton and non-graviton instance types across the data/master node roles.  Additionally,
+        # there are no "toy"-class graviton data node instance types.  Therefore, we need this (hacky) check to
+        # make sure we're using a compatible type.
+        node_type = "m5.large.search"
+    elif num_shards <= 10000 and data_node_count <= 10:
         node_type = "m6g.large.search"
     elif num_shards <= 30000 and data_node_count <= 30:
         node_type = "c6g.2xlarge.search"
@@ -242,19 +269,66 @@ def _get_master_node_plan(storage_per_replica: float, data_node_count: int) -> M
         node_type = "r6g.4xlarge.search"
 
     return MasterNodesPlan(
-        count = 3, # Recommended number in docs
-        type = node_type
+        count = MASTER_NODE_COUNT,
+        instanceType = node_type
     )
     
-def get_os_domain_plan(expected_traffic: float, spi_days: int, replicas: int) -> OSDomainPlan:
+def get_os_domain_plan(expected_traffic: float, spi_days: int, replicas: int, num_azs: int) -> OSDomainPlan:
     """
     Get the OpenSearch Domain capacity required to satisify the expected traffic
+
+    expected_traffic: traffic volume to the capture nodes, in Gbps
+    spi_days: the number of days to retain the SPI data stored in the OpenSearch Domain
+    replicas: the number of replicas to have of the data
+    num_azs: the number of AZs in the domain's VPC
     """
 
     storage_per_replica = _get_storage_per_replica(expected_traffic, spi_days)
     total_storage = _get_total_storage(expected_traffic, spi_days, replicas)
 
-    data_node_plan = _get_data_node_plan(total_storage)
-    master_node_plan = _get_master_node_plan(storage_per_replica, data_node_plan.count)
+    data_node_plan = _get_data_node_plan(total_storage, num_azs)
+    master_node_plan = _get_master_node_plan(storage_per_replica, data_node_plan.count, data_node_plan.instanceType)
 
     return OSDomainPlan(data_node_plan, master_node_plan)
+
+@dataclass
+class CaptureVpcPlan:
+    numAzs: int
+
+    def __equal__(self, other):
+        return self.numAzs == other.numAzs
+    
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "numAzs": self.numAzs
+        }
+    
+T_ClusterPlan = TypeVar('T_ClusterPlan', bound='ClusterPlan')
+
+@dataclass
+class ClusterPlan:
+    captureNodes: CaptureNodesPlan
+    captureVpc: CaptureVpcPlan
+    ecsResources: EcsSysResourcePlan
+    osDomain: OSDomainPlan
+
+    def __equal__(self, other):
+        return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources 
+                and self.osDomain == other.osDomain and self.captureVpc == other.vpc)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "captureNodes": self.captureNodes.to_dict(),
+            "captureVpc": self.captureVpc.to_dict(),
+            "ecsResources": self.ecsResources.to_dict(),
+            "osDomain": self.osDomain.to_dict()
+        }
+    
+    @classmethod
+    def from_dict(cls: Type[T_ClusterPlan], input: Dict[str, any]) -> T_ClusterPlan:
+        capture_nodes = CaptureNodesPlan(**input["captureNodes"])
+        capture_vpc = CaptureVpcPlan(**input["captureVpc"])
+        ecs_resources = EcsSysResourcePlan(**input["ecsResources"])
+        os_domain = OSDomainPlan.from_dict(input["osDomain"])
+
+        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain)

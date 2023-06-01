@@ -8,16 +8,22 @@ import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
 import constants as constants
-from core.capacity_planning import get_capture_node_capacity_plan, get_ecs_sys_resource_plan, CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC
+from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
+                                    CaptureNodesPlan, CaptureVpcPlan, EcsSysResourcePlan, OSDomainPlan, MINIMUM_TRAFFIC,
+                                    DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS)
 
 logger = logging.getLogger(__name__)
 
-def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float):
+class MustProvideAllParams(Exception):
+    def __init__(self):
+        super().__init__("If you specify one of the optional capacity parameters, you must specify all of them.")
+
+def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, replicas: int):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
-    capture_plan, ecs_resource_plan = _get_capacity_plans(name, expected_traffic, aws_provider)
+    capacity_plan = _get_capacity_plan(name, expected_traffic, spi_days, replicas, aws_provider)
 
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
@@ -29,33 +35,41 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn, capture_plan, ecs_resource_plan)
+    create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
-def _get_capacity_plans(cluster_name: str, expected_traffic: float, aws_provider: AwsClientProvider) -> Tuple[CaptureNodesPlan, EcsSysResourcePlan]:
+def _get_capacity_plan(cluster_name: str, expected_traffic: float, spi_days: int, replicas: int, aws_provider: AwsClientProvider) -> ClusterPlan:
     
-    if not expected_traffic:
+    # None of the parameters defined
+    if (not expected_traffic) and (not spi_days) and (not replicas):
+        # Re-use the existing configuration if it exists
         try:
             plan_json = ssm_ops.get_ssm_param_json_value(
                 constants.get_cluster_ssm_param_name(cluster_name),
-                "captureNodesPlan",
+                "capacityPlan",
                 aws_provider
             )
-            capture_plan = CaptureNodesPlan(
-                instance_type=plan_json["instanceType"],
-                desired_count=plan_json["desiredCount"],
-                max_count=plan_json["maxCount"],
-                min_count=plan_json["minCount"],
-            )
+            capacity_plan = ClusterPlan.from_dict(plan_json)
 
+            return capacity_plan
+
+        # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
             capture_plan = get_capture_node_capacity_plan(MINIMUM_TRAFFIC)
-    else:
+            capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
+            os_domain_plan = get_os_domain_plan(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, capture_vpc_plan.numAzs)
+    # All of the parameters defined
+    elif expected_traffic and spi_days and replicas:
         capture_plan = get_capture_node_capacity_plan(expected_traffic)
+        capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
+        os_domain_plan = get_os_domain_plan(expected_traffic, spi_days, replicas, capture_vpc_plan.numAzs)
+    # Some, but not all, of the parameters defined
+    else:
+        raise MustProvideAllParams()
 
-    ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instance_type)
+    ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instanceType)
 
-    return (capture_plan, ecs_resource_plan)
+    return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan)
         
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:

@@ -25,8 +25,7 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
-    planCaptureNodes: string;
-    planEcsResources: string;
+    planCluster: string;
 }
 
 /**
@@ -89,8 +88,7 @@ export interface ClusterMgmtParams extends CommandParams {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
-    planCaptureNodes: plan.CaptureNodesPlan;
-    planEcsResources: plan.EcsSysResourcePlan;
+    planCluster: plan.ClusterPlan;
 }
 
 /**

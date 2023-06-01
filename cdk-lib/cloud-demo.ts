@@ -29,12 +29,14 @@ switch(params.type) {
         });
 
         const captureVpcStack = new CaptureVpcStack(app, params.nameCaptureVpcStack, {
-            env: env
+            env: env,
+            planCluster: params.planCluster,
         });
 
         const osDomainStack = new OpenSearchDomainStack(app, params.nameOSDomainStack, {
             env: env,
             captureVpc: captureVpcStack.vpc,
+            planCluster: params.planCluster,
             ssmParamName: params.nameOSDomainSsmParam,
         });
         osDomainStack.addDependency(captureVpcStack)
@@ -47,8 +49,7 @@ switch(params.type) {
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
             osPassword: osDomainStack.osPassword,
-            planCaptureNodes: params.planCaptureNodes,
-            planEcsResources: params.planEcsResources,
+            planCluster: params.planCluster,
             ssmParamNameCluster: params.nameClusterSsmParam
         });
         captureNodesStack.addDependency(captureBucketStack)

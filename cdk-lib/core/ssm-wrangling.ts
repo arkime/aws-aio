@@ -11,8 +11,7 @@ export interface ClusterSsmValue {
     readonly busName: string;
     readonly clusterName: string;
     readonly vpceServiceId: string;
-    readonly captureNodesPlan: plan.CaptureNodesPlan;
-    readonly ecsSysResourcePlan: plan.EcsSysResourcePlan;
+    readonly capacityPlan: plan.ClusterPlan;
 }
 
 export interface SubnetSsmValue {

@@ -5,7 +5,8 @@ import unittest.mock as mock
 from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert
 import constants as constants
-from core.capacity_planning import CaptureNodesPlan, EcsSysResourcePlan
+from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
+                                    ClusterPlan, CaptureVpcPlan)
 
 TEST_CLUSTER = "my-cluster"
 
@@ -20,6 +21,13 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
 
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        CaptureVpcPlan(1),
+        EcsSysResourcePlan(1, 1),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
+    )
 
     # Run our test
     cmd_destroy_cluster("profile", "region", TEST_CLUSTER, False)
@@ -52,8 +60,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
-                    "planCaptureNodes": json.dumps(CaptureNodesPlan("m5.xlarge", 1, 2, 1).to_dict()),
-                    "planEcsResources": json.dumps(EcsSysResourcePlan(1, 1).to_dict())
+                    "planCluster": json.dumps(cluster_plan.to_dict()),
                 }))
             }
         )
@@ -83,6 +90,13 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
         constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
         constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
     ]
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        CaptureVpcPlan(1),
+        EcsSysResourcePlan(1, 1),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
+    )
 
     # Run our test
     cmd_destroy_cluster("profile", "region", TEST_CLUSTER, True)
@@ -132,8 +146,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
-                    "planCaptureNodes": json.dumps(CaptureNodesPlan("m5.xlarge", 1, 2, 1).to_dict()),
-                    "planEcsResources": json.dumps(EcsSysResourcePlan(1, 1).to_dict())
+                    "planCluster": json.dumps(cluster_plan.to_dict()),
                 }))
             }
         )
