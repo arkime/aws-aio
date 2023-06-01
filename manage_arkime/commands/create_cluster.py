@@ -1,6 +1,5 @@
 import json
 import logging
-from typing import Tuple
 
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
@@ -9,21 +8,18 @@ from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
 import constants as constants
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
-                                    CaptureNodesPlan, CaptureVpcPlan, EcsSysResourcePlan, OSDomainPlan, MINIMUM_TRAFFIC,
-                                    DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS)
+                                    CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS)
+from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
-
-class MustProvideAllParams(Exception):
-    def __init__(self):
-        super().__init__("If you specify one of the optional capacity parameters, you must specify all of them.")
 
 def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, replicas: int):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
-    capacity_plan = _get_capacity_plan(name, expected_traffic, spi_days, replicas, aws_provider)
+    user_config = _get_user_config(name, expected_traffic, spi_days, replicas, aws_provider)
+    capacity_plan = _get_capacity_plan(user_config)
 
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
@@ -35,38 +31,41 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan)
+    create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan, user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
-def _get_capacity_plan(cluster_name: str, expected_traffic: float, spi_days: int, replicas: int, aws_provider: AwsClientProvider) -> ClusterPlan:
-    
-    # None of the parameters defined
-    if (not expected_traffic) and (not spi_days) and (not replicas):
+def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, replicas: int, aws_provider: AwsClientProvider) -> UserConfig:
+    # At least one parameter isn't defined
+    if None in [expected_traffic, spi_days, replicas]:
         # Re-use the existing configuration if it exists
         try:
-            plan_json = ssm_ops.get_ssm_param_json_value(
+            stored_config_json = ssm_ops.get_ssm_param_json_value(
                 constants.get_cluster_ssm_param_name(cluster_name),
-                "capacityPlan",
+                "userConfig",
                 aws_provider
             )
-            capacity_plan = ClusterPlan.from_dict(plan_json)
+            user_config = UserConfig(**stored_config_json)
 
-            return capacity_plan
+            if expected_traffic is not None:
+                user_config.expectedTraffic = expected_traffic
+            if spi_days is not None:
+                user_config.spiDays = spi_days
+            if replicas is not None:
+                user_config.replicas = replicas
+
+            return user_config
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            capture_plan = get_capture_node_capacity_plan(MINIMUM_TRAFFIC)
-            capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
-            os_domain_plan = get_os_domain_plan(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, capture_vpc_plan.numAzs)
+            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS)
     # All of the parameters defined
-    elif expected_traffic and spi_days and replicas:
-        capture_plan = get_capture_node_capacity_plan(expected_traffic)
-        capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
-        os_domain_plan = get_os_domain_plan(expected_traffic, spi_days, replicas, capture_vpc_plan.numAzs)
-    # Some, but not all, of the parameters defined
     else:
-        raise MustProvideAllParams()
+        return UserConfig(expected_traffic, spi_days, replicas)
 
+def _get_capacity_plan(user_config: UserConfig) -> ClusterPlan:
+    capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic)
+    capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
+    os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, capture_vpc_plan.numAzs)
     ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instanceType)
 
     return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan)

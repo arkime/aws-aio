@@ -18,6 +18,7 @@ import { Construct } from 'constructs';
 import * as constants from '../core/constants';
 import * as plan from '../core/capacity-plan';
 import {ClusterSsmValue} from '../core/ssm-wrangling';
+import * as user from '../core/user-config';
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
@@ -28,6 +29,7 @@ export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly osPassword: secretsmanager.Secret;
     readonly planCluster: plan.ClusterPlan;
     readonly ssmParamNameCluster: string;
+    readonly userConfig: user.UserConfig;
 }
 
 export class CaptureNodesStack extends cdk.Stack {
@@ -241,7 +243,8 @@ export class CaptureNodesStack extends cdk.Stack {
             busName: clusterBus.eventBusName,
             clusterName: props.clusterName, 
             vpceServiceId: gwlbEndpointService.ref,
-            capacityPlan: props.planCluster
+            capacityPlan: props.planCluster,
+            userConfig: props.userConfig
         }
         const clusterParam = new ssm.StringParameter(this, 'ClusterParam', {
             allowedPattern: '.*',

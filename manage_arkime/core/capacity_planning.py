@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from enum import Enum
 import math
 import logging
 from typing import Dict, Type, TypeVar
@@ -36,7 +35,7 @@ class CaptureNodesPlan:
         return (self.instanceType == other.instance_type and self.desiredCount == other.desired_count
                 and self.maxCount == other.max_count and self.minCount == other.min_count)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "instanceType": self.instanceType,
             "desiredCount": self.desiredCount,
@@ -77,7 +76,7 @@ class EcsSysResourcePlan:
     def __equal__(self, other):
         return self.cpu == other.cpu and self.memory == other.memory
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "cpu": self.cpu,
             "memory": self.memory
@@ -135,7 +134,7 @@ class DataNodesPlan:
         return (self.count == other.count and self.instanceType == other.type
                 and self.volumeSize == other.vol_size)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "count": self.count,
             "instanceType": self.instanceType,
@@ -150,7 +149,7 @@ class MasterNodesPlan:
     def __equal__(self, other):
         return (self.count == other.count and self.instanceType == other.type)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "count": self.count,
             "instanceType": self.instanceType
@@ -167,7 +166,7 @@ class OSDomainPlan:
         return (self.dataNodes == other.dataNodes
                 and self.masterNodes == other.masterNodes)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "dataNodes": self.dataNodes.to_dict(),
             "masterNodes": self.masterNodes.to_dict()
@@ -298,7 +297,7 @@ class CaptureVpcPlan:
     def __equal__(self, other):
         return self.numAzs == other.numAzs
     
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "numAzs": self.numAzs
         }
@@ -316,7 +315,7 @@ class ClusterPlan:
         return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources 
                 and self.osDomain == other.osDomain and self.captureVpc == other.vpc)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             "captureNodes": self.captureNodes.to_dict(),
             "captureVpc": self.captureVpc.to_dict(),

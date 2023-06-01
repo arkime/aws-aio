@@ -7,6 +7,7 @@ from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     ClusterPlan, CaptureVpcPlan)
+from core.user_config import UserConfig
 
 TEST_CLUSTER = "my-cluster"
 
@@ -61,6 +62,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                     "planCluster": json.dumps(cluster_plan.to_dict()),
+                    "userConfig": json.dumps(UserConfig(1, 1, 1).to_dict()),
                 }))
             }
         )
@@ -147,6 +149,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                     "planCluster": json.dumps(cluster_plan.to_dict()),
+                    "userConfig": json.dumps(UserConfig(1, 1, 1).to_dict()),
                 }))
             }
         )

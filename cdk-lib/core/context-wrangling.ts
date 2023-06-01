@@ -15,7 +15,7 @@ import {CDK_CONTEXT_CMD_VAR, CDK_CONTEXT_REGION_VAR, CDK_CONTEXT_PARAMS_VAR, Man
 export function getCommandParams(app: cdk.App) : (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams | prms.MirrorMgmtParams) {
     // This ENV variable is set by the CDK CLI.  It reads it from your AWS Credential profile, and configures the var
     // before invoking CDK actions.
-    const awsAccount: string | undefined = process.env.CDK_DEFAULT_ACCOUNT    
+    const awsAccount: string | undefined = process.env.CDK_DEFAULT_ACCOUNT
 
     // Like the CDK_DEFAULT_ACCOUNT, the CDK CLI sets the CDK_DEFAULT_REGION by reading the AWS Credential profile.
     // However, we want the user to to able to specify a different region than the default so we optionaly pass in one
@@ -100,6 +100,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameViewerUserSsmParam: rawClusterMgmtParamsObj.nameViewerUserSsmParam,
                 nameViewerNodesStack: rawClusterMgmtParamsObj.nameViewerNodesStack,
                 planCluster:  JSON.parse(rawClusterMgmtParamsObj.planCluster),
+                userConfig: JSON.parse(rawClusterMgmtParamsObj.userConfig),
             }
             return clusterMgmtParams;
         case ManagementCmd.AddVpc: // Add and Remove VPC use the same parameters

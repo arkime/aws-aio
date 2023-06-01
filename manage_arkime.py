@@ -57,7 +57,7 @@ cli.add_command(destroy_demo_traffic)
 @click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have", required=True)
 @click.option(
     "--expected-traffic", 
-    help=("The amount of traffic, in gigabits-per-second, you expect your Arkime Cluster to receive."
+    help=("The average amount of traffic, in gigabits-per-second, you expect your Arkime Cluster to receive."
         + f"Maximum: {MAX_TRAFFIC} Gbps"),
     default=None,
     type=click.FLOAT,
