@@ -1,4 +1,5 @@
 import * as plan from './capacity-plan';
+import * as user from './user-config';
 
 /**
  * Base type for receiving arguments from the Python side of the app.  These directly match the interface on the Python
@@ -25,8 +26,8 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
-    planCaptureNodes: string;
-    planEcsResources: string;
+    planCluster: string;
+    userConfig: string;
 }
 
 /**
@@ -89,8 +90,8 @@ export interface ClusterMgmtParams extends CommandParams {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
-    planCaptureNodes: plan.CaptureNodesPlan;
-    planEcsResources: plan.EcsSysResourcePlan;
+    planCluster: plan.ClusterPlan;
+    userConfig: user.UserConfig;
 }
 
 /**

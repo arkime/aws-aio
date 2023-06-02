@@ -7,9 +7,12 @@ import {Domain, EngineVersion, TLSSecurityPolicy} from 'aws-cdk-lib/aws-opensear
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
+import * as plan from '../core/capacity-plan';
+
 
 export interface OpenSearchDomainStackProps extends StackProps {
     readonly captureVpc: ec2.Vpc;
+    readonly planCluster: plan.ClusterPlan;
     readonly ssmParamName: string;
 }
 
@@ -64,11 +67,13 @@ export class OpenSearchDomainStack extends Stack {
             version: EngineVersion.openSearch("2.5"),
             enableVersionUpgrade: true,
             capacity: {
-                masterNodes: 3,
-                dataNodes: 2,
+                masterNodes: props.planCluster.osDomain.masterNodes.count,
+                masterNodeInstanceType: props.planCluster.osDomain.masterNodes.instanceType,
+                dataNodes: props.planCluster.osDomain.dataNodes.count,
+                dataNodeInstanceType: props.planCluster.osDomain.dataNodes.instanceType
             },
             ebs: {
-                volumeSize: 20,
+                volumeSize: props.planCluster.osDomain.dataNodes.volumeSize,
             },
             nodeToNodeEncryption: true,
             encryptionAtRest: {
@@ -76,7 +81,7 @@ export class OpenSearchDomainStack extends Stack {
                 kmsKey: this.domainKey,
             },
             zoneAwareness: {
-                availabilityZoneCount: 2,
+                availabilityZoneCount: props.planCluster.captureVpc.numAzs,
             },
             logging: {
                 slowSearchLogEnabled: true,

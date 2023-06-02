@@ -18,6 +18,7 @@ import { Construct } from 'constructs';
 import * as constants from '../core/constants';
 import * as plan from '../core/capacity-plan';
 import {ClusterSsmValue} from '../core/ssm-wrangling';
+import * as user from '../core/user-config';
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly captureBucket: s3.Bucket;
@@ -26,9 +27,9 @@ export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
-    readonly planCaptureNodes: plan.CaptureNodesPlan;
-    readonly planEcsResources: plan.EcsSysResourcePlan;
+    readonly planCluster: plan.ClusterPlan;
     readonly ssmParamNameCluster: string;
+    readonly userConfig: user.UserConfig;
 }
 
 export class CaptureNodesStack extends cdk.Stack {
@@ -81,11 +82,11 @@ export class CaptureNodesStack extends cdk.Stack {
         // Load Balancers do not properly integrate with ECS Fargate.
         const autoScalingGroup = new autoscaling.AutoScalingGroup(this, 'ASG', {
             vpc: props.captureVpc,
-            instanceType: new ec2.InstanceType(props.planCaptureNodes.instanceType),
+            instanceType: new ec2.InstanceType(props.planCluster.captureNodes.instanceType),
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
-            desiredCapacity: props.planCaptureNodes.desiredCount,
-            minCapacity: props.planCaptureNodes.minCount,
-            maxCapacity: props.planCaptureNodes.maxCount
+            desiredCapacity: props.planCluster.captureNodes.desiredCount,
+            minCapacity: props.planCluster.captureNodes.minCount,
+            maxCapacity: props.planCluster.captureNodes.maxCount
         });
 
         const asgSecurityGroup = new ec2.SecurityGroup(this, 'ASGSecurityGroup', {
@@ -162,8 +163,8 @@ export class CaptureNodesStack extends cdk.Stack {
                 'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
                 'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
             },
-            cpu: props.planEcsResources.cpu,
-            memoryLimitMiB: props.planEcsResources.memory,
+            cpu: props.planCluster.ecsResources.cpu,
+            memoryLimitMiB: props.planCluster.ecsResources.memory,
             portMappings: [
                 { containerPort: 6081, hostPort: 6081, protocol: ecs.Protocol.UDP},
                 { containerPort: healthCheckPort, hostPort: healthCheckPort, protocol: ecs.Protocol.TCP},
@@ -242,8 +243,8 @@ export class CaptureNodesStack extends cdk.Stack {
             busName: clusterBus.eventBusName,
             clusterName: props.clusterName, 
             vpceServiceId: gwlbEndpointService.ref,
-            captureNodesPlan: props.planCaptureNodes,
-            ecsSysResourcePlan: props.planEcsResources
+            capacityPlan: props.planCluster,
+            userConfig: props.userConfig
         }
         const clusterParam = new ssm.StringParameter(this, 'ClusterParam', {
             allowedPattern: '.*',

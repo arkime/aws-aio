@@ -4,15 +4,21 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
+import * as plan from '../core/capacity-plan';
+
+export interface CaptureVpcStackProps extends StackProps {
+    readonly planCluster: plan.ClusterPlan;
+}
+
 export class CaptureVpcStack extends Stack {
   public readonly vpc: ec2.Vpc;
   public readonly flowLog: ec2.FlowLog;
 
-  constructor(scope: Construct, id: string, props: StackProps) {
+  constructor(scope: Construct, id: string, props: CaptureVpcStackProps) {
     super(scope, id, props);
 
     this.vpc = new ec2.Vpc(this, 'VPC', {
-        maxAzs: 2,
+        maxAzs: props.planCluster.captureVpc.numAzs,
         subnetConfiguration: [
             {
                 subnetType: ec2.SubnetType.PUBLIC,

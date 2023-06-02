@@ -1,4 +1,5 @@
 import * as plan from '../core/capacity-plan';
+import * as user from '../core/user-config';
 
 /**
  * This file contains functions and types that define a shared interface with the Python management CLI; the two need
@@ -11,8 +12,8 @@ export interface ClusterSsmValue {
     readonly busName: string;
     readonly clusterName: string;
     readonly vpceServiceId: string;
-    readonly captureNodesPlan: plan.CaptureNodesPlan;
-    readonly ecsSysResourcePlan: plan.EcsSysResourcePlan;
+    readonly capacityPlan: plan.ClusterPlan;
+    readonly userConfig: user.UserConfig;
 }
 
 export interface SubnetSsmValue {
