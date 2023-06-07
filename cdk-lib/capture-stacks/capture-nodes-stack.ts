@@ -162,6 +162,7 @@ export class CaptureNodesStack extends cdk.Stack {
                 'LB_HEALTH_PORT': healthCheckPort.toString(),
                 'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
                 'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
+                'S3_STORAGE_CLASS': props.planCluster.s3.pcapStorageClass,
             },
             cpu: props.planCluster.ecsResources.cpu,
             memoryLimitMiB: props.planCluster.ecsResources.memory,

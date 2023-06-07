@@ -10,6 +10,7 @@ echo "Bucket Name: $BUCKET_NAME"
 echo "LB Healthcheck Port: $LB_HEALTH_PORT"
 echo "OpenSearch Endpoint: $OPENSEARCH_ENDPOINT"
 echo "OpenSearch Secret Arn: $OPENSEARCH_SECRET_ARN"
+echo "S3 Storage Class: $S3_STORAGE_CLASS"
 echo "============================================================"
 
 # Pull configuration from ENV and AWS in order to set up our Arkime install.  The ENV variables come from the Fargate
@@ -26,6 +27,7 @@ sed -i'' "s/_AUTH_/$BASE64_AUTH/g" /opt/arkime/etc/config.ini
 sed -i'' "s/_BUCKET_/$BUCKET_NAME/g" /opt/arkime/etc/config.ini
 sed -i'' "s/_HEALTH_PORT_/$LB_HEALTH_PORT/g" /opt/arkime/etc/config.ini
 sed -i'' "s/_REGION_/$AWS_REGION/g" /opt/arkime/etc/config.ini
+sed -i'' "s/_STORAGE_CLASS_/$S3_STORAGE_CLASS/g" /opt/arkime/etc/config.ini
 echo "Successfully configured /opt/arkime/etc/config.ini"
 
 echo "Testing connection/creds to OpenSearch domain $OPENSEARCH_ENDPOINT ..."

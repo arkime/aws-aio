@@ -1,10 +1,15 @@
 import { Construct } from 'constructs';
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Duration, Stack, StackProps } from 'aws-cdk-lib';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
+import * as plan from '../core/capacity-plan';
+import { ProductStack } from 'aws-cdk-lib/aws-servicecatalog';
+
+
 export interface CaptureBucketStackProps extends StackProps {
+    readonly planCluster: plan.ClusterPlan;
     readonly ssmParamName: string;
 }
 
@@ -27,7 +32,15 @@ export class CaptureBucketStack extends Stack {
 
         this.bucket = new s3.Bucket(this, 'CaptureBucket', {
             encryption: s3.BucketEncryption.KMS,
-            encryptionKey: this.bucketKey
+            encryptionKey: this.bucketKey,
+            enforceSSL: true,
+            lifecycleRules: [
+                {
+                    id: 'PcapExpiration',
+                    enabled: true,
+                    expiration: Duration.days(props.planCluster.s3.pcapStorageDays),
+                },
+              ],
           });
 
         // This SSM parameter will be used to export the name of the capture bucket to other consumers outside of
