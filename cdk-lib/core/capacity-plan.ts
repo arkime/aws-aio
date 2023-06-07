@@ -49,6 +49,14 @@ export interface CaptureVpcPlan {
 }
 
 /**
+ * Structure to hold the details of the cluster's S3 usage plan
+ */
+export interface S3Plan {
+    pcapStorageClass: string;
+    pcapStorageDays: number;
+}
+
+/**
  * Structure to hold the overall capacity plan for an Arkime Cluster
  */
 export interface ClusterPlan {
@@ -56,4 +64,5 @@ export interface ClusterPlan {
     captureVpc: CaptureVpcPlan;
     ecsResources: EcsSysResourcePlan;
     osDomain: OSDomainPlan;
+    s3: S3Plan;
 }

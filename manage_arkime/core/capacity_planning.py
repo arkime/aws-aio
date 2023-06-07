@@ -31,7 +31,7 @@ class CaptureNodesPlan:
     maxCount: int
     minCount: int
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return (self.instanceType == other.instance_type and self.desiredCount == other.desired_count
                 and self.maxCount == other.max_count and self.minCount == other.min_count)
 
@@ -73,7 +73,7 @@ class EcsSysResourcePlan:
     cpu: int # vCPUs; 1024 per 1 vCPU
     memory: int # in MB
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return self.cpu == other.cpu and self.memory == other.memory
 
     def to_dict(self) -> Dict[str, any]:
@@ -130,7 +130,7 @@ class DataNodesPlan:
     instanceType: str
     volumeSize: int # in GiB
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return (self.count == other.count and self.instanceType == other.type
                 and self.volumeSize == other.vol_size)
 
@@ -146,7 +146,7 @@ class MasterNodesPlan:
     count: int
     instanceType: str
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return (self.count == other.count and self.instanceType == other.type)
 
     def to_dict(self) -> Dict[str, any]:
@@ -162,7 +162,7 @@ class OSDomainPlan:
     dataNodes: DataNodesPlan
     masterNodes: MasterNodesPlan
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return (self.dataNodes == other.dataNodes
                 and self.masterNodes == other.masterNodes)
 
@@ -294,12 +294,29 @@ def get_os_domain_plan(expected_traffic: float, spi_days: int, replicas: int, nu
 class CaptureVpcPlan:
     numAzs: int
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return self.numAzs == other.numAzs
     
     def to_dict(self) -> Dict[str, any]:
         return {
             "numAzs": self.numAzs
+        }
+    
+DEFAULT_S3_STORAGE_CLASS = "STANDARD"
+DEFAULT_S3_STORAGE_DAYS = 30
+
+@dataclass
+class S3Plan:
+    pcapStorageClass: str
+    pcapStorageDays: int
+
+    def __equal__(self, other) -> bool:
+        return self.pcapStorageClass == other.pcapStorageClass and self.pcapStorageDays == other.pcapStorageDays
+    
+    def to_dict(self) -> Dict[str, any]:
+        return {
+            "pcapStorageClass": self.pcapStorageClass,
+            "pcapStorageDays": self.pcapStorageDays
         }
     
 T_ClusterPlan = TypeVar('T_ClusterPlan', bound='ClusterPlan')
@@ -310,17 +327,19 @@ class ClusterPlan:
     captureVpc: CaptureVpcPlan
     ecsResources: EcsSysResourcePlan
     osDomain: OSDomainPlan
+    s3: S3Plan
 
-    def __equal__(self, other):
+    def __equal__(self, other) -> bool:
         return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources 
-                and self.osDomain == other.osDomain and self.captureVpc == other.vpc)
+                and self.osDomain == other.osDomain and self.captureVpc == other.vpc and self.s3 == other.s3)
 
     def to_dict(self) -> Dict[str, any]:
         return {
             "captureNodes": self.captureNodes.to_dict(),
             "captureVpc": self.captureVpc.to_dict(),
             "ecsResources": self.ecsResources.to_dict(),
-            "osDomain": self.osDomain.to_dict()
+            "osDomain": self.osDomain.to_dict(),
+            "s3": self.s3.to_dict(),
         }
     
     @classmethod
@@ -329,5 +348,6 @@ class ClusterPlan:
         capture_vpc = CaptureVpcPlan(**input["captureVpc"])
         ecs_resources = EcsSysResourcePlan(**input["ecsResources"])
         os_domain = OSDomainPlan.from_dict(input["osDomain"])
+        s3 = S3Plan(**input["s3"])
 
-        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain)
+        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3)

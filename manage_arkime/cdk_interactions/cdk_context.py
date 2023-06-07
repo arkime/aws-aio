@@ -4,7 +4,8 @@ from typing import Dict
 
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan, 
-                                    MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS)
+                                    MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS, S3Plan,
+                                    DEFAULT_S3_STORAGE_CLASS)
 from core.user_config import UserConfig
 
 def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig) -> Dict[str, str]:
@@ -21,9 +22,10 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
         CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
         CaptureVpcPlan(1),
         EcsSysResourcePlan(1, 1),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
     )
-    fake_user_config = UserConfig(1, 1, 1)
+    fake_user_config = UserConfig(1, 1, 1, 1)
 
     destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER

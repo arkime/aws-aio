@@ -25,6 +25,7 @@ switch(params.type) {
     case 'ClusterMgmtParams':
         const captureBucketStack = new CaptureBucketStack(app, params.nameCaptureBucketStack, {
             env: env,
+            planCluster: params.planCluster,
             ssmParamName: params.nameCaptureBucketSsmParam,
         });
 

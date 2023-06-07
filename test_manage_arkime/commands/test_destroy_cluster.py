@@ -6,7 +6,7 @@ from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
-                                    ClusterPlan, CaptureVpcPlan)
+                                    ClusterPlan, CaptureVpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS)
 from core.user_config import UserConfig
 
 TEST_CLUSTER = "my-cluster"
@@ -27,7 +27,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
         CaptureVpcPlan(1),
         EcsSysResourcePlan(1, 1),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
     )
 
     # Run our test
@@ -62,7 +63,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                     "planCluster": json.dumps(cluster_plan.to_dict()),
-                    "userConfig": json.dumps(UserConfig(1, 1, 1).to_dict()),
+                    "userConfig": json.dumps(UserConfig(1, 1, 1, 1).to_dict()),
                 }))
             }
         )
@@ -97,7 +98,8 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
         CaptureVpcPlan(1),
         EcsSysResourcePlan(1, 1),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
     )
 
     # Run our test
@@ -149,7 +151,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
                     "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
                     "planCluster": json.dumps(cluster_plan.to_dict()),
-                    "userConfig": json.dumps(UserConfig(1, 1, 1).to_dict()),
+                    "userConfig": json.dumps(UserConfig(1, 1, 1, 1).to_dict()),
                 }))
             }
         )

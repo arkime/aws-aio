@@ -8,17 +8,18 @@ from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
 import constants as constants
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
-                                    CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS)
+                                    CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS,
+                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
 
-def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, replicas: int):
+def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, replicas: int, pcap_days: int):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
-    user_config = _get_user_config(name, expected_traffic, spi_days, replicas, aws_provider)
+    user_config = _get_user_config(name, expected_traffic, spi_days, replicas, pcap_days, aws_provider)
     capacity_plan = _get_capacity_plan(user_config)
 
     cert_arn = _set_up_viewer_cert(name, aws_provider)
@@ -34,9 +35,10 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan, user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
-def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, replicas: int, aws_provider: AwsClientProvider) -> UserConfig:
+def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, replicas: int, pcap_days: int, 
+                     aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
-    if None in [expected_traffic, spi_days, replicas]:
+    if None in [expected_traffic, spi_days, replicas, pcap_days]:
         # Re-use the existing configuration if it exists
         try:
             stored_config_json = ssm_ops.get_ssm_param_json_value(
@@ -52,24 +54,27 @@ def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, 
                 user_config.spiDays = spi_days
             if replicas is not None:
                 user_config.replicas = replicas
+                user_config.spiDays = spi_days
+            if pcap_days is not None:
+                user_config.pcapDays = pcap_days
 
             return user_config
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS)
+            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_S3_STORAGE_DAYS)
     # All of the parameters defined
     else:
-        return UserConfig(expected_traffic, spi_days, replicas)
+        return UserConfig(expected_traffic, spi_days, replicas, pcap_days)
 
 def _get_capacity_plan(user_config: UserConfig) -> ClusterPlan:
     capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic)
     capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
     os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, capture_vpc_plan.numAzs)
     ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instanceType)
+    s3_plan = S3Plan(DEFAULT_S3_STORAGE_CLASS, user_config.pcapDays)
 
-    return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan)
-        
+    return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan, s3_plan)
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     # Only set up the certificate if it doesn't exist
