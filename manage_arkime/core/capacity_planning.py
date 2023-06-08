@@ -13,7 +13,8 @@ MINIMUM_TRAFFIC = 0.01 # Gbps; arbitrarily chosen, but will yield a minimal clus
 CAPACITY_BUFFER_FACTOR = 1.25 # Arbitrarily chosen
 MASTER_NODE_COUNT = 3 # Recommended number in docs
 DEFAULT_SPI_DAYS = 30 # How many days of SPI metadata to keep in the OS Domain
-DEFAULT_SPI_REPLICAS = 1 # How replicas of metadata to keep in the OS Domain
+DEFAULT_REPLICAS = 1 # How replicas of metadata to keep in the OS Domain
+DEFAULT_HISTORY_DAYS = 365 # How many days of Arkime Viewer user history to keep in the OS Domain
 DEFAULT_NUM_AZS = 2 # How many AWS Availability zones to utilize
 
 class TooMuchTraffic(Exception):
