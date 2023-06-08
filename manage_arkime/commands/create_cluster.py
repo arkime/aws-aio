@@ -8,18 +8,19 @@ from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
 import constants as constants
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
-                                    CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS,
-                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+                                    CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
+                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
 
-def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, replicas: int, pcap_days: int):
+def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
+                       pcap_days: int):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
-    user_config = _get_user_config(name, expected_traffic, spi_days, replicas, pcap_days, aws_provider)
+    user_config = _get_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
     capacity_plan = _get_capacity_plan(user_config)
 
     cert_arn = _set_up_viewer_cert(name, aws_provider)
@@ -35,10 +36,10 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan, user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
-def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, replicas: int, pcap_days: int, 
-                     aws_provider: AwsClientProvider) -> UserConfig:
+def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int, 
+                     pcap_days: int, aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
-    if None in [expected_traffic, spi_days, replicas, pcap_days]:
+    if None in [expected_traffic, spi_days, replicas, pcap_days, history_days]:
         # Re-use the existing configuration if it exists
         try:
             stored_config_json = ssm_ops.get_ssm_param_json_value(
@@ -52,9 +53,10 @@ def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, 
                 user_config.expectedTraffic = expected_traffic
             if spi_days is not None:
                 user_config.spiDays = spi_days
+            if history_days is not None:
+                user_config.historyDays = history_days
             if replicas is not None:
                 user_config.replicas = replicas
-                user_config.spiDays = spi_days
             if pcap_days is not None:
                 user_config.pcapDays = pcap_days
 
@@ -62,10 +64,10 @@ def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, 
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_S3_STORAGE_DAYS)
+            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS)
     # All of the parameters defined
     else:
-        return UserConfig(expected_traffic, spi_days, replicas, pcap_days)
+        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days)
 
 def _get_capacity_plan(user_config: UserConfig) -> ClusterPlan:
     capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic)

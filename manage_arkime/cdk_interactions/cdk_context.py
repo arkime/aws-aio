@@ -25,7 +25,7 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
     )
-    fake_user_config = UserConfig(1, 1, 1, 1)
+    fake_user_config = UserConfig(1, 1, 1, 1, 1)
 
     destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER

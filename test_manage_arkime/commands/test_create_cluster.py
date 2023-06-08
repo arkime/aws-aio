@@ -7,8 +7,8 @@ import aws_interactions.ssm_operations as ssm_ops
 from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert, _get_capacity_plan, _get_user_config
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
-                                    CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
-                                    DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+                                    CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
+                                    DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
 from core.user_config import UserConfig
 
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
@@ -23,7 +23,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
 
-    user_config = UserConfig(1, 30, 2, 30)
+    user_config = UserConfig(1, 30, 365, 2, 30)
     mock_get_config.return_value = user_config
 
     cluster_plan = ClusterPlan(
@@ -36,7 +36,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     mock_get_plans.return_value = cluster_plan
 
     # Run our test
-    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None)
+    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None)
 
     # Check our results
     expected_calls = [
@@ -87,6 +87,7 @@ def test_WHEN_get_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_
     mock_ssm_ops.get_ssm_param_json_value.return_value = {
         "expectedTraffic": 1.2,
         "spiDays": 40,
+        "historyDays": 120,
         "replicas": 2,
         "pcapDays": 35,
     }
@@ -94,10 +95,10 @@ def test_WHEN_get_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", None, None, None, None, mock_provider)
+    actual_value = _get_user_config("my-cluster", None, None, None, None, None, mock_provider)
 
     # Check our results
-    assert UserConfig(1.2, 40, 2, 35) == actual_value
+    assert UserConfig(1.2, 40, 120, 2, 35) == actual_value
 
     expected_get_ssm_calls = [
         mock.call(constants.get_cluster_ssm_param_name("my-cluster"), "userConfig", mock.ANY)
@@ -112,6 +113,7 @@ def test_WHEN_get_user_config_called_AND_partial_update_THEN_as_expected(mock_ss
     mock_ssm_ops.get_ssm_param_json_value.return_value = {
         "expectedTraffic": 1.2,
         "spiDays": 40,
+        "historyDays": 120,
         "replicas": 2,
         "pcapDays": 35,
     }
@@ -119,10 +121,10 @@ def test_WHEN_get_user_config_called_AND_partial_update_THEN_as_expected(mock_ss
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", None, 30, None, None, mock_provider)
+    actual_value = _get_user_config("my-cluster", None, 30, None, None, None, mock_provider)
 
     # Check our results
-    assert UserConfig(1.2, 30, 2, 35) == actual_value
+    assert UserConfig(1.2, 30, 120, 2, 35) == actual_value
 
     expected_get_ssm_calls = [
         mock.call(constants.get_cluster_ssm_param_name("my-cluster"), "userConfig", mock.ANY)
@@ -138,10 +140,10 @@ def test_WHEN_get_user_config_called_AND_use_default_THEN_as_expected(mock_ssm_o
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", None, None, None, None, mock_provider)
+    actual_value = _get_user_config("my-cluster", None, None, None, None, None, mock_provider)
 
     # Check our results
-    assert UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_S3_STORAGE_DAYS) == actual_value
+    assert UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS) == actual_value
 
     expected_get_ssm_calls = [
         mock.call(constants.get_cluster_ssm_param_name("my-cluster"), "userConfig", mock.ANY)
@@ -156,10 +158,10 @@ def test_WHEN_get_user_config_called_AND_specify_all_THEN_as_expected(mock_ssm_o
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", 10, 40, 2, 35, mock_provider)
+    actual_value = _get_user_config("my-cluster", 10, 40, 120, 2, 35, mock_provider)
 
     # Check our results
-    assert UserConfig(10, 40, 2, 35) == actual_value
+    assert UserConfig(10, 40, 120, 2, 35) == actual_value
 
     expected_get_ssm_calls = []
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
@@ -179,7 +181,7 @@ def test_WHEN_get_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_c
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_capacity_plan(UserConfig(1, 40, 2, 35))
+    actual_value = _get_capacity_plan(UserConfig(1, 40, 120, 2, 35))
 
     # Check our results
     assert mock_get_cap.return_value == actual_value.captureNodes

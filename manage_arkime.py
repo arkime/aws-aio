@@ -12,7 +12,7 @@ from commands.get_login_details import cmd_get_login_details
 from commands.list_clusters import cmd_list_clusters
 from commands.remove_vpc import cmd_remove_vpc
 import constants as constants
-from core.capacity_planning import MAX_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_SPI_REPLICAS, DEFAULT_S3_STORAGE_DAYS
+from core.capacity_planning import MAX_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS
 from logging_wrangler import LoggingWrangler, set_boto_log_level
 
 logger = logging.getLogger(__name__)
@@ -69,8 +69,14 @@ cli.add_command(destroy_demo_traffic)
     type=click.INT,
     required=False)
 @click.option(
+    "--history-days", 
+    help=(f"The number of days to store Arkime Viewer user history in the OpenSearch Domain.  Default: {DEFAULT_HISTORY_DAYS}"),
+    default=None,
+    type=click.INT,
+    required=False)
+@click.option(
     "--replicas", 
-    help=(f"The number replicas to make of the SPI metadata in the OpenSearch Domain.  Default: {DEFAULT_SPI_REPLICAS}"),
+    help=(f"The number replicas to make of the SPI metadata in the OpenSearch Domain.  Default: {DEFAULT_REPLICAS}"),
     default=None,
     type=click.INT,
     required=False)
@@ -81,10 +87,10 @@ cli.add_command(destroy_demo_traffic)
     type=click.INT,
     required=False)
 @click.pass_context
-def create_cluster(ctx, name, expected_traffic, spi_days, replicas, pcap_days):
+def create_cluster(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_create_cluster(profile, region, name, expected_traffic, spi_days, replicas, pcap_days)
+    cmd_create_cluster(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days)
 cli.add_command(create_cluster)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")

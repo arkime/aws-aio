@@ -4,5 +4,7 @@
 export interface UserConfig {
     expectedTraffic: number;
     spiDays: number;
+    historyDays: number;
     replicas: number;
+    pcapDays: number;
 }
