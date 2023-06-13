@@ -3,8 +3,9 @@ import pytest
 import shlex
 import unittest.mock as mock
 
+from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.ssm_operations as ssm_ops
-from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert, _get_capacity_plan, _get_user_config
+from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert, _get_capacity_plan, _get_user_config, _configure_ism
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
@@ -12,11 +13,12 @@ from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMU
 from core.user_config import UserConfig
 
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_user_config")
 @mock.patch("commands.create_cluster._get_capacity_plan")
 @mock.patch("commands.create_cluster._set_up_viewer_cert")
 @mock.patch("commands.create_cluster.CdkClient")
-def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config):
+def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config, mock_configure):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -78,6 +80,11 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
         mock.call("my-cluster", mock.ANY)
     ]
     assert expected_set_up_calls == mock_set_up.call_args_list
+
+    expected_configure_calls = [
+        mock.call("my-cluster", 365, 30, 2, mock.ANY)
+    ]
+    assert expected_configure_calls == mock_configure.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
 def test_WHEN_get_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_ops):
@@ -263,3 +270,35 @@ def test_WHEN_set_up_viewer_cert_called_AND_already_exists_THEN_skips_creation(m
 
     expected_put_ssm_calls = []
     assert expected_put_ssm_calls == mock_ssm_ops.put_ssm_param.call_args_list
+
+
+@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.create_cluster.events")
+def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
+    # Set up our mock
+    mock_ssm.get_ssm_param_json_value.return_value = "arn"
+    mock_events.ConfigureIsmEvent = ConfigureIsmEvent
+
+    mock_provider = mock.Mock()
+
+    # Run our test
+    actual_value = _configure_ism("my-cluster", 365, 30, 1, mock_provider)
+
+    # Check our results
+    expected_get_ssm_calls = [
+        mock.call(
+            constants.get_cluster_ssm_param_name("my-cluster"),
+            "busArn",
+            mock_provider
+        )
+    ]
+    assert expected_get_ssm_calls == mock_ssm.get_ssm_param_json_value.call_args_list
+
+    expected_put_events_calls = [
+        mock.call(
+            [ConfigureIsmEvent(365, 30, 1)],
+            "arn",
+            mock_provider
+        )
+    ]
+    assert expected_put_events_calls == mock_events.put_events.call_args_list

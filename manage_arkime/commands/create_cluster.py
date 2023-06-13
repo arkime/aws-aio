@@ -3,6 +3,7 @@ import logging
 
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
@@ -35,6 +36,8 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     ]
     create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan, user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
+
+    _configure_ism(name, user_config.historyDays, user_config.spiDays, user_config.replicas, aws_provider)
 
 def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int, 
                      pcap_days: int, aws_provider: AwsClientProvider) -> UserConfig:
@@ -102,3 +105,13 @@ def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     )
 
     return cert_arn
+
+def _configure_ism(cluster_name: str, history_days: int, spi_days: int, replicas: int, aws_provider: AwsClientProvider):
+    event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
+
+    # Configure ISM on the OpenSearch Domain
+    events.put_events(
+        [events.ConfigureIsmEvent(history_days, spi_days, replicas)],
+        event_bus_arn,
+        aws_provider
+    )

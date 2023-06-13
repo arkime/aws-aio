@@ -5,6 +5,7 @@ export const CDK_CONTEXT_CMD_VAR: string = 'ARKIME_CMD'
 export const CDK_CONTEXT_REGION_VAR: string = 'ARKIME_REGION'
 export const CDK_CONTEXT_PARAMS_VAR: string = 'ARKIME_PARAMS'
 export const EVENT_SOURCE: string = "arkime";
+export const EVENT_DETAIL_TYPE_CONFIGURE_ISM: string = "ConfigureIsm";
 export const EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR: string = "CreateEniMirror";
 export const EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR: string = "DestroyEniMirror";
 

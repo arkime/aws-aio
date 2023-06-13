@@ -7,6 +7,7 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -256,5 +257,56 @@ export class CaptureNodesStack extends cdk.Stack {
         });
         clusterParam.node.addDependency(gwlbEndpointService);
         clusterParam.node.addDependency(clusterBus);
+
+        /**
+         * Create the Lambda set up the ISM policy for the OpenSearch Domain.  It receives events via a rule on the
+         * Cluster Event Bus.
+        */ 
+        const configureIsmLambda = new lambda.Function(this, 'ConfigureIsmLambda', {
+            vpc: props.captureVpc,
+            functionName: `${props.clusterName}-ConfigureIsm`,
+            runtime: lambda.Runtime.PYTHON_3_9,
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            handler: 'lambda_handlers.configure_ism_handler',
+            timeout:  cdk.Duration.seconds(30), // Something has gone very wrong if this is exceeded,
+            environment: {
+                'CLUSTER_NAME': props.clusterName,
+                'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
+                'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
+            },
+        });
+        configureIsmLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'secretsmanager:GetSecretValue',
+                ],
+                resources: [
+                    `${props.osPassword.secretArn}`,
+                ]
+            })
+        );
+        configureIsmLambda.addToRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: [
+                    'cloudwatch:PutMetricData',
+                ],
+                resources: [
+                    "*"
+                ]
+            })
+        );
+
+        // Create a rule to funnel appropriate events to our configure Lambda
+        const configureRule = new events.Rule(this, 'RuleConfigureIsm', {
+            eventBus: clusterBus,
+            eventPattern: {
+                source: [constants.EVENT_SOURCE],
+                detailType: [constants.EVENT_DETAIL_TYPE_CONFIGURE_ISM],
+            },
+            targets: [new targets.LambdaFunction(configureIsmLambda)]
+        });
+        configureRule.node.addDependency(clusterBus);
     }
 }

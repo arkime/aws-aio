@@ -38,6 +38,55 @@ class ArkimeEventMetric(ABC):
 
     def __eq__(self, other: object) -> bool:
         return self.namespace == other.namespace and self.metric_data == other.metric_data
+    
+class ConfigureIsmEventOutcome(Enum):
+    SUCCESS="Success"
+    FAILURE="Failure"
+
+class ConfigureIsmEventMetrics(ArkimeEventMetric):
+    def __init__(self, cluster_name: str, outcome: ConfigureIsmEventOutcome):
+        super().__init__()
+
+        self.cluster_name = cluster_name
+        self.event_type = constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR
+
+        self.value_success = 0
+        self.value_abort_exists = 0
+        self.value_abort_eni_type = 0
+        self.value_failure = 0
+
+        if outcome == ConfigureIsmEventOutcome.SUCCESS:
+            self.value_success = 1
+        elif outcome == ConfigureIsmEventOutcome.FAILURE:
+            self.value_failure = 1
+
+    @property
+    def metric_data(self) -> List[Dict[str, any]]:
+        """
+        We emit a metric value for each outcome of the operation, as it makes metric math and alarming easier.  Only one
+        metric value should be 1; the rest should be 0.
+        """
+
+        shared_dimensions = {
+            "Dimensions": [
+                {"Name": "ClusterName", "Value": self.cluster_name},
+                {"Name": "EventType", "Value": self.event_type},
+            ]
+        }
+
+        metric_success = {
+            "MetricName": ConfigureIsmEventOutcome.SUCCESS.value,
+            "Value": self.value_success
+        }
+        metric_success.update(shared_dimensions)
+
+        metric_abort_failure = {
+            "MetricName": ConfigureIsmEventOutcome.FAILURE.value,
+            "Value": self.value_failure
+        }
+        metric_abort_failure.update(shared_dimensions)
+        
+        return [metric_success, metric_abort_failure]
 
 class CreateEniMirrorEventOutcome(Enum):
     SUCCESS="Success"
