@@ -14,6 +14,7 @@ setuptools.setup(
         "cryptography",
         "pexpect",
         "pytest",
+        "requests",
     ],
     python_requires=">=3.9",
 )

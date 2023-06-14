@@ -1,14 +1,15 @@
 import json
 import logging
 import os
+from requests.auth import HTTPBasicAuth
 from typing import Dict
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.cloudwatch_interactions as cwi
-import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
-import aws_interactions.ssm_operations as ssm_ops
 import constants as constants
+import opensearch_interactions.ism_interactions as ism
+import opensearch_interactions.opensearch_client as client
 
 class ConfigureIsmHandler:
     def __init__(self):
@@ -34,11 +35,16 @@ class ConfigureIsmHandler:
         # Ensure our Lambda will always return a status code
         try:
             self.logger.info(f"Configuring ISM for OpenSearch Domain at {opensearch_endpoint}")
-            ism_event = events.ConfigureIsmEvent.from_event_dict(event)            
+            ism_event = events.ConfigureIsmEvent.from_event_dict(event)
 
             aws_provider = AwsClientProvider(aws_compute=True)
 
-            # TODO: Do the work
+            secrets_client = aws_provider.get_secretsmanager()
+            opensearch_pass = secrets_client.get_secret_value(SecretId=opensearch_secret_arn)["SecretString"]
+            auth = HTTPBasicAuth("admin", opensearch_pass)
+            opensearch_client = client.OpenSearchClient(opensearch_endpoint, 443, auth)
+
+            ism.setup_user_history_ism(ism_event.history_days, opensearch_client)
             
             cwi.put_event_metrics(
                 cwi.ConfigureIsmEventMetrics(
