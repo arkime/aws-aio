@@ -266,7 +266,15 @@ export class CaptureNodesStack extends cdk.Stack {
             vpc: props.captureVpc,
             functionName: `${props.clusterName}-ConfigureIsm`,
             runtime: lambda.Runtime.PYTHON_3_9,
-            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime'), {
+                bundling: {
+                    image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+                    command: [
+                    'bash', '-c',
+                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                    ],
+                },
+            }),            
             handler: 'lambda_handlers.configure_ism_handler',
             timeout:  cdk.Duration.seconds(30), // Something has gone very wrong if this is exceeded,
             environment: {

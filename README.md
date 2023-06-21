@@ -176,7 +176,9 @@ To isolate the Python environment for the project from your local machine, creat
 ```
 python3 -m venv .venv
 source .venv/bin/activate
+cd manage_arkime/
 pip install -r requirements.txt
+cd ../
 ```
 
 You can exit the Python virtual environment and remove its resources like so:

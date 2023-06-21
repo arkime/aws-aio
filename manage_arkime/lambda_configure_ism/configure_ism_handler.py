@@ -42,7 +42,7 @@ class ConfigureIsmHandler:
             secrets_client = aws_provider.get_secretsmanager()
             opensearch_pass = secrets_client.get_secret_value(SecretId=opensearch_secret_arn)["SecretString"]
             auth = HTTPBasicAuth("admin", opensearch_pass)
-            opensearch_client = client.OpenSearchClient(opensearch_endpoint, 443, auth)
+            opensearch_client = client.OpenSearchClient(f"https://{opensearch_endpoint}", 443, auth)
 
             ism.setup_user_history_ism(ism_event.history_days, opensearch_client)
             
