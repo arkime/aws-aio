@@ -4,7 +4,7 @@ import shlex
 import unittest.mock as mock
 
 import aws_interactions.ssm_operations as ssm_ops
-from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert, _get_capacity_plan, _get_user_config
+from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert, _get_capacity_plan, _get_user_config, _confirm_usage
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
@@ -12,11 +12,12 @@ from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMU
 from core.user_config import UserConfig
 
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster._confirm_usage")
 @mock.patch("commands.create_cluster._get_user_config")
 @mock.patch("commands.create_cluster._get_capacity_plan")
 @mock.patch("commands.create_cluster._set_up_viewer_cert")
 @mock.patch("commands.create_cluster.CdkClient")
-def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config):
+def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config, mock_confirm):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -35,8 +36,10 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     )
     mock_get_plans.return_value = cluster_plan
 
+    mock_confirm.return_value = True
+
     # Run our test
-    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None)
+    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
 
     # Check our results
     expected_calls = [
@@ -77,6 +80,43 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     expected_set_up_calls = [
         mock.call("my-cluster", mock.ANY)
     ]
+    assert expected_set_up_calls == mock_set_up.call_args_list
+
+@mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster._confirm_usage")
+@mock.patch("commands.create_cluster._get_user_config")
+@mock.patch("commands.create_cluster._get_capacity_plan")
+@mock.patch("commands.create_cluster._set_up_viewer_cert")
+@mock.patch("commands.create_cluster.CdkClient")
+def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config, mock_confirm):
+    # Set up our mock
+    mock_set_up.return_value = "arn"
+
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    user_config = UserConfig(1, 30, 365, 2, 30)
+    mock_get_config.return_value = user_config
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        CaptureVpcPlan(DEFAULT_NUM_AZS),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+    )
+    mock_get_plans.return_value = cluster_plan
+
+    mock_confirm.return_value = False
+
+    # Run our test
+    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
+
+    # Check our results
+    expected_calls = []
+    assert expected_calls == mock_client.deploy.call_args_list
+
+    expected_set_up_calls = []
     assert expected_set_up_calls == mock_set_up.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
@@ -199,6 +239,35 @@ def test_WHEN_get_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_c
         mock.call(1, 40, 2, DEFAULT_NUM_AZS)
     ]
     assert expected_get_os_calls == mock_get_os.call_args_list
+
+@mock.patch("commands.create_cluster.UsageReport")
+def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
+    # Shared Setup
+    mock_plan = mock.Mock()
+    mock_report = mock.Mock()
+    mock_report_cls.return_value = mock_report
+    
+    # TEST: pre-confirm is true
+    actual_value = _confirm_usage(mock_plan, True)
+
+    assert True == actual_value
+    assert not mock_report.get_confirmation.called
+
+    # TEST: pre-confirm is false, user says yes
+    mock_report.get_confirmation.return_value = True
+
+    actual_value = _confirm_usage(mock_plan, False)
+
+    assert True == actual_value
+    assert mock_report.get_confirmation.called
+
+    # TEST: pre-confirm is false, user says no
+    mock_report.get_confirmation.return_value = False
+
+    actual_value = _confirm_usage(mock_plan, False)
+
+    assert False == actual_value
+    assert mock_report.get_confirmation.called
 
 @mock.patch("commands.create_cluster.upload_default_elb_cert")
 @mock.patch("commands.create_cluster.ssm_ops")

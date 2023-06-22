@@ -3,6 +3,8 @@ import math
 import logging
 from typing import Dict, Type, TypeVar
 
+import shell_interactions as shell
+
 logger = logging.getLogger(__name__)
 
 INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge" # Arbitrarily chosen
@@ -352,3 +354,35 @@ class ClusterPlan:
         s3 = S3Plan(**input["s3"])
 
         return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3)
+    
+@dataclass
+class UsageReport:
+    cluster_plan: ClusterPlan
+
+    def get_report(self) -> str:
+        report_text = (
+            "Capture Nodes:\n"
+            + f"    Max Count: {self.cluster_plan.captureNodes.maxCount}\n"
+            + f"    Desired Count: {self.cluster_plan.captureNodes.desiredCount}\n"
+            + f"    Min Count: {self.cluster_plan.captureNodes.minCount}\n"
+            + f"    Type: {self.cluster_plan.captureNodes.instanceType}\n"
+            + "OpenSearch Domain:\n"
+            + f"    Master Node Count: {self.cluster_plan.osDomain.masterNodes.count}\n"
+            + f"    Master Node Type: {self.cluster_plan.osDomain.masterNodes.instanceType}\n"
+            + f"    Data Node Count: {self.cluster_plan.osDomain.dataNodes.count}\n"
+            + f"    Data Node Type: {self.cluster_plan.osDomain.dataNodes.instanceType}\n"
+            + f"    Data Node Volume Size [GB]: {self.cluster_plan.osDomain.dataNodes.volumeSize}\n"
+            + "S3 PCAP:\n"
+            + f"    Retention Period [days]: {self.cluster_plan.s3.pcapStorageDays}\n"                       
+        )
+        return report_text
+    
+    def get_confirmation(self) -> bool:
+        confirm_prompt = (
+            "Your settings will result in the follow AWS Resource usage:\n"
+            + self.get_report()
+            + "\n"
+            + "Do you approve this usage (y/yes or n/no)? "
+        )
+        prompt_response = shell.louder_input(message=confirm_prompt, print_header=True)
+        return prompt_response.strip().lower() in ["y", "yes"]

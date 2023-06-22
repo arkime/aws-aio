@@ -9,19 +9,23 @@ import cdk_interactions.cdk_context as context
 import constants as constants
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
-                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
+                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, UsageReport)
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
 
 def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                       pcap_days: int):
+                       pcap_days: int, preconfirm_usage: bool):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
     user_config = _get_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
     capacity_plan = _get_capacity_plan(user_config)
+
+    if not _confirm_usage(capacity_plan, preconfirm_usage):
+        logger.info("Aborting per user response")
+        return
 
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
@@ -77,6 +81,11 @@ def _get_capacity_plan(user_config: UserConfig) -> ClusterPlan:
     s3_plan = S3Plan(DEFAULT_S3_STORAGE_CLASS, user_config.pcapDays)
 
     return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan, s3_plan)
+
+def _confirm_usage(capacity_plan: ClusterPlan, preconfirm_usage: bool) -> bool:
+    if preconfirm_usage:
+        return True
+    return UsageReport(capacity_plan).get_confirmation()
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     # Only set up the certificate if it doesn't exist
