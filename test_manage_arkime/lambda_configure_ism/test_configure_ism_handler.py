@@ -2,15 +2,15 @@ import json
 import unittest.mock as mock
 
 from lambda_configure_ism.configure_ism_handler import ConfigureIsmHandler
-from opensearch_interactions.opensearch_client import OpenSearchClient
 import aws_interactions.cloudwatch_interactions as cwi
 import constants as constants
 
 @mock.patch("lambda_configure_ism.configure_ism_handler.os")
+@mock.patch("lambda_configure_ism.configure_ism_handler.ism.setup_sessions_ism")
 @mock.patch("lambda_configure_ism.configure_ism_handler.ism.setup_user_history_ism")
 @mock.patch("lambda_configure_ism.configure_ism_handler.AwsClientProvider")
 @mock.patch("lambda_configure_ism.configure_ism_handler.cwi")
-def test_WHEN_ConfigureIsmHandler_handle_called_THEN_sets_up_mirroring(mock_cwi, mock_provider, mock_setup_history, mock_os):
+def test_WHEN_ConfigureIsmHandler_handle_called_THEN_sets_up_mirroring(mock_cwi, mock_provider, mock_setup_history, mock_setup_sessions, mock_os):
     # Set up our mock
     mock_cwi.ConfigureIsmEventMetrics = cwi.ConfigureIsmEventMetrics
     mock_cwi.ConfigureIsmEventOutcome = cwi.ConfigureIsmEventOutcome
@@ -53,6 +53,15 @@ def test_WHEN_ConfigureIsmHandler_handle_called_THEN_sets_up_mirroring(mock_cwi,
     ]
     assert expected_setup_history_calls == mock_setup_history.call_args_list
 
+    expected_setup_sessions_calls = [
+        mock.call(
+            30,
+            1,
+            mock.ANY
+        ),
+    ]
+    assert expected_setup_sessions_calls == mock_setup_sessions.call_args_list
+
     expected_put_metrics_calls = [
         mock.call(            
             cwi.ConfigureIsmEventMetrics(
@@ -65,10 +74,11 @@ def test_WHEN_ConfigureIsmHandler_handle_called_THEN_sets_up_mirroring(mock_cwi,
     assert expected_put_metrics_calls == mock_cwi.put_event_metrics.call_args_list
 
 @mock.patch("lambda_configure_ism.configure_ism_handler.os")
+@mock.patch("lambda_configure_ism.configure_ism_handler.ism.setup_sessions_ism")
 @mock.patch("lambda_configure_ism.configure_ism_handler.ism.setup_user_history_ism")
 @mock.patch("lambda_configure_ism.configure_ism_handler.AwsClientProvider")
 @mock.patch("lambda_configure_ism.configure_ism_handler.cwi")
-def test_WHEN_ConfigureIsmHandler_handle_called_AND_unhandled_ex_THEN_handles_gracefully(mock_cwi, mock_provider, mock_setup_history, mock_os):
+def test_WHEN_ConfigureIsmHandler_handle_called_AND_unhandled_ex_THEN_handles_gracefully(mock_cwi, mock_provider, mock_setup_history, mock_setup_sessions, mock_os):
     # Set up our mock
     mock_cwi.ConfigureIsmEventMetrics = cwi.ConfigureIsmEventMetrics
     mock_cwi.ConfigureIsmEventOutcome = cwi.ConfigureIsmEventOutcome
@@ -105,6 +115,9 @@ def test_WHEN_ConfigureIsmHandler_handle_called_AND_unhandled_ex_THEN_handles_gr
 
     expected_setup_history_calls = []
     assert expected_setup_history_calls == mock_setup_history.call_args_list
+
+    expected_setup_sessions_calls = []
+    assert expected_setup_sessions_calls == mock_setup_sessions.call_args_list
 
     expected_put_metrics_calls = [
         mock.call(            

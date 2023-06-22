@@ -45,6 +45,7 @@ class ConfigureIsmHandler:
             opensearch_client = client.OpenSearchClient(f"https://{opensearch_endpoint}", 443, auth)
 
             ism.setup_user_history_ism(ism_event.history_days, opensearch_client)
+            ism.setup_sessions_ism(ism_event.spi_days, ism_event.replicas, opensearch_client)
             
             cwi.put_event_metrics(
                 cwi.ConfigureIsmEventMetrics(

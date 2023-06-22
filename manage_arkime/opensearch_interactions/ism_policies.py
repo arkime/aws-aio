@@ -42,8 +42,15 @@ def get_user_history_ism_policy(history_days: int) -> Dict[str, any]:
 
 ISM_ID_SESSIONS="sessions"
 INDEX_PATTERN_SESSIONS = f"{ISM_ID_SESSIONS}3-*"
+ISM_DEFAULT_MERGE_SEGMENTS=1
 
 def get_sessions_ism_policy(hot_days: int, warm_days: int, replicas: int, merge_segments: int) -> Dict[str, any]:
+    """
+    hot_days: Number of days for the sessions data to stay in the "hot" state
+    warm_days: Number of additional days for the sessions data to stay in a "warm" state after it has left the "hot" state
+    replicas: Number of replicas of the sessions data to keep
+    merge_segments: The maximum number of Lucene segments to allow after a merge occurs
+    """
     return {
         "policy": {
             "description": "Arkime sessions3 Policy",
@@ -96,7 +103,7 @@ def get_sessions_ism_policy(hot_days: int, warm_days: int, replicas: int, merge_
                         {
                             "state_name": "delete",
                             "conditions": {
-                                "min_index_age": f"{warm_days}d"
+                                "min_index_age": f"{hot_days + warm_days}d"
                             }
                         }
                     ]
