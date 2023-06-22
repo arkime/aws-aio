@@ -48,11 +48,9 @@ class ConfigureIsmEventMetrics(ArkimeEventMetric):
         super().__init__()
 
         self.cluster_name = cluster_name
-        self.event_type = constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR
+        self.event_type = constants.EVENT_DETAIL_TYPE_CONFIGURE_ISM
 
         self.value_success = 0
-        self.value_abort_exists = 0
-        self.value_abort_eni_type = 0
         self.value_failure = 0
 
         if outcome == ConfigureIsmEventOutcome.SUCCESS:
