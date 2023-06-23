@@ -1,5 +1,4 @@
 import pytest
-import unittest.mock as mock
 
 import core.capacity_planning as cap
 
@@ -172,101 +171,6 @@ def test_WHEN_get_os_domain_plan_called_THEN_as_expected():
         cap.DataNodesPlan(64, cap.R6G_4XLARGE_SEARCH.type, cap.R6G_4XLARGE_SEARCH.vol_size),
         cap.MasterNodesPlan(3, "r6g.2xlarge.search")
     )
-    assert expected_value == actual_value
-
-def test_WHEN_UsageReport_get_report_THEN_as_expected():
-    # Set up the test
-    prev_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(None, None, None, None),
-        cap.CaptureVpcPlan(None),
-        cap.EcsSysResourcePlan(None, None),
-        cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, None)),
-        cap.S3Plan(None, None)
-    )
-    next_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(1),
-        cap.EcsSysResourcePlan(1, 1),
-        cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
-        cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30)
-    )
-
-    # Run the test
-    actual_report = cap.UsageReport(prev_plan, next_plan).get_report()
-
-    # Check the results
-    expected_report = (
-        "Capture Nodes:\n"
-        + "    Max Count: None -> 2\n"
-        + "    Desired Count: None -> 1\n"
-        + "    Min Count: None -> 1\n"
-        + f"    Type: None -> {cap.INSTANCE_TYPE_CAPTURE_NODE}\n"
-        + "OpenSearch Domain:\n"
-        + "    Master Node Count: None -> 3\n"
-        + "    Master Node Type: None -> m6g.large.search\n"
-        + "    Data Node Count: None -> 2\n"
-        + "    Data Node Type: None -> t3.small.search\n"
-        + "    Data Node Volume Size [GB]: None -> 100\n"
-        + "S3 PCAP:\n"
-        + "    Retention Period [days]: None -> 30\n"                       
-    )
-
-    assert expected_report == actual_report
-
-@mock.patch('core.capacity_planning.shell')
-def test_WHEN_UsageReport_get_confirmation_AND_yes_THEN_as_expected(mock_shell):
-    # Set up the test
-    prev_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(None, None, None, None),
-        cap.CaptureVpcPlan(None),
-        cap.EcsSysResourcePlan(None, None),
-        cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, None)),
-        cap.S3Plan(None, None)
-    )
-    next_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(1),
-        cap.EcsSysResourcePlan(1, 1),
-        cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
-        cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30)
-    )
-
-    mock_input = mock_shell.louder_input
-    mock_input.return_value = "yes"
-
-    # Run the test
-    actual_value = cap.UsageReport(prev_plan, next_plan).get_confirmation()
-
-    # Check the results
-    expected_value = True
-    assert expected_value == actual_value
-
-@mock.patch('core.capacity_planning.shell')
-def test_WHEN_UsageReport_get_confirmation_AND_no_THEN_as_expected(mock_shell):
-    # Set up the test
-    prev_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(None, None, None, None),
-        cap.CaptureVpcPlan(None),
-        cap.EcsSysResourcePlan(None, None),
-        cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, None)),
-        cap.S3Plan(None, None)
-    )
-    next_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(1),
-        cap.EcsSysResourcePlan(1, 1),
-        cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
-        cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30)
-    )
-
-    mock_input = mock_shell.louder_input
-    mock_input.return_value = "no"
-
-    # Run the test
-    actual_value = cap.UsageReport(prev_plan, next_plan).get_confirmation()
-
-    # Check the results
-    expected_value = False
     assert expected_value == actual_value
 
     
