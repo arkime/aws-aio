@@ -4,7 +4,8 @@ import shlex
 import unittest.mock as mock
 
 import aws_interactions.ssm_operations as ssm_ops
-from commands.create_cluster import cmd_create_cluster, _set_up_viewer_cert, _get_capacity_plan, _get_user_config
+from commands.create_cluster import (cmd_create_cluster, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
+                                     _get_previous_capacity_plan, _get_previous_user_config)
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
@@ -12,11 +13,15 @@ from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMU
 from core.user_config import UserConfig
 
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
-@mock.patch("commands.create_cluster._get_user_config")
-@mock.patch("commands.create_cluster._get_capacity_plan")
+@mock.patch("commands.create_cluster._get_previous_user_config")
+@mock.patch("commands.create_cluster._get_previous_capacity_plan")
+@mock.patch("commands.create_cluster._confirm_usage")
+@mock.patch("commands.create_cluster._get_next_user_config")
+@mock.patch("commands.create_cluster._get_next_capacity_plan")
 @mock.patch("commands.create_cluster._set_up_viewer_cert")
 @mock.patch("commands.create_cluster.CdkClient")
-def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config):
+def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
+                                                                 mock_confirm, mock_get_prev_plan, mock_get_prev_config):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -35,8 +40,10 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     )
     mock_get_plans.return_value = cluster_plan
 
+    mock_confirm.return_value = True
+
     # Run our test
-    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None)
+    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
 
     # Check our results
     expected_calls = [
@@ -79,8 +86,96 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_set_up_calls == mock_set_up.call_args_list
 
+@mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster._get_previous_user_config")
+@mock.patch("commands.create_cluster._get_previous_capacity_plan")
+@mock.patch("commands.create_cluster._confirm_usage")
+@mock.patch("commands.create_cluster._get_next_user_config")
+@mock.patch("commands.create_cluster._get_next_capacity_plan")
+@mock.patch("commands.create_cluster._set_up_viewer_cert")
+@mock.patch("commands.create_cluster.CdkClient")
+def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
+                                                                         mock_confirm, mock_get_prev_plan, mock_get_prev_config):
+    # Set up our mock
+    mock_set_up.return_value = "arn"
+
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    user_config = UserConfig(1, 30, 365, 2, 30)
+    mock_get_config.return_value = user_config
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        CaptureVpcPlan(DEFAULT_NUM_AZS),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+    )
+    mock_get_plans.return_value = cluster_plan
+
+    mock_confirm.return_value = False
+
+    # Run our test
+    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
+
+    # Check our results
+    expected_calls = []
+    assert expected_calls == mock_client.deploy.call_args_list
+
+    expected_set_up_calls = []
+    assert expected_set_up_calls == mock_set_up.call_args_list
+
+
+
 @mock.patch("commands.create_cluster.ssm_ops")
-def test_WHEN_get_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_ops):
+def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_ssm_ops):
+    # Set up our mock
+    mock_ssm_ops.get_ssm_param_json_value.return_value = {
+        "expectedTraffic": 0.1,
+        "spiDays": 30,
+        "replicas": 1,
+        "pcapDays": 30,
+        "historyDays": 120
+    }
+
+    mock_provider = mock.Mock()
+
+    # Run our test
+    actual_value = _get_previous_user_config("cluster-name", mock_provider)
+
+    # Check our results
+    expected_value = UserConfig(0.1, 30, 120, 1, 30)
+    assert expected_value == actual_value
+
+    expected_get_ssm_calls = [
+        mock.call(constants.get_cluster_ssm_param_name("cluster-name"), "userConfig", mock_provider)
+    ]
+    assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
+
+
+@mock.patch("commands.create_cluster.ssm_ops")
+def test_WHEN_get_previous_user_config_called_AND_doesnt_exist_THEN_as_expected(mock_ssm_ops):
+    # Set up our mock
+    mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
+    mock_ssm_ops.get_ssm_param_json_value.side_effect = ssm_ops.ParamDoesNotExist("")
+
+    mock_provider = mock.Mock()
+
+    # Run our test
+    actual_value = _get_previous_user_config("cluster-name", mock_provider)
+
+    # Check our results
+    expected_value = UserConfig(None, None, None, None, None)
+    assert expected_value == actual_value
+
+    expected_get_ssm_calls = [
+        mock.call(constants.get_cluster_ssm_param_name("cluster-name"), "userConfig", mock_provider)
+    ]
+    assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
+
+@mock.patch("commands.create_cluster.ssm_ops")
+def test_WHEN_get_next_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
 
@@ -95,7 +190,7 @@ def test_WHEN_get_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", None, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(1.2, 40, 120, 2, 35) == actual_value
@@ -106,7 +201,7 @@ def test_WHEN_get_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
-def test_WHEN_get_user_config_called_AND_partial_update_THEN_as_expected(mock_ssm_ops):
+def test_WHEN_get_next_user_config_called_AND_partial_update_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
 
@@ -121,7 +216,7 @@ def test_WHEN_get_user_config_called_AND_partial_update_THEN_as_expected(mock_ss
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", None, 30, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, 30, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(1.2, 30, 120, 2, 35) == actual_value
@@ -132,7 +227,7 @@ def test_WHEN_get_user_config_called_AND_partial_update_THEN_as_expected(mock_ss
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
-def test_WHEN_get_user_config_called_AND_use_default_THEN_as_expected(mock_ssm_ops):
+def test_WHEN_get_next_user_config_called_AND_use_default_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
     mock_ssm_ops.get_ssm_param_json_value.side_effect = ssm_ops.ParamDoesNotExist("")
@@ -140,7 +235,7 @@ def test_WHEN_get_user_config_called_AND_use_default_THEN_as_expected(mock_ssm_o
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", None, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS) == actual_value
@@ -151,14 +246,14 @@ def test_WHEN_get_user_config_called_AND_use_default_THEN_as_expected(mock_ssm_o
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
-def test_WHEN_get_user_config_called_AND_specify_all_THEN_as_expected(mock_ssm_ops):
+def test_WHEN_get_next_user_config_called_AND_specify_all_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
 
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_user_config("my-cluster", 10, 40, 120, 2, 35, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", 10, 40, 120, 2, 35, mock_provider)
 
     # Check our results
     assert UserConfig(10, 40, 120, 2, 35) == actual_value
@@ -167,10 +262,92 @@ def test_WHEN_get_user_config_called_AND_specify_all_THEN_as_expected(mock_ssm_o
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
+@mock.patch("commands.create_cluster.ssm_ops")
+def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock_ssm_ops):
+    # Set up our mock
+    mock_ssm_ops.get_ssm_param_json_value.return_value = {
+        "captureNodes": {
+            "instanceType": "m5.xlarge",
+            "desiredCount": 1,
+            "maxCount": 2,
+            "minCount": 1
+        },
+        "captureVpc": {
+            "numAzs": 2
+        },
+        "ecsResources": {
+            "cpu": 3584,
+            "memory": 15360
+        },
+        "osDomain": {
+            "dataNodes": {
+                "count": 2,
+                "instanceType": "r6g.large.search",
+                "volumeSize": 1024
+            },
+            "masterNodes": {
+                "count": 3,
+                "instanceType": "m6g.large.search"
+            }
+        },
+        "s3": {
+            "pcapStorageClass": "STANDARD",
+            "pcapStorageDays": 30
+        }
+    }
+
+    mock_provider = mock.Mock()
+
+    # Run our test
+    actual_value = _get_previous_capacity_plan("cluster-name", mock_provider)
+
+    # Check our results
+    expected_value = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        CaptureVpcPlan(2),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "r6g.large.search", 1024), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 30)
+    )
+    assert expected_value == actual_value
+
+    expected_get_ssm_calls = [
+        mock.call(constants.get_cluster_ssm_param_name("cluster-name"), "capacityPlan", mock_provider)
+    ]
+    assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
+
+
+@mock.patch("commands.create_cluster.ssm_ops")
+def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expected(mock_ssm_ops):
+    # Set up our mock
+    mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
+    mock_ssm_ops.get_ssm_param_json_value.side_effect = ssm_ops.ParamDoesNotExist("")
+
+    mock_provider = mock.Mock()
+
+    # Run our test
+    actual_value = _get_previous_capacity_plan("cluster-name", mock_provider)
+
+    # Check our results
+    expected_value = ClusterPlan(
+        CaptureNodesPlan(None, None, None, None),
+        CaptureVpcPlan(None),
+        EcsSysResourcePlan(None, None),
+        OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
+        S3Plan(None, None)
+    )
+    assert expected_value == actual_value
+
+    expected_get_ssm_calls = [
+        mock.call(constants.get_cluster_ssm_param_name("cluster-name"), "capacityPlan", mock_provider)
+    ]
+    assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
+
+
 @mock.patch("commands.create_cluster.get_os_domain_plan")
 @mock.patch("commands.create_cluster.get_capture_node_capacity_plan")
 @mock.patch("commands.create_cluster.ssm_ops")
-def test_WHEN_get_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os):
+def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
     mock_ssm_ops.get_ssm_param_json_value.side_effect = ssm_ops.ParamDoesNotExist("")
@@ -181,7 +358,7 @@ def test_WHEN_get_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_c
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_capacity_plan(UserConfig(1, 40, 120, 2, 35))
+    actual_value = _get_next_capacity_plan(UserConfig(1, 40, 120, 2, 35))
 
     # Check our results
     assert mock_get_cap.return_value == actual_value.captureNodes
@@ -199,6 +376,38 @@ def test_WHEN_get_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_c
         mock.call(1, 40, 2, DEFAULT_NUM_AZS)
     ]
     assert expected_get_os_calls == mock_get_os.call_args_list
+
+@mock.patch("commands.create_cluster.UsageReport")
+def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
+    # Shared Setup
+    mock_plan_prev = mock.Mock()
+    mock_plan_next = mock.Mock()
+    mock_config_prev = mock.Mock()
+    mock_config_next = mock.Mock()
+    mock_report = mock.Mock()
+    mock_report_cls.return_value = mock_report
+    
+    # TEST: pre-confirm is true
+    actual_value = _confirm_usage(mock_plan_prev, mock_plan_next, mock_config_prev, mock_config_next, True)
+
+    assert True == actual_value
+    assert not mock_report.get_confirmation.called
+
+    # TEST: pre-confirm is false, user says yes
+    mock_report.get_confirmation.return_value = True
+
+    actual_value = _confirm_usage(mock_plan_prev, mock_plan_next, mock_config_prev, mock_config_next, False)
+
+    assert True == actual_value
+    assert mock_report.get_confirmation.called
+
+    # TEST: pre-confirm is false, user says no
+    mock_report.get_confirmation.return_value = False
+
+    actual_value = _confirm_usage(mock_plan_prev, mock_plan_next, mock_config_prev, mock_config_next, False)
+
+    assert False == actual_value
+    assert mock_report.get_confirmation.called
 
 @mock.patch("commands.create_cluster.upload_default_elb_cert")
 @mock.patch("commands.create_cluster.ssm_ops")
