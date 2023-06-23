@@ -357,23 +357,24 @@ class ClusterPlan:
     
 @dataclass
 class UsageReport:
-    cluster_plan: ClusterPlan
+    prev_plan: ClusterPlan
+    next_plan: ClusterPlan
 
     def get_report(self) -> str:
         report_text = (
             "Capture Nodes:\n"
-            + f"    Max Count: {self.cluster_plan.captureNodes.maxCount}\n"
-            + f"    Desired Count: {self.cluster_plan.captureNodes.desiredCount}\n"
-            + f"    Min Count: {self.cluster_plan.captureNodes.minCount}\n"
-            + f"    Type: {self.cluster_plan.captureNodes.instanceType}\n"
+            + f"    Max Count: {self.prev_plan.captureNodes.maxCount} -> {self.next_plan.captureNodes.maxCount}\n"
+            + f"    Desired Count: {self.prev_plan.captureNodes.desiredCount} -> {self.next_plan.captureNodes.desiredCount}\n"
+            + f"    Min Count: {self.prev_plan.captureNodes.minCount} -> {self.next_plan.captureNodes.minCount}\n"
+            + f"    Type: {self.prev_plan.captureNodes.instanceType} -> {self.next_plan.captureNodes.instanceType}\n"
             + "OpenSearch Domain:\n"
-            + f"    Master Node Count: {self.cluster_plan.osDomain.masterNodes.count}\n"
-            + f"    Master Node Type: {self.cluster_plan.osDomain.masterNodes.instanceType}\n"
-            + f"    Data Node Count: {self.cluster_plan.osDomain.dataNodes.count}\n"
-            + f"    Data Node Type: {self.cluster_plan.osDomain.dataNodes.instanceType}\n"
-            + f"    Data Node Volume Size [GB]: {self.cluster_plan.osDomain.dataNodes.volumeSize}\n"
+            + f"    Master Node Count: {self.prev_plan.osDomain.masterNodes.count} -> {self.next_plan.osDomain.masterNodes.count}\n"
+            + f"    Master Node Type: {self.prev_plan.osDomain.masterNodes.instanceType} -> {self.next_plan.osDomain.masterNodes.instanceType}\n"
+            + f"    Data Node Count: {self.prev_plan.osDomain.dataNodes.count} -> {self.next_plan.osDomain.dataNodes.count}\n"
+            + f"    Data Node Type: {self.prev_plan.osDomain.dataNodes.instanceType} -> {self.next_plan.osDomain.dataNodes.instanceType}\n"
+            + f"    Data Node Volume Size [GB]: {self.prev_plan.osDomain.dataNodes.volumeSize} -> {self.next_plan.osDomain.dataNodes.volumeSize}\n"
             + "S3 PCAP:\n"
-            + f"    Retention Period [days]: {self.cluster_plan.s3.pcapStorageDays}\n"                       
+            + f"    Retention Period [days]: {self.prev_plan.s3.pcapStorageDays} -> {self.next_plan.s3.pcapStorageDays}\n"                       
         )
         return report_text
     
