@@ -31,6 +31,7 @@ NAME_DEMO_STACK_2: str = "DemoTrafficGen02"
 
 # The names of EventBridge items and fields
 EVENT_SOURCE = "arkime"
+EVENT_DETAIL_TYPE_CONFIGURE_ISM = "ConfigureIsm"
 EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR = "CreateEniMirror"
 EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR = "DestroyEniMirror"
 

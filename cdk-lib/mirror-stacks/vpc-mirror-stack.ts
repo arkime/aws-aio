@@ -129,8 +129,6 @@ export class VpcMirrorStack extends Stack {
         });
         vpcParam.node.addDependency(filter);
 
-
-
         /**
          * Configure the resources to listen for raw AWS Service events in the User VPC Account/Region and convert
          * those events into something more actionable for our system
@@ -139,7 +137,7 @@ export class VpcMirrorStack extends Stack {
         // Create the Lambda that listen for AWS Service events on the default bus and transform them into events we
         // can action
         const listenerLambda = new lambda.Function(this, 'AwsEventListenerLambda', {
-            functionName: `AwsEventListener-${props.vpcId}`,
+            functionName: `${props.clusterName}-AwsEventListener-${props.vpcId}`,
             runtime: lambda.Runtime.PYTHON_3_9,
             code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
             handler: 'lambda_handlers.aws_event_listener_handler',
@@ -175,7 +173,7 @@ export class VpcMirrorStack extends Stack {
 
         // Make a human-readable log of the raw AWS Service events we're proccessing
         const vpcLogGroup = new logs.LogGroup(this, 'LogGroup', {
-            logGroupName: `ArkimeInputEvents-${props.vpcId}`,
+            logGroupName: `${props.clusterName}-ArkimeInputEvents-${props.vpcId}`,
             removalPolicy: RemovalPolicy.DESTROY // This is intended for debugging
         });
 
@@ -231,7 +229,7 @@ export class VpcMirrorStack extends Stack {
 
         // Archive Arkime events related to this User VPC to enable replay, with a focus on shorter-term debugging
         clusterBus.archive('Archive', {
-            archiveName: `Arkime-${props.vpcId}`,
+            archiveName: `${props.clusterName}-Arkime-${props.vpcId}`,
             description: `Archive of Arkime events for VPC ${props.vpcId}`,
             eventPattern: {
                 source: [constants.EVENT_SOURCE],
@@ -244,7 +242,7 @@ export class VpcMirrorStack extends Stack {
 
         // Create the Lambda that will set up the traffic mirroring for ENIs in our VPC
         const createLambda = new lambda.Function(this, 'CreateEniMirrorLambda', {
-            functionName: `CreateEniMirror-${props.vpcId}`,
+            functionName: `${props.clusterName}-CreateEniMirror-${props.vpcId}`,
             runtime: lambda.Runtime.PYTHON_3_9,
             code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
             handler: 'lambda_handlers.create_eni_mirror_handler',
@@ -308,7 +306,7 @@ export class VpcMirrorStack extends Stack {
 
         // Create the Lambda that will tear down the traffic mirroring for ENIs in our VPC
         const destroyLambda = new lambda.Function(this, 'DestroyEniMirrorLambda', {
-            functionName: `DestroyEniMirror-${props.vpcId}`,
+            functionName: `${props.clusterName}-DestroyEniMirror-${props.vpcId}`,
             runtime: lambda.Runtime.PYTHON_3_9,
             code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
             handler: 'lambda_handlers.destroy_eni_mirror_handler',

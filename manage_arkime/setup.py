@@ -5,8 +5,8 @@ setuptools.setup(
     version="0.1",
     description=("Tooling and configuration to install/manage Arkime Clusters in an AWS account"),
     author="Chris Helma",
-    package_dir={"": "manage_arkime"},
-    packages=setuptools.find_packages(where="manage_arkime"),
+    package_dir={"": "."},
+    packages=setuptools.find_packages(where="."),
     install_requires=[
         "boto3",
         "click",
@@ -14,6 +14,7 @@ setuptools.setup(
         "cryptography",
         "pexpect",
         "pytest",
+        "requests",
     ],
     python_requires=">=3.9",
 )

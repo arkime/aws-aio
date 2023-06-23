@@ -42,6 +42,26 @@ class ArkimeEvent(ABC):
 
     def __eq__(self, other: object) -> bool:
         return self.source == other.source and self.detail_type == other.detail_type and self.details == other.details
+    
+class ConfigureIsmEvent(ArkimeEvent):
+    def __init__(self, history_days: int, spi_days: int, replicas: int):
+        super().__init__()
+
+        self.history_days = history_days
+        self.spi_days = spi_days
+        self.replicas = replicas
+
+    @property
+    def details(self) -> Dict[str, any]:
+        return {
+            "history_days": self.history_days,
+            "spi_days": self.spi_days,
+            "replicas": self.replicas,
+        }
+
+    @property
+    def detail_type(self) -> str:
+        return constants.EVENT_DETAIL_TYPE_CONFIGURE_ISM
 
 class CreateEniMirrorEvent(ArkimeEvent):
     def __init__(self, cluster_name: str, vpc_id: str, subnet_id: str, eni_id: str, eni_type: str, traffic_filter_id: str, vni: int):
