@@ -3,6 +3,7 @@ import math
 import logging
 from typing import Dict, Type, TypeVar
 
+
 logger = logging.getLogger(__name__)
 
 INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge" # Arbitrarily chosen
@@ -352,3 +353,4 @@ class ClusterPlan:
         s3 = S3Plan(**input["s3"])
 
         return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3)
+    

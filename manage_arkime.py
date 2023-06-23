@@ -86,11 +86,18 @@ cli.add_command(destroy_demo_traffic)
     default=None,
     type=click.INT,
     required=False)
+@click.option(
+    "--preconfirm-usage", 
+    help="Skips the manual confirmation that the capacity to be provisioned is as expected.",
+    is_flag=True,
+    show_default=True,
+    default=False
+)
 @click.pass_context
-def create_cluster(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days):
+def create_cluster(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_create_cluster(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days)
+    cmd_create_cluster(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage)
 cli.add_command(create_cluster)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")

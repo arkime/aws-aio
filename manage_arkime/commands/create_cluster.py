@@ -1,4 +1,3 @@
-import json
 import logging
 
 from aws_interactions.acm_interactions import upload_default_elb_cert
@@ -8,21 +7,28 @@ import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
 import constants as constants
+from core.usage_report import UsageReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
-                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
+                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, CaptureNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
 
 def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                       pcap_days: int):
+                       pcap_days: int, preconfirm_usage: bool):
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
-    user_config = _get_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
-    capacity_plan = _get_capacity_plan(user_config)
+    previous_user_config = _get_previous_user_config(name, aws_provider)
+    next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
+    previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
+    next_capacity_plan = _get_next_capacity_plan(next_user_config)
+
+    if not _confirm_usage(previous_capacity_plan, next_capacity_plan, previous_user_config, next_user_config, preconfirm_usage):
+        logger.info("Aborting per user response")
+        return
 
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
@@ -34,12 +40,26 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn, capacity_plan, user_config)
+    create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
     _configure_ism(name, user_config.historyDays, user_config.spiDays, user_config.replicas, aws_provider)
 
-def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int, 
+def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider) -> UserConfig:
+    # Pull the existing config, if possible
+    try:
+        stored_config_json = ssm_ops.get_ssm_param_json_value(
+            constants.get_cluster_ssm_param_name(cluster_name),
+            "userConfig",
+            aws_provider
+        )
+        return UserConfig(**stored_config_json)
+
+    # Existing config doesn't exist; return a blank config
+    except ssm_ops.ParamDoesNotExist:
+        return UserConfig(None, None, None, None, None)
+
+def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int, 
                      pcap_days: int, aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
     if None in [expected_traffic, spi_days, replicas, pcap_days, history_days]:
@@ -71,8 +91,28 @@ def _get_user_config(cluster_name: str, expected_traffic: float, spi_days: int, 
     # All of the parameters defined
     else:
         return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days)
+    
+def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvider) -> ClusterPlan:
+    # Pull the existing plan, if possible
+    try:
+        stored_plan_json = ssm_ops.get_ssm_param_json_value(
+            constants.get_cluster_ssm_param_name(cluster_name),
+            "capacityPlan",
+            aws_provider
+        )
+        return ClusterPlan.from_dict(stored_plan_json)
 
-def _get_capacity_plan(user_config: UserConfig) -> ClusterPlan:
+    # Existing plan doesn't exist; return a blank plan
+    except ssm_ops.ParamDoesNotExist:
+        return ClusterPlan(
+            CaptureNodesPlan(None, None, None, None),
+            CaptureVpcPlan(None),
+            EcsSysResourcePlan(None, None),
+            OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
+            S3Plan(None, None)
+        )
+
+def _get_next_capacity_plan(user_config: UserConfig) -> ClusterPlan:
     capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic)
     capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
     os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, capture_vpc_plan.numAzs)
@@ -80,6 +120,16 @@ def _get_capacity_plan(user_config: UserConfig) -> ClusterPlan:
     s3_plan = S3Plan(DEFAULT_S3_STORAGE_CLASS, user_config.pcapDays)
 
     return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan, s3_plan)
+
+def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterPlan, prev_user_config: UserConfig,
+                   next_user_config: UserConfig, preconfirm_usage: bool) -> bool:
+
+    report = UsageReport(prev_capacity_plan, next_capacity_plan, prev_user_config, next_user_config)
+
+    if preconfirm_usage:
+        logger.info(f"Usage report:\n{report.get_report()}")
+        return True
+    return report.get_confirmation()
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     # Only set up the certificate if it doesn't exist
