@@ -121,7 +121,7 @@ def test_WHEN_setup_sessions_ism_AND_exists_THEN_as_expected():
     expected_update_ism_calls = [
         mock.call(
             policies.ISM_ID_SESSIONS,
-            policies.get_sessions_ism_policy(SPI_DAYS, 0, REPLICAS, 1),
+            policies.get_sessions_ism_policy(1, SPI_DAYS - 1, REPLICAS, 1),
             SEQ_NO,
             PRIMARY_TERM
         )
@@ -170,7 +170,7 @@ def test_WHEN_setup_sessions_ism_AND_doesnt_exists_THEN_as_expected():
     expected_create_ism_calls = [
         mock.call(
             policies.ISM_ID_SESSIONS,
-            policies.get_sessions_ism_policy(SPI_DAYS, 0, REPLICAS, 1),
+            policies.get_sessions_ism_policy(1, SPI_DAYS - 1, REPLICAS, 1),
         )
     ]
     assert expected_create_ism_calls == mock_client.create_ism_policy.call_args_list

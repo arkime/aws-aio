@@ -31,7 +31,7 @@ def setup_user_history_ism(history_days: int, client: OpenSearchClient):
 
 def setup_sessions_ism(spi_days: int, replicas: int, client: OpenSearchClient):
     # Create the new policy template
-    policy = policies.get_sessions_ism_policy(spi_days, 0, replicas, policies.ISM_DEFAULT_MERGE_SEGMENTS)
+    policy = policies.get_sessions_ism_policy(1, spi_days - 1, replicas, policies.ISM_DEFAULT_MERGE_SEGMENTS)
 
     # Get the existing policy, if it exists
     get_policy_raw = client.get_ism_policy(policies.ISM_ID_SESSIONS)

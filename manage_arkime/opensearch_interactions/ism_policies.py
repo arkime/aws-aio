@@ -1,6 +1,6 @@
 from typing import Dict
 
-ISM_ID_HISTORY="history"
+ISM_ID_HISTORY="arkime_history"
 INDEX_PATTERN_HISTORY = f"{ISM_ID_HISTORY}_v*"
 
 def get_user_history_ism_policy(history_days: int) -> Dict[str, any]:
@@ -40,7 +40,7 @@ def get_user_history_ism_policy(history_days: int) -> Dict[str, any]:
         }
     }
 
-ISM_ID_SESSIONS="sessions"
+ISM_ID_SESSIONS="arkime_sessions"
 INDEX_PATTERN_SESSIONS = f"{ISM_ID_SESSIONS}3-*"
 ISM_DEFAULT_MERGE_SEGMENTS=1
 
