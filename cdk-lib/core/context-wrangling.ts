@@ -125,7 +125,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 idVpceService: rawMirrorMgmtParamsObj.idVpceService,
                 listSubnetIds: rawMirrorMgmtParamsObj.listSubnetIds,
                 listSubnetSsmParams: rawMirrorMgmtParamsObj.listSubnetSsmParams,
-                vpcCidr: rawMirrorMgmtParamsObj.vpcCidr,
+                vpcCidrs: rawMirrorMgmtParamsObj.vpcCidrs,
             }
             return mirrorMgmtParams;
         default:

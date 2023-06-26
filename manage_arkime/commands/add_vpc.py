@@ -72,7 +72,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
     add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn,
-                                                       next_vni,vpc_details.cidr_block)
+                                                       next_vni, vpc_details.cidr_blocks)
 
     cdk_client = CdkClient()
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=add_vpc_context)

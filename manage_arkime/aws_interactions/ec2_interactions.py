@@ -153,14 +153,14 @@ def delete_eni_mirroring(traffic_session: str, aws_provider: AwsClientProvider) 
 class VpcDetails:
     vpc_id: str
     owner_id: str
-    cidr_block: str
+    cidr_blocks: List[str]
     tenancy: str
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
         return {
             'vpc_id': self.vpc_id,
             'owner_id': self.owner_id,
-            'cidr_block': self.cidr_block,
+            'cidr_blocks': self.cidr_blocks,
             'tenancy': self.tenancy,
         }
 
@@ -175,9 +175,11 @@ def get_vpc_details(vpc_id: str, aws_provider: AwsClientProvider) -> VpcDetails:
         raise VpcDoesNotExist(vpc_id=vpc_id)
 
     vpc_details = describe_vpc_response["Vpcs"][0]
+    cidr_blocks = [item["CidrBlock"] for item in vpc_details["CidrBlockAssociationSet"] if item["CidrBlockState"]["State"] in ["associating", "associated"]]
+
     return VpcDetails(
         vpc_id=vpc_details["VpcId"],
         owner_id=vpc_details["OwnerId"],
-        cidr_block=vpc_details["CidrBlock"],
+        cidr_blocks=cidr_blocks,
         tenancy=vpc_details["InstanceTenancy"]
     )

@@ -20,7 +20,7 @@ export interface VpcMirrorStackProps extends StackProps {
     readonly subnetIds: string[];
     readonly subnetSsmParamNames: string[];
     readonly vpcId: string;
-    readonly vpcCidr: string;
+    readonly vpcCidrs: string[];
     readonly vpcSsmParamName: string;
     readonly vpceServiceId: string;
     readonly mirrorVni: string;
@@ -81,15 +81,17 @@ export class VpcMirrorStack extends Stack {
             tags: [{key: 'Name', value: props.vpcId}],
             networkServices: ['amazon-dns']
         });
-        new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalOutbound`, {
-            destinationCidrBlock: props.vpcCidr,
-            ruleAction: 'REJECT',
-            ruleNumber: 10,
-            sourceCidrBlock: '0.0.0.0/0',
-            trafficDirection: 'EGRESS',
-            trafficMirrorFilterId: filter.ref,
-            description: 'Reject all intra-VPC traffic'
-        });
+        for (let block_num = 0; block_num < props.vpcCidrs.length; block_num++) {
+            new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalOutboundBlock-${block_num + 1}`, {
+                destinationCidrBlock: props.vpcCidrs[block_num],
+                ruleAction: 'REJECT',
+                ruleNumber: 10 + block_num,
+                sourceCidrBlock: '0.0.0.0/0',
+                trafficDirection: 'EGRESS',
+                trafficMirrorFilterId: filter.ref,
+                description: 'Reject all intra-VPC traffic'
+            });
+        }
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherOutbound`, {
             destinationCidrBlock: '0.0.0.0/0',
             ruleAction: 'ACCEPT',
@@ -99,16 +101,17 @@ export class VpcMirrorStack extends Stack {
             trafficMirrorFilterId: filter.ref,
             description: 'Accept all outbound traffic'
         });
-
-        new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalInbound`, {
-            destinationCidrBlock: '0.0.0.0/0',
-            ruleAction: 'REJECT',
-            ruleNumber: 10,
-            sourceCidrBlock: props.vpcCidr, 
-            trafficDirection: 'INGRESS',
-            trafficMirrorFilterId: filter.ref,
-            description: 'Reject all intra-VPC traffic'
-        });
+        for (let block_num = 0; block_num < props.vpcCidrs.length; block_num++) {
+            new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalInbound-${block_num + 1}`, {
+                destinationCidrBlock: '0.0.0.0/0',
+                ruleAction: 'REJECT',
+                ruleNumber: 10 + block_num,
+                sourceCidrBlock: props.vpcCidrs[block_num], 
+                trafficDirection: 'INGRESS',
+                trafficMirrorFilterId: filter.ref,
+                description: 'Reject all intra-VPC traffic'
+            });
+        }        
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherInbound`, {
             destinationCidrBlock: '0.0.0.0/0',
             ruleAction: 'ACCEPT',
@@ -324,10 +327,18 @@ export class VpcMirrorStack extends Stack {
         // Create the Lambda that will tear down the traffic mirroring for ENIs in our VPC
         const destroyLambda = new lambda.Function(this, 'DestroyEniMirrorLambda', {
             functionName: `${props.clusterName}-DestroyEniMirror-${props.vpcId}`,
-            runtime: lambda.Runtime.PYTHON_3_9,
-            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            runtime: lambda.Runtime.PYTHON_3_9,            
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime'), {
+                bundling: {
+                    image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+                    command: [
+                    'bash', '-c',
+                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                    ],
+                },
+            }),            
             handler: 'lambda_handlers.destroy_eni_mirror_handler',
-            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded            
+            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded
         });
         destroyLambda.addToRolePolicy(
             new iam.PolicyStatement({

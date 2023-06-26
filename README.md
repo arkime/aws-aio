@@ -220,6 +220,7 @@ Here are some scaling things that you'll want to consider:
 * The maximum scaling limit of the Capture Nodes ECS Service as well as the scaling conditions
 * The number of availability zones the setup launches in, and whether specific zones are required
 * The max throughput of a single Gateway Load Balancer Endpoint is 100 Gbps, and we provision one per User subnet
+* The max number of CIDR ranges a User VPC can have is 4, due to the hard cap on Traffic Mirroring Filter Rules
 
 Here are some account limits you'll want to watch out for:
 * Number of EIPs per region is small, and we spin up several for each Arkime Cluster
