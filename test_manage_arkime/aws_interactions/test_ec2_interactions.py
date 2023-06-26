@@ -238,3 +238,46 @@ def test_WHEN_remove_eni_mirroring_called_AND_doesnt_exist_THEN_raises():
     # Run our test
     with pytest.raises(ec2i.MirrorDoesntExist):
         ec2i.delete_eni_mirroring("session-1", mock_aws_provider)
+
+def test_WHEN_get_vpc_details_called_THEN_returns_them():
+    # Set up our mock
+    mock_ec2_client = mock.Mock()
+    mock_ec2_client.describe_vpcs.return_value = {
+        "Vpcs": [
+            {
+                "VpcId": "vpc-1234",
+                "OwnerId": "12345678910",
+                "CidrBlock": "10.0.0.0/16",
+                "InstanceTenancy": "dedicated",
+            }
+        ]
+    }
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ec2.return_value = mock_ec2_client
+
+    # Run our test
+    result = ec2i.get_vpc_details("vpc-1234", mock_aws_provider)
+
+    # Check our results
+    expected_describe_calls = [
+        mock.call(VpcIds=["vpc-1234"]),
+    ]
+    assert expected_describe_calls == mock_ec2_client.describe_vpcs.call_args_list
+
+    expected_result = ec2i.VpcDetails("vpc-1234", "12345678910", "10.0.0.0/16", "dedicated")
+    assert expected_result == result
+
+def test_WHEN_get_vpc_details_called_AND_doesnt_exist_THEN_raises():
+    # Set up our mock
+    mock_ec2_client = mock.Mock()
+    mock_ec2_client.describe_vpcs.return_value = {
+        "Vpcs": []
+    }
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ec2.return_value = mock_ec2_client
+
+    # Run our test
+    with pytest.raises(ec2i.VpcDoesNotExist):
+        ec2i.get_vpc_details("vpc-1234", mock_aws_provider)

@@ -43,7 +43,7 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
-    _configure_ism(name, user_config.historyDays, user_config.spiDays, user_config.replicas, aws_provider)
+    _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
 
 def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider) -> UserConfig:
     # Pull the existing config, if possible
