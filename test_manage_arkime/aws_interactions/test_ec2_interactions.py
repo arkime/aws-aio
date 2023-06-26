@@ -54,20 +54,20 @@ def test_WHEN_get_enis_of_instance_called_THEN_returns_them():
     # Set up our mock
     mock_ec2_client = mock.Mock()
     mock_ec2_client.describe_instances.return_value = {
-        'Reservations': [{
-            'Instances': [{
-                'NetworkInterfaces': [
+        "Reservations": [{
+            "Instances": [{
+                "NetworkInterfaces": [
                     {
-                        'NetworkInterfaceId': 'eni-1',
-                        'SubnetId': 'subnet-1',
-                        'VpcId': 'vpc-1',
-                        'InterfaceType': 'type-1'
+                        "NetworkInterfaceId": "eni-1",
+                        "SubnetId": "subnet-1",
+                        "VpcId": "vpc-1",
+                        "InterfaceType": "type-1"
                     },
                     {
-                        'NetworkInterfaceId': 'eni-2',
-                        'SubnetId': 'subnet-1',
-                        'VpcId': 'vpc-1',
-                        'InterfaceType': 'type-2'
+                        "NetworkInterfaceId": "eni-2",
+                        "SubnetId": "subnet-1",
+                        "VpcId": "vpc-1",
+                        "InterfaceType": "type-2"
                     }
                 ]
             }],
@@ -249,6 +249,26 @@ def test_WHEN_get_vpc_details_called_THEN_returns_them():
                 "OwnerId": "12345678910",
                 "CidrBlock": "10.0.0.0/16",
                 "InstanceTenancy": "dedicated",
+                "CidrBlockAssociationSet": [
+                    {
+                        "CidrBlock": "192.168.0.0/24",
+                        "CidrBlockState": {
+                            "State": "associating"
+                        }
+                    },
+                    {
+                        "CidrBlock": "192.168.128.0/24",
+                        "CidrBlockState": {
+                            "State": "associated"
+                        }
+                    },
+                    {
+                        "CidrBlock": "192.168.42.0/24",
+                        "CidrBlockState": {
+                            "State": "disassociated"
+                        }
+                    }
+                ],
             }
         ]
     }
@@ -265,7 +285,7 @@ def test_WHEN_get_vpc_details_called_THEN_returns_them():
     ]
     assert expected_describe_calls == mock_ec2_client.describe_vpcs.call_args_list
 
-    expected_result = ec2i.VpcDetails("vpc-1234", "12345678910", "10.0.0.0/16", "dedicated")
+    expected_result = ec2i.VpcDetails("vpc-1234", "12345678910", ["192.168.0.0/24", "192.168.128.0/24"], "dedicated")
     assert expected_result == result
 
 def test_WHEN_get_vpc_details_called_AND_doesnt_exist_THEN_raises():

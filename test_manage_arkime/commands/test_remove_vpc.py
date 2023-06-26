@@ -53,7 +53,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
                     "idVpceService": "service-1",
                     "listSubnetIds": ["subnet-1", "subnet-2"],
                     "listSubnetSsmParams": [constants.get_subnet_ssm_param_name("cluster-1", "vpc-1", subnet_id) for subnet_id in ["subnet-1", "subnet-2"]],
-                    "vpcCidr": "0.0.0.0/0"
+                    "vpcCidrs": ["0.0.0.0/0"]
                 }))
             }
         )

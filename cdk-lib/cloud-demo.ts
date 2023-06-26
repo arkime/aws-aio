@@ -83,7 +83,7 @@ switch(params.type) {
             subnetIds: params.listSubnetIds,
             subnetSsmParamNames: params.listSubnetSsmParams,
             vpcId: params.idVpc,
-            vpcCidr: params.vpcCidr,
+            vpcCidrs: params.vpcCidrs,
             vpcSsmParamName: params.nameVpcSsmParam,
             vpceServiceId: params.idVpceService,
             mirrorVni: params.idVni,
@@ -95,7 +95,7 @@ switch(params.type) {
             env: env
         });
         new TrafficGenStack(app, 'DemoTrafficGen02', {
-            cidr: "192.168.0.0/16",
+            cidr: "192.168.0.0/17",
             env: env
         });
         break;
@@ -105,7 +105,7 @@ switch(params.type) {
             env: env
         });
         new TrafficGenStack(app, 'DemoTrafficGen02', {
-            cidr: "192.168.0.0/16",
+            cidr: "192.168.0.0/17",
             env: env
         });
         break;
