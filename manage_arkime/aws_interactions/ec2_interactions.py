@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import logging
-from typing import List
+from typing import List, Dict
 
 from botocore.exceptions import ClientError
 
@@ -148,3 +148,36 @@ def delete_eni_mirroring(traffic_session: str, aws_provider: AwsClientProvider) 
             raise MirrorDoesntExist(traffic_session)
         else:
             raise
+
+@dataclass
+class VpcDetails:
+    vpc_id: str
+    owner_id: str
+    cidr_block: str
+    tenancy: str
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            'vpc_id': self.vpc_id,
+            'owner_id': self.owner_id,
+            'cidr_block': self.cidr_block,
+            'tenancy': self.tenancy,
+        }
+
+def get_vpc_details(vpc_id: str, aws_provider: AwsClientProvider) -> VpcDetails:
+    ec2_client = aws_provider.get_ec2()
+    describe_vpc_response = ec2_client.describe_vpcs(
+        VpcIds=[vpc_id]
+    )
+
+    # Will be [] if the VPC does not exist
+    if not describe_vpc_response["Vpcs"]: 
+        raise VpcDoesNotExist(vpc_id=vpc_id)
+
+    vpc_details = describe_vpc_response["Vpcs"][0]
+    return VpcDetails(
+        vpc_id=vpc_details["VpcId"],
+        owner_id=vpc_details["OwnerId"],
+        cidr_block=vpc_details["CidrBlock"],
+        tenancy=vpc_details["InstanceTenancy"]
+    )

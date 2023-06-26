@@ -1,4 +1,3 @@
-import json
 import logging
 
 from aws_interactions.aws_client_provider import AwsClientProvider
@@ -54,9 +53,10 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
         logger.warning("Aborting...")
         return
 
-    # Get all the subnets in the VPC
+    # Get information about the VPC
     try:
         subnet_ids = ec2i.get_subnets_of_vpc(vpc_id, aws_provider)
+        vpc_details = ec2i.get_vpc_details(vpc_id, aws_provider)
     except ec2i.VpcDoesNotExist as ex:
         logger.error(f"The VPC {vpc_id} does not exist in the account/region")
         logger.warning("Aborting...")
@@ -71,7 +71,8 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn, next_vni)
+    add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn,
+                                                       next_vni,vpc_details.cidr_block)
 
     cdk_client = CdkClient()
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=add_vpc_context)

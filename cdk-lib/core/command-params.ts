@@ -44,6 +44,7 @@ export interface MirrorMgmtParamsRaw extends CommandParamsRaw {
     idVpceService: string;
     listSubnetIds: string[];
     listSubnetSsmParams: string[];
+    vpcCidr: string;
 }
 
 /**
@@ -108,4 +109,5 @@ export interface MirrorMgmtParams extends CommandParams {
     idVpceService: string;
     listSubnetIds: string[];
     listSubnetSsmParams: string[];
+    vpcCidr: string;
 }

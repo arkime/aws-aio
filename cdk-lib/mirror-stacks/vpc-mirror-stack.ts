@@ -20,6 +20,7 @@ export interface VpcMirrorStackProps extends StackProps {
     readonly subnetIds: string[];
     readonly subnetSsmParamNames: string[];
     readonly vpcId: string;
+    readonly vpcCidr: string;
     readonly vpcSsmParamName: string;
     readonly vpceServiceId: string;
     readonly mirrorVni: string;
@@ -81,7 +82,7 @@ export class VpcMirrorStack extends Stack {
             networkServices: ['amazon-dns']
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-RejectLocalOutbound`, {
-            destinationCidrBlock: '10.0.0.0/16', // TODO: Need to figure this out instead of hardcode
+            destinationCidrBlock: props.vpcCidr,
             ruleAction: 'REJECT',
             ruleNumber: 10,
             sourceCidrBlock: '0.0.0.0/0',
@@ -90,7 +91,7 @@ export class VpcMirrorStack extends Stack {
             description: 'Reject all intra-VPC traffic'
         });
         new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherOutbound`, {
-            destinationCidrBlock: '0.0.0.0/0', // TODO: Need to figure this out instead of hardcode
+            destinationCidrBlock: '0.0.0.0/0',
             ruleAction: 'ACCEPT',
             ruleNumber: 20,
             sourceCidrBlock: '0.0.0.0/0',
@@ -103,7 +104,7 @@ export class VpcMirrorStack extends Stack {
             destinationCidrBlock: '0.0.0.0/0',
             ruleAction: 'REJECT',
             ruleNumber: 10,
-            sourceCidrBlock: '10.0.0.0/16', // TODO: Need to figure this out instead of hardcode
+            sourceCidrBlock: props.vpcCidr, 
             trafficDirection: 'INGRESS',
             trafficMirrorFilterId: filter.ref,
             description: 'Reject all intra-VPC traffic'
@@ -139,7 +140,15 @@ export class VpcMirrorStack extends Stack {
         const listenerLambda = new lambda.Function(this, 'AwsEventListenerLambda', {
             functionName: `${props.clusterName}-AwsEventListener-${props.vpcId}`,
             runtime: lambda.Runtime.PYTHON_3_9,
-            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime'), {
+                bundling: {
+                    image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+                    command: [
+                    'bash', '-c',
+                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                    ],
+                },
+            }), 
             handler: 'lambda_handlers.aws_event_listener_handler',
             timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded,
             environment: {
@@ -244,9 +253,17 @@ export class VpcMirrorStack extends Stack {
         const createLambda = new lambda.Function(this, 'CreateEniMirrorLambda', {
             functionName: `${props.clusterName}-CreateEniMirror-${props.vpcId}`,
             runtime: lambda.Runtime.PYTHON_3_9,
-            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime')),            
+            code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime'), {
+                bundling: {
+                    image: lambda.Runtime.PYTHON_3_9.bundlingImage,
+                    command: [
+                    'bash', '-c',
+                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                    ],
+                },
+            }), 
             handler: 'lambda_handlers.create_eni_mirror_handler',
-            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded            
+            timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded
         });
         createLambda.addToRolePolicy(
             new iam.PolicyStatement({

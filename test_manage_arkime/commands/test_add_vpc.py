@@ -50,6 +50,7 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
 
     subnet_ids = ["subnet-1", "subnet-2"]
     mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", "196.168.0.0/16", "default")
 
     mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
     mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", "filter-1"]
@@ -79,7 +80,8 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
                     "idVpc": "vpc-1",
                     "idVpceService": "service-1",
                     "listSubnetIds": subnet_ids,
-                    "listSubnetSsmParams": [constants.get_subnet_ssm_param_name("cluster-1", "vpc-1", subnet_id) for subnet_id in subnet_ids]
+                    "listSubnetSsmParams": [constants.get_subnet_ssm_param_name("cluster-1", "vpc-1", subnet_id) for subnet_id in subnet_ids],
+                    "vpcCidr": "196.168.0.0/16"
                 }))
             }
         )
@@ -139,6 +141,7 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
 
     subnet_ids = ["subnet-1", "subnet-2"]
     mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", "196.168.0.0/16", "default")
 
     mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
     mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", "filter-1"]
@@ -168,7 +171,8 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
                     "idVpc": "vpc-1",
                     "idVpceService": "service-1",
                     "listSubnetIds": subnet_ids,
-                    "listSubnetSsmParams": [constants.get_subnet_ssm_param_name("cluster-1", "vpc-1", subnet_id) for subnet_id in subnet_ids]
+                    "listSubnetSsmParams": [constants.get_subnet_ssm_param_name("cluster-1", "vpc-1", subnet_id) for subnet_id in subnet_ids],
+                    "vpcCidr": "196.168.0.0/16"
                 }))
             }
         )

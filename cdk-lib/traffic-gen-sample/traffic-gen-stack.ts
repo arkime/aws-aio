@@ -8,9 +8,12 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as path from 'path'
 import { Construct } from 'constructs';
 
+export interface TrafficGenStackProps extends cdk.StackProps {
+    readonly cidr: string;
+}
 
 export class TrafficGenStack extends cdk.Stack {
-    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    constructor(scope: Construct, id: string, props: TrafficGenStackProps) {
         super(scope, id, props);
 
         /**
@@ -18,7 +21,10 @@ export class TrafficGenStack extends cdk.Stack {
          */
         // This is a Stock VPC w/ a Public/Private subnet pair in 1 AZ along with NATGateways providing internet access 
         // to the private subnet.
-        const vpc = new ec2.Vpc(this, 'VPC', {maxAzs: 1});
+        const vpc = new ec2.Vpc(this, 'VPC', {
+            ipAddresses: ec2.IpAddresses.cidr(props.cidr),
+            maxAzs: 1
+        });
 
         // Set up VPC Flow Logs to enable visibility of the traffic mirroring on the user-side
         const flowLogsGroup = new logs.LogGroup(this, 'FlowLogsLogGroup', {
