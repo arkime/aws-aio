@@ -1,5 +1,7 @@
+import json
 import logging
 
+import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.events_interactions as events
@@ -21,6 +23,7 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
+    # Generate our capacity plan and confirm it's what the user expected
     previous_user_config = _get_previous_user_config(name, aws_provider)
     next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
     previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
@@ -30,8 +33,10 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         logger.info("Aborting per user response")
         return
 
+    # Set up the cert the Viewers use for HTTPS
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
+    # Deploy the CFN Resources
     cdk_client = CdkClient()
     stacks_to_deploy = [
         constants.get_capture_bucket_stack_name(name),
@@ -43,7 +48,11 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
+    # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
     _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
+
+    # Set up any additional state
+    _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
 
 def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider) -> UserConfig:
     # Pull the existing config, if possible
@@ -130,6 +139,39 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
         logger.info(f"Usage report:\n{report.get_report()}")
         return True
     return report.get_confirmation()
+
+def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan, aws_provider: AwsClientProvider):
+    # Write the Arkime INI files
+    capture_ini = arkime_conf.get_capture_ini(next_capacity_plan.s3.pcapStorageClass)
+    ssm_ops.put_ssm_param(
+        constants.get_capture_config_ini_ssm_param_name(cluster_name),
+        json.dumps(capture_ini.to_dict()),
+        aws_provider,
+        description="Contents of the Capture Nodes' .ini file",
+        overwrite=True
+    )
+
+    viewer_ini = arkime_conf.get_viewer_ini()
+    ssm_ops.put_ssm_param(
+        constants.get_viewer_config_ini_ssm_param_name(cluster_name),
+        json.dumps(viewer_ini.to_dict()),
+        aws_provider,
+        description="Contents of the Viewer Nodes' .ini file",
+        overwrite=True
+    )
+
+    # Write any/all additional Capture Node files
+    capture_additional_files = [
+        arkime_conf.get_capture_rules_default()
+    ]
+    for capture_file in capture_additional_files:
+        ssm_ops.put_ssm_param(
+            constants.get_capture_file_ssm_param_name(cluster_name, capture_file.file_name),
+            json.dumps(capture_file.to_dict()),
+            aws_provider,
+            description="A Capture Node file",
+            overwrite=True
+        )
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     # Only set up the certificate if it doesn't exist

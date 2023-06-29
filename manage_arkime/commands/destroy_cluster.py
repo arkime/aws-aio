@@ -1,5 +1,6 @@
 import logging
 
+import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import destroy_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
@@ -59,6 +60,9 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
     # Destroy our cert
     _destroy_viewer_cert(name, aws_provider)
 
+    # Destroy any additional remaining state
+    _delete_arkime_config_from_datastore(name, aws_provider)
+
 def _destroy_viewer_cert(cluster_name: str, aws_provider: AwsClientProvider):
     # Only destroy up the certificate if it exists
     cert_ssm_param = constants.get_viewer_cert_ssm_param_name(cluster_name)
@@ -72,3 +76,25 @@ def _destroy_viewer_cert(cluster_name: str, aws_provider: AwsClientProvider):
     logger.debug("Destroying certificate and SSM parameter...")
     destroy_cert(cert_arn, aws_provider) # destroy first so if op fails we still know the ARN
     delete_ssm_param(cert_ssm_param, aws_provider)
+
+def _delete_arkime_config_from_datastore(cluster_name: str, aws_provider: AwsClientProvider):
+    # Delete the Arkime INI files
+    delete_ssm_param(
+        constants.get_capture_config_ini_ssm_param_name(cluster_name),
+        aws_provider
+    )
+
+    delete_ssm_param(
+        constants.get_viewer_config_ini_ssm_param_name(cluster_name),
+        aws_provider
+    )
+
+    # Write any/all additional Capture Node files
+    capture_additional_files = [
+        arkime_conf.get_capture_rules_default()
+    ]
+    for capture_file in capture_additional_files:
+        delete_ssm_param(
+            constants.get_capture_file_ssm_param_name(cluster_name, capture_file.file_name),
+            aws_provider
+        )
