@@ -1,5 +1,4 @@
-import * as plan from './capacity-plan';
-import * as user from './user-config';
+import * as types from './context-types';
 
 /**
  * Base type for receiving arguments from the Python side of the app.  These directly match the interface on the Python
@@ -13,6 +12,7 @@ export interface CommandParamsRaw { }
  */
 export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     type: 'ClusterMgmtParamsRaw';
+    arkimeFileMap: string;
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
@@ -78,6 +78,7 @@ export interface DestroyDemoTrafficParams extends CommandParams {
  */
 export interface ClusterMgmtParams extends CommandParams {
     type: 'ClusterMgmtParams'
+    arkimeFileMap: types.ArkimeFilesMap;
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
@@ -91,8 +92,8 @@ export interface ClusterMgmtParams extends CommandParams {
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
     nameViewerNodesStack: string;
-    planCluster: plan.ClusterPlan;
-    userConfig: user.UserConfig;
+    planCluster: types.ClusterPlan;
+    userConfig: types.UserConfig;
 }
 
 /**

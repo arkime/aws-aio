@@ -11,8 +11,10 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
+import * as types from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
+    readonly arkimeFilesMap: types.ArkimeFilesMap;
     readonly arnViewerCert: string;
     readonly captureBucket: s3.Bucket;
     readonly viewerVpc: ec2.Vpc;
@@ -73,6 +75,8 @@ export class ViewerNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
+                'ARKIME_CONFIG_INI': props.arkimeFilesMap.viewerIniPath,
+                'ARKIME_ADD_FILES': JSON.stringify(props.arkimeFilesMap.viewerAddFilePaths),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CLUSTER_NAME': props.clusterName,

@@ -5,6 +5,8 @@ set -e
 echo "============================================================"
 echo "Cluster: $CLUSTER_NAME"
 echo "Role: Capture Node"
+echo "Arkime Config INI Path: $ARKIME_CONFIG_INI"
+echo "Arkime Additional File Paths: $ARKIME_ADD_FILES"
 echo "AWS Region: $AWS_REGION"
 echo "Bucket Name: $BUCKET_NAME"
 echo "LB Healthcheck Port: $LB_HEALTH_PORT"

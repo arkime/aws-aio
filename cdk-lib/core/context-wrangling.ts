@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib';
-import * as plan from './capacity-plan';
 import * as prms from './command-params';
 import {CDK_CONTEXT_CMD_VAR, CDK_CONTEXT_REGION_VAR, CDK_CONTEXT_PARAMS_VAR, ManagementCmd} from './constants';
 
@@ -86,6 +85,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 type: 'ClusterMgmtParams',
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
+                arkimeFileMap: JSON.parse(rawClusterMgmtParamsObj.arkimeFileMap),
                 nameCluster: rawClusterMgmtParamsObj.nameCluster,
                 nameCaptureBucketStack: rawClusterMgmtParamsObj.nameCaptureBucketStack,
                 nameCaptureBucketSsmParam: rawClusterMgmtParamsObj.nameCaptureBucketSsmParam,

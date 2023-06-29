@@ -1,4 +1,4 @@
-import * as plan from '../core/capacity-plan';
+import * as plan from './context-types';
 import * as user from '../core/user-config';
 
 /**

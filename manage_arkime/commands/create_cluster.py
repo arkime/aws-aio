@@ -1,6 +1,7 @@
 import json
 import logging
 
+import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
@@ -36,6 +37,9 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     # Set up the cert the Viewers use for HTTPS
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
+    # Set up any additional state
+    file_map = _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
+
     # Deploy the CFN Resources
     cdk_client = CdkClient()
     stacks_to_deploy = [
@@ -45,14 +49,11 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config)
+    create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config, file_map)
     cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
 
     # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
     _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
-
-    # Set up any additional state
-    _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
 
 def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider) -> UserConfig:
     # Pull the existing config, if possible
@@ -140,11 +141,20 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
         return True
     return report.get_confirmation()
 
-def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan, aws_provider: AwsClientProvider):
+def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan,
+                                      aws_provider: AwsClientProvider) -> arkime_files.ArkimeFilesMap:
+    # Initialize our map
+    map = arkime_files.ArkimeFilesMap(
+        constants.get_capture_config_ini_ssm_param_name(cluster_name),
+        [],
+        constants.get_viewer_config_ini_ssm_param_name(cluster_name),
+        [],
+    )
+
     # Write the Arkime INI files
     capture_ini = arkime_conf.get_capture_ini(next_capacity_plan.s3.pcapStorageClass)
     ssm_ops.put_ssm_param(
-        constants.get_capture_config_ini_ssm_param_name(cluster_name),
+        map.captureIniPath,
         json.dumps(capture_ini.to_dict()),
         aws_provider,
         description="Contents of the Capture Nodes' .ini file",
@@ -153,7 +163,7 @@ def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: Clu
 
     viewer_ini = arkime_conf.get_viewer_ini()
     ssm_ops.put_ssm_param(
-        constants.get_viewer_config_ini_ssm_param_name(cluster_name),
+        map.viewerIniPath,
         json.dumps(viewer_ini.to_dict()),
         aws_provider,
         description="Contents of the Viewer Nodes' .ini file",
@@ -165,13 +175,18 @@ def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: Clu
         arkime_conf.get_capture_rules_default()
     ]
     for capture_file in capture_additional_files:
+        new_path = constants.get_capture_file_ssm_param_name(cluster_name, capture_file.file_name)
         ssm_ops.put_ssm_param(
-            constants.get_capture_file_ssm_param_name(cluster_name, capture_file.file_name),
+            new_path,
             json.dumps(capture_file.to_dict()),
             aws_provider,
             description="A Capture Node file",
             overwrite=True
         )
+
+        map.captureAddFilePaths.append(new_path)
+
+    return map
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     # Only set up the certificate if it doesn't exist

@@ -5,6 +5,8 @@ set -e
 echo "============================================================"
 echo "Cluster: $CLUSTER_NAME"
 echo "Role: Viewer Node"
+echo "Arkime Config INI Path: $ARKIME_CONFIG_INI"
+echo "Arkime Additional File Paths: $ARKIME_ADD_FILES"
 echo "AWS Region: $AWS_REGION"
 echo "Bucket Name: $BUCKET_NAME"
 echo "OpenSearch Endpoint: $OPENSEARCH_ENDPOINT"

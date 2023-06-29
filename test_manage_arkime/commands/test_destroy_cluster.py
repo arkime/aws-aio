@@ -2,6 +2,7 @@ import json
 import shlex
 import unittest.mock as mock
 
+import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert, _delete_arkime_config_from_datastore
@@ -53,6 +54,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+                    "arkimeFileMap": json.dumps(arkime_files.ArkimeFilesMap("", [], "", []).to_dict()),
                     "nameCluster": TEST_CLUSTER,
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(TEST_CLUSTER),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
@@ -149,6 +151,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+                    "arkimeFileMap": json.dumps(arkime_files.ArkimeFilesMap("", [], "", []).to_dict()),
                     "nameCluster": TEST_CLUSTER,
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(TEST_CLUSTER),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),

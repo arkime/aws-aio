@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Dict
+from arkime_interactions.arkime_files import ArkimeFile
 
 # ========== Magic Strings ==========
 # Magic key strings we'll search for as targets for a sed find/replace on our Capture/Viewer hosts during their startup
@@ -12,24 +11,6 @@ PCAP_BUCKET = "_PCAP_BUCKET_"
 VIEWER_PORT = "_VIEWER_PORT_"
 
 # ========== Config File Generation ==========
-@dataclass
-class ArkimeFile:
-    file_name: str # The Arkime Config's file name on-disk
-    path_prefix: str # The path to where the config should live on-disk, excluding the filename
-    contents: str # The contents of the config file
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, ArkimeFile):
-            return False
-        return self.file_name == other.file_name and self.path_prefix == other.path_prefix and self.contents == other.contents
-    
-    def to_dict(self) -> Dict[str, str]:
-        return {
-            "file_name": self.file_name,
-            "path_prefix": self.path_prefix,
-            "contents": self.contents
-        }
-
 def get_capture_ini(s3_storage_class: str) -> ArkimeFile:
     contents = f"""
 [default]

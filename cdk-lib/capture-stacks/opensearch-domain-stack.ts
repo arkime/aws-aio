@@ -7,7 +7,7 @@ import {Domain, EngineVersion, TLSSecurityPolicy} from 'aws-cdk-lib/aws-opensear
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-import * as plan from '../core/capacity-plan';
+import * as plan from '../core/context-types';
 
 
 export interface OpenSearchDomainStackProps extends StackProps {

@@ -3,6 +3,7 @@ import pytest
 import shlex
 import unittest.mock as mock
 
+import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.ssm_operations as ssm_ops
@@ -48,6 +49,9 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 
     mock_confirm.return_value = True
 
+    map = arkime_files.ArkimeFilesMap("cap", ["f1"], "view", ["f2", "f3"])
+    mock_write_arkime.return_value = map
+
     # Run our test
     cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
 
@@ -66,6 +70,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+                    "arkimeFileMap": json.dumps(map.to_dict()),
                     "nameCluster": "my-cluster",
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
@@ -446,9 +451,19 @@ def test_WHEN_write_arkime_config_to_datastore_called_THEN_as_expected(mock_ssm_
     mock_provider = mock.Mock()
 
     # Run our test
-    _write_arkime_config_to_datastore("my-cluster", cluster_plan, mock_provider)
+    actual_value = _write_arkime_config_to_datastore("my-cluster", cluster_plan, mock_provider)
 
     # Check our results
+    expected_map = arkime_files.ArkimeFilesMap(
+        constants.get_capture_config_ini_ssm_param_name("my-cluster"),
+        [
+            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().file_name)
+        ],
+        constants.get_viewer_config_ini_ssm_param_name("my-cluster"),
+        [],
+    )
+    assert expected_map == actual_value
+
     expected_put_ssm_calls = [
         mock.call(
             constants.get_capture_config_ini_ssm_param_name("my-cluster"),
