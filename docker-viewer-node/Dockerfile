@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # Get required and quality-of-life utilities
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget curl ca-certificates unzip less mandoc man-db vim libmagic1 iproute2 dnsutils net-tools tcpdump
+    apt-get install -y --no-install-recommends wget curl ca-certificates unzip less mandoc man-db vim libmagic1 iproute2 dnsutils net-tools tcpdump jq
 
 # Install the AWS CLI so we can pull the OpenSearch Domain password from AWS Secrets Manager at runtime
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
@@ -16,7 +16,6 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu20_amd64.deb && \
     apt-get install -y ./arkime.deb && \
     rm -rf ./arkime.deb
-COPY ./arkime_config.ini /opt/arkime/etc/config.ini
 
 COPY ./run_viewer_node.sh /run_viewer_node.sh
 CMD ["/run_viewer_node.sh"]

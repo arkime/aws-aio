@@ -52,7 +52,7 @@ ouiFile=/opt/arkime/etc/oui.txt
 
     return ArkimeFile(
         "config.ini",
-        "/opt/arkime/etc/",
+        "/opt/arkime/etc",
         contents
     )
 
@@ -83,7 +83,7 @@ rules:
 
     return ArkimeFile(
         "default.rules",
-        "/opt/arkime/etc/",
+        "/opt/arkime/etc",
         contents
     )
 
@@ -114,6 +114,6 @@ pcapWriteMethod=s3
 
     return ArkimeFile(
         "config.ini",
-        "/opt/arkime/etc/",
+        "/opt/arkime/etc",
         contents
     )

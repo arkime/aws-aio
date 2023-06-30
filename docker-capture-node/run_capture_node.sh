@@ -15,22 +15,55 @@ echo "OpenSearch Secret Arn: $OPENSEARCH_SECRET_ARN"
 echo "S3 Storage Class: $S3_STORAGE_CLASS"
 echo "============================================================"
 
+# Pull our configuration files from the cloud
+function write_file_from_param() {
+    path=$1
+
+    # Retrieve our file from the cloud and account for wacky escaping
+    param_val=$(aws ssm get-parameter --name "$path" --query Parameter.Value)
+    corrected_string=$(echo "$param_val" | sed 's/\\\"/\"/g' | sed 's/\\\\/\\/g') # Remove extra escaping
+    corrected_string=$(echo "$corrected_string" | sed 's/^"//' | sed 's/"$//') # Remove starting/ending quotes
+
+    # Pull out the values we need
+    file_name=$(echo "$corrected_string" | jq -r '.file_name')
+    echo "File Name: $file_name" >&2
+    path_prefix=$(echo "$corrected_string" | jq -r '.path_prefix')
+    echo "File Path Prefix: $path_prefix" >&2
+    contents=$(echo "$corrected_string" | jq -r '.contents')
+    full_path="$path_prefix/$file_name"
+
+    # Write the file to disk
+    echo -e "$contents" > "$full_path"
+
+    # Return the path to the calling context
+    echo "$full_path"
+}
+
+echo "$ARKIME_ADD_FILES" | jq -r '.[]' | while IFS= read -r path; do
+    echo "Processing File in Param: $path"
+    full_file_path=$(write_file_from_param "$path")
+    echo "Written to: $full_file_path"
+done
+
+echo "Processing config.ini in Param: $ARKIME_CONFIG_INI"
+config_ini_path=$(write_file_from_param "$ARKIME_CONFIG_INI")
+echo "Written to: $config_ini_path"
+
 # Pull configuration from ENV and AWS in order to set up our Arkime install.  The ENV variables come from the Fargate
 # Container definition.  We perform some escaping of the our replacement strings for safety.
 # See: https://stackoverflow.com/questions/407523/escape-a-string-for-a-sed-replace-pattern
-echo "Configuring /opt/arkime/etc/config.ini ..."
+echo "Configuring $config_ini_path ..."
 ESCAPED_ENDPOINT=$(printf '%s\n' "$OPENSEARCH_ENDPOINT" | sed -e 's/[\/&]/\\&/g')
-sed -i'' "s/_ENDPOINT_/$ESCAPED_ENDPOINT/g" /opt/arkime/etc/config.ini
+sed -i'' "s/_OS_ENDPOINT_/$ESCAPED_ENDPOINT/g" "$config_ini_path"
 
 OPENSEARCH_PASS=$(aws secretsmanager get-secret-value --secret-id $OPENSEARCH_SECRET_ARN --output text --query SecretString)
 BASE64_AUTH=$(echo -n "admin:$OPENSEARCH_PASS" | base64)
-sed -i'' "s/_AUTH_/$BASE64_AUTH/g" /opt/arkime/etc/config.ini
+sed -i'' "s/_OS_AUTH_/$BASE64_AUTH/g" "$config_ini_path"
 
-sed -i'' "s/_BUCKET_/$BUCKET_NAME/g" /opt/arkime/etc/config.ini
-sed -i'' "s/_HEALTH_PORT_/$LB_HEALTH_PORT/g" /opt/arkime/etc/config.ini
-sed -i'' "s/_REGION_/$AWS_REGION/g" /opt/arkime/etc/config.ini
-sed -i'' "s/_STORAGE_CLASS_/$S3_STORAGE_CLASS/g" /opt/arkime/etc/config.ini
-echo "Successfully configured /opt/arkime/etc/config.ini"
+sed -i'' "s/_PCAP_BUCKET_/$BUCKET_NAME/g" "$config_ini_path"
+sed -i'' "s/_HEALTH_PORT_/$LB_HEALTH_PORT/g" "$config_ini_path"
+sed -i'' "s/_AWS_REGION_/$AWS_REGION/g" "$config_ini_path"
+echo "Successfully configured $config_ini_path"
 
 echo "Testing connection/creds to OpenSearch domain $OPENSEARCH_ENDPOINT ..."
 curl -u admin:$OPENSEARCH_PASS -X GET https://$OPENSEARCH_ENDPOINT:443

@@ -142,6 +142,13 @@ export class CaptureNodesStack extends cdk.Stack {
                 resources: [ksmEncryptionKey.keyArn]
             }),
         );
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['ssm:GetParameter'], // Container pulls configuration from Parameter Store
+                resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter*`]
+            }),
+        );
         props.osPassword.grantRead(taskDefinition.taskRole);
         props.captureBucket.grantReadWrite(taskDefinition.taskRole);
         props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);

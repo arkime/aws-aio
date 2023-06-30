@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # Get required and quality-of-life utilities
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget curl ca-certificates unzip less mandoc man-db vim libmagic1 iproute2 dnsutils net-tools tcpdump
+    apt-get install -y --no-install-recommends wget curl ca-certificates unzip less mandoc man-db vim libmagic1 iproute2 dnsutils net-tools tcpdump jq
 
 # Install the AWS CLI so we can pull passwords from AWS Secrets Manager at runtime
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
@@ -19,9 +19,6 @@ RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu
 
 # Download the rir & oui files
 RUN /opt/arkime/bin/arkime_update_geo.sh
-
-COPY ./arkime_config.ini /opt/arkime/etc/config.ini
-COPY ./default.rules /opt/arkime/etc/default.rules
 
 COPY ./run_capture_node.sh /run_capture_node.sh
 CMD ["/run_capture_node.sh"]

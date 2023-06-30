@@ -64,6 +64,13 @@ export class ViewerNodesStack extends cdk.Stack {
                 resources: [ksmEncryptionKey.keyArn]
             }),
         );
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['ssm:GetParameter'], // Container pulls configuration from Parameter Store
+                resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter*`]
+            }),
+        );
         props.osPassword.grantRead(taskDefinition.taskRole);
         props.captureBucket.grantRead(taskDefinition.taskRole);
         props.osDomain.grantReadWrite(taskDefinition.taskRole);
