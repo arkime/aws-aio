@@ -82,8 +82,8 @@ export interface UserConfig {
  * Structure to hold the mapping of Arkime files to their path in the data store
  */
 export interface ArkimeFilesMap {
-    captureIniPath: string;
-    captureAddFilePaths: string[];
-    viewerIniPath: string;
-    viewerAddFilePaths: string[];
+    captureIniLoc: string;
+    captureAddFileLocs: string[];
+    viewerIniLoc: string;
+    viewerAddFileLocs: string[];
 }

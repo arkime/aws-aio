@@ -95,6 +95,6 @@ def _delete_arkime_config_from_datastore(cluster_name: str, aws_provider: AwsCli
     ]
     for capture_file in capture_additional_files:
         delete_ssm_param(
-            constants.get_capture_file_ssm_param_name(cluster_name, capture_file.file_name),
+            constants.get_capture_file_ssm_param_name(cluster_name, capture_file.system_path),
             aws_provider
         )

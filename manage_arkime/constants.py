@@ -51,8 +51,8 @@ def get_capture_bucket_ssm_param_name(cluster_name: str) -> str:
 def get_capture_config_ini_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-ini"
 
-def get_capture_file_ssm_param_name(cluster_name: str, file_name: str) -> str:
-    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-files/{file_name}"
+def get_capture_file_ssm_param_name(cluster_name: str, system_path: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-files{system_path}"
 
 def get_capture_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureNodes"

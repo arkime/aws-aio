@@ -154,7 +154,7 @@ def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: Clu
     # Write the Arkime INI files
     capture_ini = arkime_conf.get_capture_ini(next_capacity_plan.s3.pcapStorageClass)
     ssm_ops.put_ssm_param(
-        map.captureIniPath,
+        map.captureIniLoc,
         json.dumps(capture_ini.to_dict()),
         aws_provider,
         description="Contents of the Capture Nodes' .ini file",
@@ -163,7 +163,7 @@ def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: Clu
 
     viewer_ini = arkime_conf.get_viewer_ini()
     ssm_ops.put_ssm_param(
-        map.viewerIniPath,
+        map.viewerIniLoc,
         json.dumps(viewer_ini.to_dict()),
         aws_provider,
         description="Contents of the Viewer Nodes' .ini file",
@@ -175,7 +175,7 @@ def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: Clu
         arkime_conf.get_capture_rules_default()
     ]
     for capture_file in capture_additional_files:
-        new_path = constants.get_capture_file_ssm_param_name(cluster_name, capture_file.file_name)
+        new_path = constants.get_capture_file_ssm_param_name(cluster_name, capture_file.system_path)
         ssm_ops.put_ssm_param(
             new_path,
             json.dumps(capture_file.to_dict()),
@@ -184,7 +184,7 @@ def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: Clu
             overwrite=True
         )
 
-        map.captureAddFilePaths.append(new_path)
+        map.captureAddFileLocs.append(new_path)
 
     return map
 

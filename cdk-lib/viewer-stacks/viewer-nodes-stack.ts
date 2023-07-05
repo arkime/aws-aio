@@ -82,8 +82,8 @@ export class ViewerNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
-                'ARKIME_CONFIG_INI': props.arkimeFilesMap.viewerIniPath,
-                'ARKIME_ADD_FILES': JSON.stringify(props.arkimeFilesMap.viewerAddFilePaths),
+                'ARKIME_CONFIG_INI_LOC': props.arkimeFilesMap.viewerIniLoc,
+                'ARKIME_ADD_FILE_LOCS': JSON.stringify(props.arkimeFilesMap.viewerAddFileLocs),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CLUSTER_NAME': props.clusterName,

@@ -457,7 +457,7 @@ def test_WHEN_write_arkime_config_to_datastore_called_THEN_as_expected(mock_ssm_
     expected_map = arkime_files.ArkimeFilesMap(
         constants.get_capture_config_ini_ssm_param_name("my-cluster"),
         [
-            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().file_name)
+            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().system_path)
         ],
         constants.get_viewer_config_ini_ssm_param_name("my-cluster"),
         [],
@@ -480,7 +480,7 @@ def test_WHEN_write_arkime_config_to_datastore_called_THEN_as_expected(mock_ssm_
             overwrite=True
         ),
         mock.call(
-            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().file_name),
+            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().system_path),
             mock.ANY,
             mock_provider,
             description=mock.ANY,

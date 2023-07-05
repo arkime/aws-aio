@@ -5,8 +5,8 @@ set -e
 echo "============================================================"
 echo "Cluster: $CLUSTER_NAME"
 echo "Role: Capture Node"
-echo "Arkime Config INI Path: $ARKIME_CONFIG_INI"
-echo "Arkime Additional File Paths: $ARKIME_ADD_FILES"
+echo "Arkime Config INI Datastore Location: $ARKIME_CONFIG_INI_LOC"
+echo "Arkime Additional File Datastore Locations: $ARKIME_ADD_FILE_LOCS"
 echo "AWS Region: $AWS_REGION"
 echo "Bucket Name: $BUCKET_NAME"
 echo "LB Healthcheck Port: $LB_HEALTH_PORT"
@@ -16,37 +16,34 @@ echo "S3 Storage Class: $S3_STORAGE_CLASS"
 echo "============================================================"
 
 # Pull our configuration files from the cloud
-function write_file_from_param() {
-    path=$1
+function write_file_from_datastore() {
+    datastore_location=$1
 
     # Retrieve our file from the cloud and account for wacky escaping
-    param_val=$(aws ssm get-parameter --name "$path" --query Parameter.Value)
+    param_val=$(aws ssm get-parameter --name "$datastore_location" --query Parameter.Value)
     corrected_string=$(echo "$param_val" | sed 's/\\\"/\"/g' | sed 's/\\\\/\\/g') # Remove extra escaping
     corrected_string=$(echo "$corrected_string" | sed 's/^"//' | sed 's/"$//') # Remove starting/ending quotes
 
     # Pull out the values we need
-    file_name=$(echo "$corrected_string" | jq -r '.file_name')
-    echo "File Name: $file_name" >&2
-    path_prefix=$(echo "$corrected_string" | jq -r '.path_prefix')
-    echo "File Path Prefix: $path_prefix" >&2
+    system_path=$(echo "$corrected_string" | jq -r '.system_path')
+    echo "System Path: $system_path" >&2
     contents=$(echo "$corrected_string" | jq -r '.contents')
-    full_path="$path_prefix/$file_name"
 
     # Write the file to disk
-    echo -e "$contents" > "$full_path"
+    echo -e "$contents" > "$system_path"
 
     # Return the path to the calling context
-    echo "$full_path"
+    echo "$system_path"
 }
 
-echo "$ARKIME_ADD_FILES" | jq -r '.[]' | while IFS= read -r path; do
-    echo "Processing File in Param: $path"
-    full_file_path=$(write_file_from_param "$path")
+echo "$ARKIME_ADD_FILE_LOCS" | jq -r '.[]' | while IFS= read -r path; do
+    echo "Processing File in Datastore: $path"
+    full_file_path=$(write_file_from_datastore "$path")
     echo "Written to: $full_file_path"
 done
 
-echo "Processing config.ini in Param: $ARKIME_CONFIG_INI"
-config_ini_path=$(write_file_from_param "$ARKIME_CONFIG_INI")
+echo "Processing config.ini in Datastore: $ARKIME_CONFIG_INI_LOC"
+config_ini_path=$(write_file_from_datastore "$ARKIME_CONFIG_INI_LOC")
 echo "Written to: $config_ini_path"
 
 # Pull configuration from ENV and AWS in order to set up our Arkime install.  The ENV variables come from the Fargate
@@ -81,4 +78,4 @@ chown nobody /opt/arkime/raw # Unneeded when using S3 offload
 
 # Start Arkime Capture
 echo "Running Arkime Capture process ..."
-/opt/arkime/bin/capture
+/opt/arkime/bin/capture --config "$config_ini_path"

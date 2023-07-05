@@ -264,7 +264,7 @@ def test_WHEN_destroy_viewer_cert_called_AND_doesnt_exist_THEN_skip(mock_ssm_get
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
 
 @mock.patch("commands.destroy_cluster.delete_ssm_param")
-def test_WHEN_destroy_viewer_cert_called_THEN_as_expected(mock_ssm_delete):
+def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_ssm_delete):
     # Set up our mock
     mock_provider = mock.Mock()
 
@@ -282,7 +282,7 @@ def test_WHEN_destroy_viewer_cert_called_THEN_as_expected(mock_ssm_delete):
             mock_provider
         ),
         mock.call(
-            constants.get_capture_file_ssm_param_name(TEST_CLUSTER, arkime_conf.get_capture_rules_default().file_name),
+            constants.get_capture_file_ssm_param_name(TEST_CLUSTER, arkime_conf.get_capture_rules_default().system_path),
             mock_provider
         ),
     ]

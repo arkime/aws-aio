@@ -165,8 +165,8 @@ export class CaptureNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-capture-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'CaptureNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
-                'ARKIME_CONFIG_INI': props.arkimeFilesMap.captureIniPath,
-                'ARKIME_ADD_FILES': JSON.stringify(props.arkimeFilesMap.captureAddFilePaths),
+                'ARKIME_CONFIG_INI_LOC': props.arkimeFilesMap.captureIniLoc,
+                'ARKIME_ADD_FILE_LOCS': JSON.stringify(props.arkimeFilesMap.captureAddFileLocs),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CLUSTER_NAME': props.clusterName,
