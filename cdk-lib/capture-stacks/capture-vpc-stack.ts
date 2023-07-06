@@ -4,7 +4,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 
-import * as plan from '../core/capacity-plan';
+import * as plan from '../core/context-types';
 
 export interface CaptureVpcStackProps extends StackProps {
     readonly planCluster: plan.ClusterPlan;

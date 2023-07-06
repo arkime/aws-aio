@@ -2,14 +2,16 @@ import json
 import shlex
 from typing import Dict, List
 
+from arkime_interactions.arkime_files import ArkimeFilesMap
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan, 
                                     MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS)
 from core.user_config import UserConfig
 
-def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig) -> Dict[str, str]:
-    create_context = _generate_cluster_context(name, viewer_cert_arn, cluster_plan, user_config)
+def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan,
+                                    user_config: UserConfig, file_map: ArkimeFilesMap) -> Dict[str, str]:
+    create_context = _generate_cluster_context(name, viewer_cert_arn, cluster_plan, user_config, file_map)
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_CREATE_CLUSTER
     return create_context
 
@@ -26,13 +28,16 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
     )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
+    fake_map = ArkimeFilesMap("", [], "", [])
 
-    destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config)
+    destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config, fake_map)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER
     return destroy_context
 
-def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig) -> Dict[str, str]:
+def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig,
+                              file_map: ArkimeFilesMap) -> Dict[str, str]:
     cmd_params = {
+        "arkimeFileMap": json.dumps(file_map.to_dict()),
         "nameCluster": name,
         "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
         "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(name),

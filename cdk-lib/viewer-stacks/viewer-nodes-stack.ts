@@ -11,8 +11,10 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
+import * as types from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
+    readonly arkimeFilesMap: types.ArkimeFilesMap;
     readonly arnViewerCert: string;
     readonly captureBucket: s3.Bucket;
     readonly viewerVpc: ec2.Vpc;
@@ -62,6 +64,13 @@ export class ViewerNodesStack extends cdk.Stack {
                 resources: [ksmEncryptionKey.keyArn]
             }),
         );
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['ssm:GetParameter'], // Container pulls configuration from Parameter Store
+                resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter*`]
+            }),
+        );
         props.osPassword.grantRead(taskDefinition.taskRole);
         props.captureBucket.grantRead(taskDefinition.taskRole);
         props.osDomain.grantReadWrite(taskDefinition.taskRole);
@@ -73,6 +82,8 @@ export class ViewerNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
+                'ARKIME_CONFIG_INI_LOC': props.arkimeFilesMap.viewerIniLoc,
+                'ARKIME_ADD_FILE_LOCS': JSON.stringify(props.arkimeFilesMap.viewerAddFileLocs),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CLUSTER_NAME': props.clusterName,

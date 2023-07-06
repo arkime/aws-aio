@@ -4,7 +4,7 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-import * as plan from '../core/capacity-plan';
+import * as plan from '../core/context-types';
 import { ProductStack } from 'aws-cdk-lib/aws-servicecatalog';
 
 

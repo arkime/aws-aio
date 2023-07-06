@@ -66,3 +66,24 @@ export interface ClusterPlan {
     osDomain: OSDomainPlan;
     s3: S3Plan;
 }
+
+/**
+ * Structure to hold the user's input configuration
+ */
+export interface UserConfig {
+    expectedTraffic: number;
+    spiDays: number;
+    historyDays: number;
+    replicas: number;
+    pcapDays: number;
+}
+
+/**
+ * Structure to hold the mapping of Arkime files to their path in the data store
+ */
+export interface ArkimeFilesMap {
+    captureIniLoc: string;
+    captureAddFileLocs: string[];
+    viewerIniLoc: string;
+    viewerAddFileLocs: string[];
+}

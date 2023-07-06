@@ -48,6 +48,12 @@ def get_capture_bucket_stack_name(cluster_name: str) -> str:
 def get_capture_bucket_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-bucket-name"
 
+def get_capture_config_ini_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-ini"
+
+def get_capture_file_ssm_param_name(cluster_name: str, system_path: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-files{system_path}"
+
 def get_capture_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureNodes"
 
@@ -68,6 +74,9 @@ def get_subnet_ssm_param_name(cluster_name: str, vpc_id: str, subnet_id: str) ->
 
 def get_viewer_cert_ssm_param_name(cluster_name: str) -> str:
     return f"/arkime/clusters/{cluster_name}/viewer-cert"
+
+def get_viewer_config_ini_ssm_param_name(cluster_name: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/viewer-ini"
 
 def get_viewer_dns_ssm_param_name(cluster_name: str) -> str:
     return f"/arkime/clusters/{cluster_name}/viewer-dns"

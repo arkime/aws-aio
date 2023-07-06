@@ -17,11 +17,12 @@ import * as path from 'path'
 import { Construct } from 'constructs';
 
 import * as constants from '../core/constants';
-import * as plan from '../core/capacity-plan';
+import * as plan from '../core/context-types';
 import {ClusterSsmValue} from '../core/ssm-wrangling';
-import * as user from '../core/user-config';
+import * as types from '../core/context-types';
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
+    readonly arkimeFilesMap: types.ArkimeFilesMap;
     readonly captureBucket: s3.Bucket;
     readonly captureBucketKey: kms.Key;
     readonly captureVpc: ec2.Vpc;
@@ -30,7 +31,7 @@ export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly osPassword: secretsmanager.Secret;
     readonly planCluster: plan.ClusterPlan;
     readonly ssmParamNameCluster: string;
-    readonly userConfig: user.UserConfig;
+    readonly userConfig: types.UserConfig;
 }
 
 export class CaptureNodesStack extends cdk.Stack {
@@ -141,6 +142,13 @@ export class CaptureNodesStack extends cdk.Stack {
                 resources: [ksmEncryptionKey.keyArn]
             }),
         );
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['ssm:GetParameter'], // Container pulls configuration from Parameter Store
+                resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter*`]
+            }),
+        );
         props.osPassword.grantRead(taskDefinition.taskRole);
         props.captureBucket.grantReadWrite(taskDefinition.taskRole);
         props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);
@@ -157,6 +165,8 @@ export class CaptureNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-capture-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'CaptureNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
+                'ARKIME_CONFIG_INI_LOC': props.arkimeFilesMap.captureIniLoc,
+                'ARKIME_ADD_FILE_LOCS': JSON.stringify(props.arkimeFilesMap.captureAddFileLocs),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CLUSTER_NAME': props.clusterName,
