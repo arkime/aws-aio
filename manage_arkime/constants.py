@@ -60,6 +60,12 @@ def get_capture_nodes_stack_name(cluster_name: str) -> str:
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
 
+def get_config_bucket_name(account: str, region: str, cluster_name: str):
+    return f"arkimeconfig-{account}-{region}-{cluster_name}"
+
+def get_config_bucket_ssm_param_name(cluster_name: str):
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/config-bucket-name"
+
 def get_cluster_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
 

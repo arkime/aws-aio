@@ -141,6 +141,20 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
         return True
     return report.get_confirmation()
 
+def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
+    # Check if the Arkime config info exists in Param Store to see if we need to do any other work.
+    # If it does exists, we can return.
+
+    # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
+
+    # Create the Capture and Viewer tarballs
+    # Generate their hashes, config version, and aws-aio versions
+    
+    # Upload the tarball to S3
+    # Update Parameter Store
+
+    pass
+
 def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan,
                                       aws_provider: AwsClientProvider) -> arkime_files.ArkimeFilesMap:
     # Initialize our map
