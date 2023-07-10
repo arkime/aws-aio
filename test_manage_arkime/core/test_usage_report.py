@@ -30,21 +30,21 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
     # Check the results
     expected_report = (
         "Arkime Metadata:\n"
-        + f"    Session Retention [days]: None -> 30\n"
-        + f"    User History Retention [days]: None -> 365\n"
+        + f"    Session Retention [days]: 30\n"
+        + f"    User History Retention [days]: 365\n"
         + "Capture Nodes:\n"
-        + "    Max Count: None -> 2\n"
-        + "    Desired Count: None -> 1\n"
-        + "    Min Count: None -> 1\n"
-        + f"    Type: None -> {cap.INSTANCE_TYPE_CAPTURE_NODE}\n"
+        + "    Max Count: 2\n"
+        + "    Desired Count: 1\n"
+        + "    Min Count: 1\n"
+        + f"    Type: {cap.INSTANCE_TYPE_CAPTURE_NODE}\n"
         + "OpenSearch Domain:\n"
-        + "    Master Node Count: None -> 3\n"
-        + "    Master Node Type: None -> m6g.large.search\n"
-        + "    Data Node Count: None -> 2\n"
-        + "    Data Node Type: None -> t3.small.search\n"
-        + "    Data Node Volume Size [GB]: None -> 100\n"
+        + "    Master Node Count: 3\n"
+        + "    Master Node Type: m6g.large.search\n"
+        + "    Data Node Count: 2\n"
+        + "    Data Node Type: t3.small.search\n"
+        + "    Data Node Volume Size [GB]: 100\n"
         + "S3:\n"
-        + "    PCAP Retention [days]: None -> 30\n"                       
+        + "    PCAP Retention [days]: 30\n"
     )
 
     assert expected_report == actual_report
