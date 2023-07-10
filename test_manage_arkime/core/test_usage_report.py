@@ -11,7 +11,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
         cap.CaptureNodesPlan(None, None, None, None),
         cap.CaptureVpcPlan(None),
         cap.EcsSysResourcePlan(None, None),
-        cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, None)),
+        cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, "m6g.before.search")),
         cap.S3Plan(None, None)
     )
     next_plan = cap.ClusterPlan(
@@ -21,7 +21,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30)
     )
-    prev_config = UserConfig(None, None, None, None, None)
+    prev_config = UserConfig(0.1, 10, None, None, None)
     next_config = UserConfig(0.5, 30, 365, 1, 120)
 
     # Run the test
@@ -30,7 +30,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
     # Check the results
     expected_report = (
         "Arkime Metadata:\n"
-        + f"    Session Retention [days]: 30\n"
+        + f"    Session Retention [days]: \033[1m10 -> 30\033[0m\n"
         + f"    User History Retention [days]: 365\n"
         + "Capture Nodes:\n"
         + "    Max Count: 2\n"
@@ -39,7 +39,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
         + f"    Type: {cap.INSTANCE_TYPE_CAPTURE_NODE}\n"
         + "OpenSearch Domain:\n"
         + "    Master Node Count: 3\n"
-        + "    Master Node Type: m6g.large.search\n"
+        + "    Master Node Type: \033[1mm6g.before.search -> m6g.large.search\033[0m\n"
         + "    Data Node Count: 2\n"
         + "    Data Node Type: t3.small.search\n"
         + "    Data Node Volume Size [GB]: 100\n"

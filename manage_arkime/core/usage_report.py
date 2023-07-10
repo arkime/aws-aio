@@ -2,9 +2,10 @@ import shell_interactions as shell
 from core.capacity_planning import ClusterPlan
 from core.user_config import UserConfig
 
-
 from dataclasses import dataclass
 
+from typing import Union
+UserVal = Union[int, str, float]
 
 @dataclass
 class UsageReport:
@@ -13,8 +14,8 @@ class UsageReport:
     prev_config: UserConfig
     next_config: UserConfig
 
-    def _line(self, name: str, oldVal, newVal) -> str:
-        if oldVal == None or oldVal == newVal:
+    def _line(self, name: str, oldVal: UserVal, newVal: UserVal) -> str:
+        if oldVal is None or oldVal == newVal:
             return f"    {name}: {newVal}\n"
         else:
             return f"    {name}: \033[1m{oldVal} -> {newVal}\033[0m\n"
