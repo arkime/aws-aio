@@ -1,0 +1,21 @@
+---
+version: 1
+rules:
+  - name: "Truncate Encrypted PCAP"
+    when: "fieldSet"
+    fields:
+      protocols:
+        - tls
+        - ssh
+        - quic
+    ops:
+      _maxPacketsToSave: 20
+
+  - name: "Drop syn scan"
+    when: "beforeFinalSave"
+    fields:
+      packets.src: 1
+      packets.dst: 0
+      tcpflags.syn: 1
+    ops:
+      _dontSaveSPI: 1

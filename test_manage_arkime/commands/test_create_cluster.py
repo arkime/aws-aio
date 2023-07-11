@@ -4,6 +4,7 @@ import shlex
 import unittest.mock as mock
 
 import arkime_interactions.arkime_files as arkime_files
+import arkime_interactions.config_wrangling as config_wrangling
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.ssm_operations as ssm_ops
@@ -17,6 +18,7 @@ from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMU
 from core.user_config import UserConfig
 
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 @mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_previous_user_config")
@@ -28,7 +30,7 @@ from core.user_config import UserConfig
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                  mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                 mock_write_arkime):
+                                                                 mock_write_arkime, mock_set_up_arkime_conf):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -107,7 +109,13 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_write_arkime_calls == mock_write_arkime.call_args_list
 
+    expected_set_up_arkime_conf_calls = [
+        mock.call("my-cluster", mock.ANY)
+    ]
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
+
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 @mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_previous_user_config")
@@ -119,7 +127,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                          mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_write_arkime):
+                                                                         mock_write_arkime, mock_set_up_arkime_conf):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -155,6 +163,9 @@ def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cd
 
     expected_write_arkime_calls = []
     assert expected_write_arkime_calls == mock_write_arkime.call_args_list
+
+    expected_set_up_arkime_conf_calls = []
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
 def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_ssm_ops):

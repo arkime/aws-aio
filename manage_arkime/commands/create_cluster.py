@@ -2,6 +2,7 @@ import json
 import logging
 
 import arkime_interactions.arkime_files as arkime_files
+import arkime_interactions.config_wrangling as config_wrangling
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
@@ -36,6 +37,9 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
 
     # Set up the cert the Viewers use for HTTPS
     cert_arn = _set_up_viewer_cert(name, aws_provider)
+
+    # Create a copy of the the default Arkime config
+    config_wrangling.set_up_arkime_config_dir(name, constants.get_cluster_config_parent_dir())
 
     # Set up any additional state
     file_map = _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
