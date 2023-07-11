@@ -49,8 +49,6 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                 constants.get_capture_nodes_stack_name(TEST_CLUSTER),
                 constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -75,6 +73,11 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
         )
     ]
     assert expected_calls == mock_client.destroy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_destroy_calls = [
         mock.call(TEST_CLUSTER, mock.ANY)
@@ -146,8 +149,6 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                 constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                 constants.get_viewer_nodes_stack_name(TEST_CLUSTER)
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -172,6 +173,11 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
         )
     ]
     assert expected_cdk_calls == mock_client.destroy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_destroy_calls = [
         mock.call(TEST_CLUSTER, mock.ANY)

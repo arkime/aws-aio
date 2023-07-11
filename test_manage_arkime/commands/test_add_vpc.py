@@ -67,8 +67,6 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
             [
                 constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_ADD_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -86,11 +84,12 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
             }
         )
     ]
-
-    print(expected_cdk_calls)
-    print(mock_cdk.deploy.call_args_list)
-
     assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_mirror_calls = [
         mock.call("bus-1", "cluster-1", "vpc-1", "subnet-1", "filter-1", 42, mock.ANY),
@@ -158,8 +157,6 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
             [
                 constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_ADD_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -177,8 +174,12 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
             }
         )
     ]
-
     assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_mirror_calls = [
         mock.call("bus-1", "cluster-1", "vpc-1", "subnet-1", "filter-1", 1234, mock.ANY),

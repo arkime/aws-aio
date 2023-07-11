@@ -16,9 +16,12 @@ def test_WHEN_cmd_deploy_demo_traffic_called_THEN_cdk_command_correct(mock_cdk_c
     expected_calls = [
         mock.call(
             [constants.NAME_DEMO_STACK_1, constants.NAME_DEMO_STACK_2],
-            aws_profile="profile",
-            aws_region="region",
             context={constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DEPLOY_DEMO}
         )
     ]
     assert expected_calls == mock_client.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list

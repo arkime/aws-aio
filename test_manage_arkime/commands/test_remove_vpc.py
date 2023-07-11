@@ -39,8 +39,6 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
             [
                 constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_REMOVE_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -59,6 +57,11 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
         )
     ]
     assert expected_cdk_calls == mock_cdk.destroy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_put_event_calls = [
         mock.call([events.DestroyEniMirrorEvent("cluster-1", "vpc-1", "subnet-1", "eni-1")], "bus-1", mock.ANY),

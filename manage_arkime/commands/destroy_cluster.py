@@ -54,8 +54,8 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         ]
     destroy_context = context.generate_destroy_cluster_context(name)
 
-    cdk_client = CdkClient()
-    cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=destroy_context)
+    cdk_client = CdkClient(aws_profile=profile, aws_region=region)
+    cdk_client.destroy(stacks_to_destroy, context=destroy_context)
 
     # Destroy our cert
     _destroy_viewer_cert(name, aws_provider)

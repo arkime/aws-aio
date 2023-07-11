@@ -77,8 +77,8 @@ def test_WHEN_bootstrap_called_AND_profile_region_THEN_executes_command(mock_she
     mock_get_env.return_value = test_env
 
     # Run our test
-    client = cdk.CdkClient()
-    client.bootstrap(aws_profile="my_profile", aws_region="region")
+    client = cdk.CdkClient(aws_profile="my_profile", aws_region="region")
+    client.bootstrap()
 
     # Check our results
     expected_command = cdk.get_command_prefix(aws_profile="my_profile", aws_region="region") + f" bootstrap {str(test_env)}"
@@ -100,6 +100,7 @@ def test_WHEN_bootstrap_called_AND_fails_unknown_THEN_raises(mock_shell):
     with pytest.raises(exceptions.CdkBootstrapFailedUnknown):
         client.bootstrap()
 
+@mock.patch('cdk_interactions.cdk_client.get_cdk_env', mock.Mock())
 @mock.patch('cdk_interactions.cdk_client.shell')
 def test_WHEN_deploy_called_THEN_executes_command(mock_shell):
     # Set up our mock
@@ -119,6 +120,7 @@ def test_WHEN_deploy_called_THEN_executes_command(mock_shell):
     ]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
+@mock.patch('cdk_interactions.cdk_client.get_cdk_env', mock.Mock())
 @mock.patch('cdk_interactions.cdk_client.shell')
 def test_WHEN_deploy_called_AND_profile_region_context_THEN_executes_command(mock_shell):
     # Set up our mock
@@ -126,8 +128,8 @@ def test_WHEN_deploy_called_AND_profile_region_context_THEN_executes_command(moc
     mock_call_shell.return_value = [0, ["success"]]
 
     # Run our test
-    client = cdk.CdkClient()
-    client.deploy(["MyStack"], aws_profile="my_profile", aws_region="region", context={"key": "value"})
+    client = cdk.CdkClient(aws_profile="my_profile", aws_region="region")
+    client.deploy(["MyStack"], context={"key": "value"})
 
     # Check our results
     expected_command = cdk.get_command_prefix(aws_profile="my_profile", aws_region="region", context={"key": "value"}) + " deploy MyStack"
@@ -191,6 +193,7 @@ def test_WHEN_deploy_called_AND_cant_bootstrap_THEN_raises(mock_shell, mock_get_
     ]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
+@mock.patch('cdk_interactions.cdk_client.get_cdk_env', mock.Mock())
 @mock.patch('cdk_interactions.cdk_client.shell')
 def test_WHEN_deploy_called_AND_fails_THEN_raises(mock_shell):
     # Set up our mock
@@ -208,6 +211,7 @@ def test_WHEN_deploy_called_AND_fails_THEN_raises(mock_shell):
     expected_calls = [mock.call(command="cdk deploy MyStack", request_response_pairs=mock.ANY)]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
+@mock.patch('cdk_interactions.cdk_client.get_cdk_env', mock.Mock())
 @mock.patch('cdk_interactions.cdk_client.shell')
 def test_WHEN_deploy_single_stack_called_THEN_executes_command(mock_shell):
     # Set up our mock
@@ -222,6 +226,7 @@ def test_WHEN_deploy_single_stack_called_THEN_executes_command(mock_shell):
     expected_calls = [mock.call(command="cdk deploy MyStack", request_response_pairs=mock.ANY)]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
 
+@mock.patch('cdk_interactions.cdk_client.get_cdk_env', mock.Mock())
 @mock.patch('cdk_interactions.cdk_client.shell')
 def test_WHEN_deploy_all_stacks_called_THEN_executes_command(mock_shell):
     # Set up our mock
@@ -269,8 +274,8 @@ def test_WHEN_destroy_called_AND_profile_region_context_THEN_executes_command(mo
     mock_input.return_value = "yes"
 
     # Run our test
-    client = cdk.CdkClient()
-    client.destroy(["MyStack"], aws_profile="my_profile", aws_region="region", context={"key": "value"})
+    client = cdk.CdkClient(aws_profile="my_profile", aws_region="region")
+    client.destroy(["MyStack"], context={"key": "value"})
 
     # Check our results
     expected_command = cdk.get_command_prefix(aws_profile="my_profile", aws_region="region", context={"key": "value"}) + " destroy --force MyStack"

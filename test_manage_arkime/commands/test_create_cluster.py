@@ -1,10 +1,8 @@
 import json
-import pytest
 import shlex
 import unittest.mock as mock
 
 import arkime_interactions.arkime_files as arkime_files
-import arkime_interactions.config_wrangling as config_wrangling
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.ssm_operations as ssm_ops
@@ -67,8 +65,6 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                 constants.get_opensearch_domain_stack_name("my-cluster"),
                 constants.get_viewer_nodes_stack_name("my-cluster"),
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -93,6 +89,11 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
         )
     ]
     assert expected_calls == mock_client.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_profile="profile", aws_region="region")
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_set_up_calls = [
         mock.call("my-cluster", mock.ANY)

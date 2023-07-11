@@ -30,14 +30,14 @@ class CdkClient:
     This class provides a Python wrapper around the CDK CLI, surfacing CDK actions into the realm of the Management CLI.
     """
 
-    def __init__(self, profile: str = None, region: str = None):
-        self.profile = profile
-        self.region = region
+    def __init__(self, aws_profile: str = None, aws_region: str = None):
+        self.aws_profile = aws_profile
+        self.aws_region = aws_region
+        self.cdk_env = get_cdk_env(aws_profile=aws_profile, aws_region=aws_region)
     
-    def bootstrap(self, aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region, context=context)
-        cdk_env = get_cdk_env(aws_profile=aws_profile, aws_region=aws_region)
-        command_suffix = f"bootstrap {str(cdk_env)}"
+    def bootstrap(self, context: Dict[str, str] = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=self.aws_profile, aws_region=self.aws_region, context=context)
+        command_suffix = f"bootstrap {str(self.cdk_env)}"
         command = f"{command_prefix} {command_suffix}"
         
         logger.info(f"Executing command: {command_suffix}")
@@ -51,8 +51,8 @@ class CdkClient:
 
         logger.info(f"Bootstrap succeeded")
 
-    def deploy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region, context=context)
+    def deploy(self, stack_names: List[str], context: Dict[str, str] = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=self.aws_profile, aws_region=self.aws_region, context=context)
         command_suffix = f"deploy {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 
@@ -72,7 +72,7 @@ class CdkClient:
             # If the CDK setup isn't bootstrapped, attempt to bootstrap and redeploy
             logger.warning("The AWS Account/Region does not appear to be CDK Bootstrapped, which is required for"
                         + " deployment.  Attempting to bootstrap now...")
-            self.bootstrap(aws_profile=aws_profile, aws_region=aws_region, context=context)
+            self.bootstrap(context=context)
             logger.info(f"Executing command: {command_suffix}")
             exit_code, stdout = shell.call_shell_command(command=command, request_response_pairs=[cdk_confirmation_dialogue])
             exceptions.raise_common_exceptions(exit_code, stdout)
@@ -83,21 +83,20 @@ class CdkClient:
 
         logger.info(f"Deployment succeeded")
 
-    def deploy_single_stack(self, stack_name, aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None):
-        self.deploy([stack_name], aws_profile=aws_profile, aws_region=aws_region, context=context)
+    def deploy_single_stack(self, stack_name, context: Dict[str, str] = None):
+        self.deploy([stack_name], context=context)
 
-    def deploy_all_stacks(self, aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None):
-        self.deploy(["--all"], aws_profile=aws_profile, aws_region=aws_region, context=context)
+    def deploy_all_stacks(self, context: Dict[str, str] = None):
+        self.deploy(["--all"], context=context)
 
-    def destroy(self, stack_names: List[str], aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=aws_profile, aws_region=aws_region, context=context)
+    def destroy(self, stack_names: List[str], context: Dict[str, str] = None) -> None:
+        command_prefix = get_command_prefix(aws_profile=self.aws_profile, aws_region=self.aws_region, context=context)
         command_suffix = f"destroy --force {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 
         # Get the CDK Environment and confirm user wants to tear down the stacks, abort if not
-        cdk_env = get_cdk_env(aws_profile=aws_profile, aws_region=aws_region)
         destroy_prompt = ("Your command will result in the the following CloudFormation stacks being destroyed in"
-                           + f" AWS Account {cdk_env.aws_account} and Region {cdk_env.aws_region}: {stack_names}"
+                           + f" AWS Account {self.cdk_env.aws_account} and Region {self.cdk_env.aws_region}: {stack_names}"
                            + "\n\n"
                            + "Do you wish to proceed (y/yes or n/no)? ")
         prompt_response = shell.louder_input(message=destroy_prompt, print_header=True)

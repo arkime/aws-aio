@@ -28,12 +28,6 @@ def get_bucket_status(bucket_name: str, aws_client_provider: AwsClientProvider) 
         else:
             raise ex
 
-"""
-{'ResponseMetadata': {'RequestId': 'XB5Y296BMGYAQSEM', 'HostId': 'V8ZhbWDrrEhdvpoCONpj1wPRN8/zhi9DGQ4WTcr8w6RDpPak9NilGNepXU1BXN/V/z5W1tqUaFI=', 'HTTPStatusCode': 200, 'HTTPHeaders': {'x-amz-id-2': 'V8ZhbWDrrEhdvpoCONpj1wPRN8/zhi9DGQ4WTcr8w6RDpPak9NilGNepXU1BXN/V/z5W1tqUaFI=', 'x-amz-request-id': 'XB5Y296BMGYAQSEM', 'date': 'Mon, 10 Jul 2023 19:48:11 GMT', 'x-amz-bucket-region': 'us-east-1', 'x-amz-access-point-alias': 'false', 'content-type': 'application/xml', 'server': 'AmazonS3'}, 'RetryAttempts': 1}}
-
-{'Error': {'Code': '403', 'Message': 'Forbidden'}, 'ResponseMetadata': {'RequestId': '7Z0WXQ83E5G0PNV2', 'HostId': 'RJsxGguZLp1PKh6JRqgDrRd/4QRTO/cFHpgZ6u0bRtnP0XqNwUdKaOPcUtHl4EFygjlR/PWpHPg=', 'HTTPStatusCode': 403, 'HTTPHeaders': {'x-amz-bucket-region': 'us-west-2', 'x-amz-request-id': '7Z0WXQ83E5G0PNV2', 'x-amz-id-2': 'RJsxGguZLp1PKh6JRqgDrRd/4QRTO/cFHpgZ6u0bRtnP0XqNwUdKaOPcUtHl4EFygjlR/PWpHPg=', 'content-type': 'application/xml', 'date': 'Mon, 10 Jul 2023 20:05:45 GMT', 'server': 'AmazonS3'}, 'RetryAttempts': 1}}
-"""
-
 def destroy_s3_bucket(bucket_name: str, aws_client_provider: AwsClientProvider):
     s3_resource = aws_client_provider.get_s3_resource()
     bucket = s3_resource.Bucket(bucket_name)
