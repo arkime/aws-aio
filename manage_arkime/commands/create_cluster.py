@@ -10,6 +10,7 @@ import aws_interactions.events_interactions as events
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
+from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_context as context
 import constants as constants
 from core.usage_report import UsageReport
@@ -25,6 +26,8 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    aws_env = aws_provider.get_aws_env()
+    cdk_client = CdkClient(aws_env)
 
     # Generate our capacity plan and confirm it's what the user expected
     previous_user_config = _get_previous_user_config(name, aws_provider)
@@ -46,7 +49,6 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     file_map = _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
 
     # Deploy the CFN Resources
-    cdk_client = CdkClient(aws_profile=profile, aws_region=region)
     stacks_to_deploy = [
         constants.get_capture_bucket_stack_name(name),
         constants.get_capture_nodes_stack_name(name),

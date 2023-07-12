@@ -15,6 +15,7 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     logger.debug(f"Invoking add-vpc with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    cdk_client = CdkClient(aws_provider.get_aws_env())
     vni_provider = SsmVniProvider(cluster_name, aws_provider)
 
     # If the user didn't supply a VNI, try to find one
@@ -74,7 +75,6 @@ def cmd_add_vpc(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     add_vpc_context = context.generate_add_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn,
                                                        next_vni, vpc_details.cidr_blocks)
 
-    cdk_client = CdkClient(aws_profile=profile, aws_region=region)
     cdk_client.deploy(stacks_to_deploy, context=add_vpc_context)
 
     # Create the per-ENI Traffic Mirroring Sessions.

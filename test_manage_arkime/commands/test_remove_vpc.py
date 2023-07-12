@@ -3,20 +3,27 @@ import shlex
 import unittest.mock as mock
 
 from commands.remove_vpc import cmd_remove_vpc
+from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
 import constants as constants
 
 
-@mock.patch("commands.remove_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("commands.remove_vpc.AwsClientProvider")
 @mock.patch("commands.remove_vpc.SsmVniProvider")
 @mock.patch("commands.remove_vpc.ssm_ops")
 @mock.patch("commands.remove_vpc.events")
 @mock.patch("commands.remove_vpc.CdkClient")
-def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, mock_events, mock_ssm, mock_vni_provider_cls):
+def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, mock_events, mock_ssm,
+                                                           mock_vni_provider_cls, mock_aws_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider_cls.return_value = mock_vni_provider
+
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
 
     mock_events.DestroyEniMirrorEvent = events.DestroyEniMirrorEvent
 
@@ -59,7 +66,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
     assert expected_cdk_calls == mock_cdk.destroy.call_args_list
 
     expected_cdk_client_create_calls = [
-        mock.call(aws_profile="profile", aws_region="region")
+        mock.call(aws_env)
     ]
     assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 

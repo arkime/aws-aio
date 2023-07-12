@@ -4,6 +4,7 @@ import unittest.mock as mock
 
 import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.generate_config as arkime_conf
+from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.ssm_operations as ssm_ops
 
@@ -15,7 +16,7 @@ from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMU
                                     DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
 from core.user_config import UserConfig
 
-@mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster.AwsClientProvider")
 @mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 @mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
@@ -28,12 +29,17 @@ from core.user_config import UserConfig
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                  mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                 mock_write_arkime, mock_set_up_arkime_conf):
+                                                                 mock_write_arkime, mock_set_up_arkime_conf, mock_aws_provider_cls):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
+
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
 
     user_config = UserConfig(1, 30, 365, 2, 30)
     mock_get_config.return_value = user_config
@@ -91,7 +97,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     assert expected_calls == mock_client.deploy.call_args_list
 
     expected_cdk_client_create_calls = [
-        mock.call(aws_profile="profile", aws_region="region")
+        mock.call(aws_env)
     ]
     assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 

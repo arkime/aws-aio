@@ -16,6 +16,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
     logger.debug(f"Invoking destroy-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    cdk_client = CdkClient(aws_provider.get_aws_env())
 
     vpcs_search_path = f"{constants.get_cluster_ssm_param_name(name)}/vpcs"
     monitored_vpcs = get_ssm_names_by_path(vpcs_search_path, aws_provider)
@@ -54,7 +55,6 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         ]
     destroy_context = context.generate_destroy_cluster_context(name)
 
-    cdk_client = CdkClient(aws_profile=profile, aws_region=region)
     cdk_client.destroy(stacks_to_destroy, context=destroy_context)
 
     # Destroy our cert

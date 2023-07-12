@@ -3,7 +3,7 @@ import re
 from typing import Dict, List
 
 import shell_interactions as shell
-from cdk_interactions.cdk_environment import get_cdk_env
+from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_exceptions as exceptions
 import constants as constants
 
@@ -30,14 +30,12 @@ class CdkClient:
     This class provides a Python wrapper around the CDK CLI, surfacing CDK actions into the realm of the Management CLI.
     """
 
-    def __init__(self, aws_profile: str = None, aws_region: str = None):
-        self.aws_profile = aws_profile
-        self.aws_region = aws_region
-        self.cdk_env = get_cdk_env(aws_profile=aws_profile, aws_region=aws_region)
+    def __init__(self, aws_env: AwsEnvironment):
+        self._aws_env = aws_env
     
     def bootstrap(self, context: Dict[str, str] = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=self.aws_profile, aws_region=self.aws_region, context=context)
-        command_suffix = f"bootstrap {str(self.cdk_env)}"
+        command_prefix = get_command_prefix(aws_profile=self._aws_env.aws_profile, aws_region=self._aws_env.aws_region, context=context)
+        command_suffix = f"bootstrap {str(self._aws_env)}"
         command = f"{command_prefix} {command_suffix}"
         
         logger.info(f"Executing command: {command_suffix}")
@@ -52,7 +50,7 @@ class CdkClient:
         logger.info(f"Bootstrap succeeded")
 
     def deploy(self, stack_names: List[str], context: Dict[str, str] = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=self.aws_profile, aws_region=self.aws_region, context=context)
+        command_prefix = get_command_prefix(aws_profile=self._aws_env.aws_profile, aws_region=self._aws_env.aws_region, context=context)
         command_suffix = f"deploy {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 
@@ -90,13 +88,13 @@ class CdkClient:
         self.deploy(["--all"], context=context)
 
     def destroy(self, stack_names: List[str], context: Dict[str, str] = None) -> None:
-        command_prefix = get_command_prefix(aws_profile=self.aws_profile, aws_region=self.aws_region, context=context)
+        command_prefix = get_command_prefix(aws_profile=self._aws_env.aws_profile, aws_region=self._aws_env.aws_region, context=context)
         command_suffix = f"destroy --force {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 
         # Get the CDK Environment and confirm user wants to tear down the stacks, abort if not
         destroy_prompt = ("Your command will result in the the following CloudFormation stacks being destroyed in"
-                           + f" AWS Account {self.cdk_env.aws_account} and Region {self.cdk_env.aws_region}: {stack_names}"
+                           + f" AWS Account {self._aws_env.aws_account} and Region {self._aws_env.aws_region}: {stack_names}"
                            + "\n\n"
                            + "Do you wish to proceed (y/yes or n/no)? ")
         prompt_response = shell.louder_input(message=destroy_prompt, print_header=True)
