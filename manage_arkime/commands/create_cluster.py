@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 
 import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.config_wrangling as config_wrangling
@@ -42,8 +43,8 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     # Set up the cert the Viewers use for HTTPS
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
-    # Create a copy of the the default Arkime config
-    config_wrangling.set_up_arkime_config_dir(name, constants.get_cluster_config_parent_dir())
+    # Set up the Arkime Config so it's available in-AWS
+    _set_up_arkime_config(name, aws_provider)
 
     # Set up any additional state
     file_map = _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
@@ -149,19 +150,32 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
     return report.get_confirmation()
 
 def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
+    # Create a copy of the the default Arkime config (if necessary)
+    config_wrangling.set_up_arkime_config_dir(cluster_name, constants.get_cluster_config_parent_dir())
+
     # Check if the Arkime config info exists in Param Store to see if we need to do any other work.
     # If it does exists, we can return.
+    # TODO
 
     # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
-    # bucket_status = s3.get_bucket_status(constants.get_config_bucket_name())
+    aws_env = aws_provider.get_aws_env()
+    bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
+
+    try:
+        s3.ensure_bucket_exists(bucket_name, aws_provider)
+    except s3.CouldntEnsureBucketExists as ex:
+        logger.error(f"Couldn't ensure S3 bucket {bucket_name} exists; aborting operation")
+        sys.exit(1)
 
     # Create the Capture and Viewer tarballs
     # Generate their hashes, config version, and aws-aio versions
+    # TODO
     
     # Upload the tarball to S3
-    # Update Parameter Store
+    # TODO
 
-    pass
+    # Update Parameter Store
+    # TODO
 
 def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan,
                                       aws_provider: AwsClientProvider) -> arkime_files.ArkimeFilesMap:

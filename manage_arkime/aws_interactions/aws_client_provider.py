@@ -18,6 +18,10 @@ class AwsClientProvider:
         self._aws_compute = aws_compute
 
     def get_aws_env(self) -> AwsEnvironment:
+        """
+        Get an encapsulation of the AWS Account/Region context using the specific AWS Profile.
+        """
+
         logger.debug(f"Getting AWS Environment for profile '{self._aws_profile}' and region '{self._aws_region}'")
 
         sts_client = self.get_sts()

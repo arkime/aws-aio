@@ -19,7 +19,7 @@ TEST_CLUSTER = "my-cluster"
 @mock.patch("commands.destroy_cluster._destroy_viewer_cert")
 @mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
 @mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("commands.destroy_cluster.destroy_bucket")
 @mock.patch("commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_destroy_bucket,
                                                                                         mock_destroy_domain, mock_ssm_get, mock_destroy_cert,
@@ -101,7 +101,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
 @mock.patch("commands.destroy_cluster._destroy_viewer_cert")
 @mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
 @mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("commands.destroy_cluster.destroy_bucket")
 @mock.patch("commands.destroy_cluster.get_ssm_param_value")
 @mock.patch("commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket,
@@ -147,7 +147,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
     expected_destroy_bucket_calls = [
         mock.call(
             bucket_name=constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
-            aws_client_provider=mock.ANY
+            aws_provider=mock.ANY
         )
     ]
     assert expected_destroy_bucket_calls == mock_destroy_bucket.call_args_list
@@ -204,7 +204,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
 @mock.patch("commands.destroy_cluster.AwsClientProvider", mock.Mock())
 @mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
 @mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("commands.destroy_cluster.destroy_s3_bucket")
+@mock.patch("commands.destroy_cluster.destroy_bucket")
 @mock.patch("commands.destroy_cluster.CdkClient")
 def test_WHEN_cmd_destroy_cluster_called_AND_existing_captures_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain,
                                                                           mock_ssm_names):

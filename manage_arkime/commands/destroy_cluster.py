@@ -4,7 +4,7 @@ import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import destroy_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
-from aws_interactions.s3_interactions import destroy_s3_bucket
+from aws_interactions.s3_interactions import destroy_bucket
 from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
 import constants as constants
@@ -32,7 +32,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         destroy_os_domain_and_wait(domain_name=os_domain_name, aws_client_provider=aws_provider)
 
         bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
-        destroy_s3_bucket(bucket_name=bucket_name, aws_client_provider=aws_provider)
+        destroy_bucket(bucket_name=bucket_name, aws_provider=aws_provider)
 
     if not destroy_everything:
         # By default, destroy-cluster just tears down the capture/viewer nodes in order to preserve the user's data.  We
