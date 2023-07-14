@@ -17,3 +17,4 @@ cdk.out
 
 # Arkime stuff
 manage_arkime.log
+config-*

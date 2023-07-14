@@ -1,3 +1,5 @@
+import os
+import re
 
 # =================================================================================================
 # These constant values cross the boundary between the Python and CDK sides of the solution.
@@ -60,6 +62,12 @@ def get_capture_nodes_stack_name(cluster_name: str) -> str:
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
 
+def get_config_bucket_name(account: str, region: str, cluster_name: str):
+    return f"arkimeconfig-{account}-{region}-{cluster_name.lower()}"
+
+def get_config_bucket_ssm_param_name(cluster_name: str):
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/config-bucket-name"
+
 def get_cluster_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
 
@@ -115,3 +123,26 @@ def get_vnis_user_ssm_param_name(cluster_name: str) -> str:
 
 def get_vni_current_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vni-current"
+
+VALID_CLUSTER_REGEX = "^[a-zA-Z0-9_-]*$"
+
+class InvalidClusterName(Exception):
+    def __init__(self, cluster_name: str):
+        self.cluster_name = cluster_name
+        super().__init__(f"The cluster name {cluster_name} does not match the regex {VALID_CLUSTER_REGEX}")
+
+def is_valid_cluster_name(cluster_name: str) -> bool:
+    # Regex should return true if there is a character other than alphanumeric, hyphen, or underscore
+    no_special_chars = re.compile(VALID_CLUSTER_REGEX)
+
+    # There are no special characters and it's not an empty string
+    return bool(no_special_chars.match(cluster_name)) and len(cluster_name) > 0
+
+def get_cluster_config_parent_dir() -> str:
+    """
+    Returns the path to the location on disk to the directory which will contain the configuration specific to each
+    cluster
+    """
+    this_files_path = os.path.abspath(__file__)
+    two_levels_up = os.path.dirname(os.path.dirname(this_files_path)) # should be repo root
+    return two_levels_up

@@ -3,6 +3,7 @@ import shlex
 import unittest.mock as mock
 
 from commands.add_vpc import cmd_add_vpc, _mirror_enis_in_subnet
+from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
@@ -36,13 +37,14 @@ def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, moc
     assert expected_put_events_calls == mock_events.put_events.call_args_list
 
 
-@mock.patch("commands.add_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("commands.add_vpc.AwsClientProvider")
 @mock.patch("commands.add_vpc.SsmVniProvider")
 @mock.patch("commands.add_vpc._mirror_enis_in_subnet")
 @mock.patch("commands.add_vpc.ssm_ops")
 @mock.patch("commands.add_vpc.ec2i")
 @mock.patch("commands.add_vpc.CdkClient")
-def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror, mock_vni_provider_cls):
+def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror,
+                                                                        mock_vni_provider_cls, mock_aws_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider.get_next_vni.return_value = 42
@@ -58,6 +60,11 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
 
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
+
     # Run our test
     cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", None)
 
@@ -67,8 +74,6 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
             [
                 constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_ADD_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -86,11 +91,12 @@ def test_WHEN_cmd_add_vpc_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
             }
         )
     ]
-
-    print(expected_cdk_calls)
-    print(mock_cdk.deploy.call_args_list)
-
     assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_env)
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_mirror_calls = [
         mock.call("bus-1", "cluster-1", "vpc-1", "subnet-1", "filter-1", 42, mock.ANY),
@@ -127,13 +133,14 @@ def test_WHEN_cmd_add_vpc_called_AND_no_available_vnis_THEN_aborts(mock_cdk_clie
     expected_vni_calls = []
     assert expected_vni_calls == mock_vni_provider.use_next_vni.call_args_list
 
-@mock.patch("commands.add_vpc.AwsClientProvider", mock.Mock())
+@mock.patch("commands.add_vpc.AwsClientProvider")
 @mock.patch("commands.add_vpc.SsmVniProvider")
 @mock.patch("commands.add_vpc._mirror_enis_in_subnet")
 @mock.patch("commands.add_vpc.ssm_ops")
 @mock.patch("commands.add_vpc.ec2i")
 @mock.patch("commands.add_vpc.CdkClient")
-def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror, mock_vni_provider_cls):
+def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirroring(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror,
+                                                                                  mock_vni_provider_cls, mock_aws_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider.is_vni_available.return_value = True
@@ -149,6 +156,11 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
 
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
+
     # Run our test
     cmd_add_vpc("profile", "region", "cluster-1", "vpc-1", 1234)
 
@@ -158,8 +170,6 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
             [
                 constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_ADD_VPC,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -177,8 +187,12 @@ def test_WHEN_cmd_add_vpc_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
             }
         )
     ]
-
     assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_env)
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
 
     expected_mirror_calls = [
         mock.call("bus-1", "cluster-1", "vpc-1", "subnet-1", "filter-1", 1234, mock.ANY),

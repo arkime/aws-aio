@@ -1,4 +1,10 @@
+import logging
+
 import boto3
+
+from aws_interactions.aws_environment import AwsEnvironment
+
+logger = logging.getLogger(__name__)
 
 class AwsClientProvider:
     def __init__(self, aws_profile: str = "default", aws_region: str = None, aws_compute=False):
@@ -10,6 +16,25 @@ class AwsClientProvider:
         self._aws_profile = aws_profile
         self._aws_region = aws_region
         self._aws_compute = aws_compute
+
+    def get_aws_env(self) -> AwsEnvironment:
+        """
+        Get an encapsulation of the AWS Account/Region context using the specific AWS Profile.
+        """
+
+        logger.debug(f"Getting AWS Environment for profile '{self._aws_profile}' and region '{self._aws_region}'")
+
+        sts_client = self.get_sts()
+
+        # Determine the region first.  If it's known, use that.  Otherwise, we attempt to pull the default region from
+        # the user's on-box AWS Config which we can access through a boto client object
+        env_region = self._aws_region if self._aws_region else sts_client.meta.region_name
+
+        # Next is the AWS Account.  This can be determined via the STS API "GetCallerIdentity", which tells you about the
+        # credentials used to make the call.
+        env_account = sts_client.get_caller_identity()["Account"]
+
+        return AwsEnvironment(env_account, env_region, self._aws_profile)
 
     def _get_session(self) -> boto3.Session:
         if self._aws_compute:

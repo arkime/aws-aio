@@ -16,6 +16,7 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     logger.debug(f"Invoking remove-vpc with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    cdk_client = CdkClient(aws_provider.get_aws_env())
 
     # Confirm the Cluster exists before proceeding
     try:
@@ -53,5 +54,4 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     ]
     add_vpc_context = context.generate_remove_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn)
 
-    cdk_client = CdkClient()
-    cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=add_vpc_context)
+    cdk_client.destroy(stacks_to_destroy, context=add_vpc_context)

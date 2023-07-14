@@ -4,7 +4,7 @@ import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import destroy_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
-from aws_interactions.destroy_s3_bucket import destroy_s3_bucket
+from aws_interactions.s3_interactions import destroy_bucket
 from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
 import constants as constants
@@ -16,6 +16,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
     logger.debug(f"Invoking destroy-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    cdk_client = CdkClient(aws_provider.get_aws_env())
 
     vpcs_search_path = f"{constants.get_cluster_ssm_param_name(name)}/vpcs"
     monitored_vpcs = get_ssm_names_by_path(vpcs_search_path, aws_provider)
@@ -31,7 +32,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         destroy_os_domain_and_wait(domain_name=os_domain_name, aws_client_provider=aws_provider)
 
         bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
-        destroy_s3_bucket(bucket_name=bucket_name, aws_client_provider=aws_provider)
+        destroy_bucket(bucket_name=bucket_name, aws_provider=aws_provider)
 
     if not destroy_everything:
         # By default, destroy-cluster just tears down the capture/viewer nodes in order to preserve the user's data.  We
@@ -54,8 +55,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         ]
     destroy_context = context.generate_destroy_cluster_context(name)
 
-    cdk_client = CdkClient()
-    cdk_client.destroy(stacks_to_destroy, aws_profile=profile, aws_region=region, context=destroy_context)
+    cdk_client.destroy(stacks_to_destroy, context=destroy_context)
 
     # Destroy our cert
     _destroy_viewer_cert(name, aws_provider)

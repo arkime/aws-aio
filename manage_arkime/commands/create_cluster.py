@@ -1,13 +1,17 @@
 import json
 import logging
+import sys
 
 import arkime_interactions.arkime_files as arkime_files
+import arkime_interactions.config_wrangling as config_wrangling
 import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.events_interactions as events
+import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
+from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_context as context
 import constants as constants
 from core.usage_report import UsageReport
@@ -23,6 +27,8 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    aws_env = aws_provider.get_aws_env()
+    cdk_client = CdkClient(aws_env)
 
     # Generate our capacity plan and confirm it's what the user expected
     previous_user_config = _get_previous_user_config(name, aws_provider)
@@ -37,11 +43,13 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     # Set up the cert the Viewers use for HTTPS
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
+    # Set up the Arkime Config so it's available in-AWS
+    _set_up_arkime_config(name, aws_provider)
+
     # Set up any additional state
     file_map = _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
 
     # Deploy the CFN Resources
-    cdk_client = CdkClient()
     stacks_to_deploy = [
         constants.get_capture_bucket_stack_name(name),
         constants.get_capture_nodes_stack_name(name),
@@ -50,7 +58,7 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_viewer_nodes_stack_name(name)
     ]
     create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config, file_map)
-    cdk_client.deploy(stacks_to_deploy, aws_profile=profile, aws_region=region, context=create_context)
+    cdk_client.deploy(stacks_to_deploy, context=create_context)
 
     # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
     _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
@@ -140,6 +148,34 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
         logger.info(f"Usage report:\n{report.get_report()}")
         return True
     return report.get_confirmation()
+
+def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
+    # Create a copy of the the default Arkime config (if necessary)
+    config_wrangling.set_up_arkime_config_dir(cluster_name, constants.get_cluster_config_parent_dir())
+
+    # Check if the Arkime config info exists in Param Store to see if we need to do any other work.
+    # If it does exists, we can return.
+    # TODO
+
+    # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
+    aws_env = aws_provider.get_aws_env()
+    bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
+
+    try:
+        s3.ensure_bucket_exists(bucket_name, aws_provider)
+    except s3.CouldntEnsureBucketExists as ex:
+        logger.error(f"Couldn't ensure S3 bucket {bucket_name} exists; aborting operation")
+        sys.exit(1)
+
+    # Create the Capture and Viewer tarballs
+    # Generate their hashes, config version, and aws-aio versions
+    # TODO
+    
+    # Upload the tarball to S3
+    # TODO
+
+    # Update Parameter Store
+    # TODO
 
 def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan,
                                       aws_provider: AwsClientProvider) -> arkime_files.ArkimeFilesMap:

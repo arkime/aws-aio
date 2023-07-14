@@ -60,6 +60,7 @@ sed -i'' "s/_OS_AUTH_/$BASE64_AUTH/g" "$config_ini_path"
 sed -i'' "s/_PCAP_BUCKET_/$BUCKET_NAME/g" "$config_ini_path"
 sed -i'' "s/_HEALTH_PORT_/$LB_HEALTH_PORT/g" "$config_ini_path"
 sed -i'' "s/_AWS_REGION_/$AWS_REGION/g" "$config_ini_path"
+sed -i'' "s/_S3_STORAGE_CLASS_/$S3_STORAGE_CLASS/g" "$config_ini_path"
 echo "Successfully configured $config_ini_path"
 
 echo "Testing connection/creds to OpenSearch domain $OPENSEARCH_ENDPOINT ..."

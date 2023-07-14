@@ -1,22 +1,25 @@
 import json
-import pytest
 import shlex
 import unittest.mock as mock
 
 import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.generate_config as arkime_conf
+from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.events_interactions import ConfigureIsmEvent
+import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 
 from commands.create_cluster import (cmd_create_cluster, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
-                                     _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _write_arkime_config_to_datastore)
+                                     _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _write_arkime_config_to_datastore,
+                                     _set_up_arkime_config)
 import constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
 from core.user_config import UserConfig
 
-@mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster.AwsClientProvider")
+@mock.patch("commands.create_cluster._set_up_arkime_config")
 @mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_previous_user_config")
@@ -28,12 +31,17 @@ from core.user_config import UserConfig
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                  mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                 mock_write_arkime):
+                                                                 mock_write_arkime, mock_set_up_arkime_conf, mock_aws_provider_cls):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
+
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
 
     user_config = UserConfig(1, 30, 365, 2, 30)
     mock_get_config.return_value = user_config
@@ -65,8 +73,6 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                 constants.get_opensearch_domain_stack_name("my-cluster"),
                 constants.get_viewer_nodes_stack_name("my-cluster"),
             ],
-            aws_profile="profile",
-            aws_region="region",
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
@@ -92,6 +98,11 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_calls == mock_client.deploy.call_args_list
 
+    expected_cdk_client_create_calls = [
+        mock.call(aws_env)
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
+
     expected_set_up_calls = [
         mock.call("my-cluster", mock.ANY)
     ]
@@ -107,7 +118,13 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_write_arkime_calls == mock_write_arkime.call_args_list
 
+    expected_set_up_arkime_conf_calls = [
+        mock.call("my-cluster", mock.ANY)
+    ]
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
+
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
+@mock.patch("commands.create_cluster._set_up_arkime_config")
 @mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_previous_user_config")
@@ -119,7 +136,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                          mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_write_arkime):
+                                                                         mock_write_arkime, mock_set_up_arkime_conf):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -155,6 +172,9 @@ def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cd
 
     expected_write_arkime_calls = []
     assert expected_write_arkime_calls == mock_write_arkime.call_args_list
+
+    expected_set_up_arkime_conf_calls = []
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
 @mock.patch("commands.create_cluster.ssm_ops")
 def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_ssm_ops):
@@ -584,3 +604,51 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
         )
     ]
     assert expected_put_events_calls == mock_events.put_events.call_args_list
+
+@mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
+@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
+def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket):
+    # Set up our mock
+    test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
+
+    mock_provider = mock.Mock()
+    mock_provider.get_aws_env.return_value = test_env
+
+    # Run our test
+    _set_up_arkime_config("cluster-name", mock_provider)
+
+    # Check our results
+    expected_set_up_config_dir_calls = [
+        mock.call("cluster-name", constants.get_cluster_config_parent_dir())
+    ]
+    assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
+
+    expected_mock_ensure_bucket_calls = [
+        mock.call(constants.get_config_bucket_name("XXXXXXXXXXX", "my-region-1", "cluster-name"), mock_provider)
+    ]
+    assert expected_mock_ensure_bucket_calls == mock_ensure_bucket.call_args_list
+
+
+@mock.patch("commands.create_cluster.sys.exit")
+@mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
+@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
+def test_WHEN_set_up_arkime_config_called_AND_couldnt_make_bucket_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_exit):
+    # Set up our mock
+    test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
+
+    mock_provider = mock.Mock()
+    mock_provider.get_aws_env.return_value = test_env
+
+    mock_ensure_bucket.side_effect = s3.CouldntEnsureBucketExists("")
+
+    # Run our test
+    _set_up_arkime_config("cluster-name", mock_provider)
+
+    # Check our results
+    expected_mock_ensure_bucket_calls = [
+        mock.call(constants.get_config_bucket_name("XXXXXXXXXXX", "my-region-1", "cluster-name"), mock_provider)
+    ]
+    assert expected_mock_ensure_bucket_calls == mock_ensure_bucket.call_args_list
+
+    expected_exit_calls = [mock.call(1)]
+    assert expected_exit_calls == mock_exit.call_args_list
