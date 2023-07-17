@@ -1,4 +1,4 @@
-import shell_interactions as shell
+import core.shell_interactions as shell
 from core.capacity_planning import ClusterPlan
 from core.user_config import UserConfig
 
