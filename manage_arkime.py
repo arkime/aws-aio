@@ -13,7 +13,7 @@ from commands.list_clusters import cmd_list_clusters
 from commands.remove_vpc import cmd_remove_vpc
 import core.constants as constants
 from core.capacity_planning import MAX_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS
-from logging_wrangler import LoggingWrangler, set_boto_log_level
+from core.logging_wrangler import LoggingWrangler, set_boto_log_level
 
 logger = logging.getLogger(__name__)
 
