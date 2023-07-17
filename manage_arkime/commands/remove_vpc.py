@@ -7,7 +7,7 @@ import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
 import core.constants as constants
 import cdk_interactions.cdk_context as context
-from vni_provider import SsmVniProvider
+from core.vni_provider import SsmVniProvider
 
 logger = logging.getLogger(__name__)
 

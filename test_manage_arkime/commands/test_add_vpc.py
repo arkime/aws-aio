@@ -8,7 +8,7 @@ import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
 import core.constants as constants
-import vni_provider as vnis
+import core.vni_provider as vnis
 
 
 @mock.patch("commands.add_vpc.events")
