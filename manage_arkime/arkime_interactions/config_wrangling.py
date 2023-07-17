@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 
-from constants import is_valid_cluster_name, InvalidClusterName
+from core.constants import is_valid_cluster_name, InvalidClusterName
 
 
 logger = logging.getLogger(__name__)

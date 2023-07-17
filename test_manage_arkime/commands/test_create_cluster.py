@@ -12,7 +12,7 @@ import aws_interactions.ssm_operations as ssm_ops
 from commands.create_cluster import (cmd_create_cluster, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _write_arkime_config_to_datastore,
                                      _set_up_arkime_config)
-import constants as constants
+import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)

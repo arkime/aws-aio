@@ -3,7 +3,7 @@ import pytest
 import unittest.mock as mock
 
 import arkime_interactions.config_wrangling as config
-import constants as constants
+import core.constants as constants
 
 
 def test_WHEN_get_cluster_dir_name_called_THEN_as_expected():

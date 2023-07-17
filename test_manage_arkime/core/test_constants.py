@@ -1,4 +1,4 @@
-import constants as constants
+import core.constants as constants
 
 
 def test_WHEN_is_valid_cluster_name_called_THEN_as_expected():

@@ -4,7 +4,7 @@ import unittest.mock as mock
 from lambda_aws_event_listener.aws_event_listener_handler import AwsEventListenerHandler
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
-import constants as constants
+import core.constants as constants
 
 @mock.patch("lambda_aws_event_listener.aws_event_listener_handler.os")
 def test_WHEN_AwsEventListenerHandler_handle_called_AND_ec2_running_THEN_invokes_correct_subhandler(mock_os):

@@ -2,7 +2,7 @@ import unittest.mock as mock
 
 from aws_interactions.aws_environment import AwsEnvironment
 from commands.deploy_demo_traffic import cmd_deploy_demo_traffic
-import constants as constants
+import core.constants as constants
 
 @mock.patch("commands.deploy_demo_traffic.AwsClientProvider")
 @mock.patch("commands.deploy_demo_traffic.CdkClient")

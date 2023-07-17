@@ -2,7 +2,7 @@ import json
 import unittest.mock as mock
 
 import aws_interactions.cloudwatch_interactions as cwi
-import constants as constants
+import core.constants as constants
 
 
 def test_WHEN_CreateEniMirrorEventMetrics_created_AND_success_THEN_correct_metrics():

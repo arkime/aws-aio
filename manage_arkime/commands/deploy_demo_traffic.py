@@ -2,7 +2,7 @@ import logging
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 from cdk_interactions.cdk_client import CdkClient
-import constants as constants
+import core.constants as constants
 
 logger = logging.getLogger(__name__)
 

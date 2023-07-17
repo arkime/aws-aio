@@ -5,7 +5,7 @@ from lambda_create_eni_mirror.create_eni_mirror_handler import CreateEniMirrorHa
 import aws_interactions.cloudwatch_interactions as cwi
 import aws_interactions.ec2_interactions as ec2i
 from aws_interactions.ssm_operations import ParamDoesNotExist
-import constants as constants
+import core.constants as constants
 
 @mock.patch("lambda_create_eni_mirror.create_eni_mirror_handler.AwsClientProvider", mock.Mock())
 @mock.patch("lambda_create_eni_mirror.create_eni_mirror_handler.cwi")

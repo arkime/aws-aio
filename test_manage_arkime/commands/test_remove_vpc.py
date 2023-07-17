@@ -6,7 +6,7 @@ from commands.remove_vpc import cmd_remove_vpc
 from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
-import constants as constants
+import core.constants as constants
 
 
 @mock.patch("commands.remove_vpc.AwsClientProvider")

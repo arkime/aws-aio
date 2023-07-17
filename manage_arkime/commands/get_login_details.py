@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
-import constants as constants
+import core.constants as constants
 
 logger = logging.getLogger(__name__)
 

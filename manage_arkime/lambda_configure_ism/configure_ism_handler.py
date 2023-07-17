@@ -7,7 +7,7 @@ from typing import Dict
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.cloudwatch_interactions as cwi
 import aws_interactions.events_interactions as events
-import constants as constants
+import core.constants as constants
 import opensearch_interactions.ism_interactions as ism
 import opensearch_interactions.opensearch_client as client
 

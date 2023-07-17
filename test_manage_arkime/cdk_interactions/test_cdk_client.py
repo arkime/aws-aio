@@ -1,7 +1,7 @@
 import pytest
 import unittest.mock as mock
 
-import constants as constants
+import core.constants as constants
 import cdk_interactions.cdk_client as cdk
 from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_exceptions as exceptions

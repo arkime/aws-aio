@@ -3,8 +3,8 @@ import pytest
 import unittest.mock as mock
 
 from aws_interactions.ssm_operations import ParamDoesNotExist
-import constants as constants
-import vni_provider as vni
+import core.constants as constants
+import core.vni_provider as vni
 
 
 def test_WHEN_get_next_vni_called_AND_next_available_THEN_returns_it():
@@ -249,7 +249,7 @@ def test_WHEN_relinquish_vni_called_AND_out_of_range_THEN_raises():
     # Check our results
     assert not mock_update_user_vni_map.called
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_update_current_autogen_vni_called_THEN_updates_it(mock_ssm):
     # Set up our mock
     mock_aws = mock.Mock()
@@ -273,7 +273,7 @@ def test_WHEN_update_current_autogen_vni_called_THEN_updates_it(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.put_ssm_param.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_current_autogen_vni_called_THEN_returns_it(mock_ssm):
     # Set up our mock
     mock_ssm.get_ssm_param_value.return_value = "31"
@@ -292,7 +292,7 @@ def test_WHEN_get_current_autogen_vni_called_THEN_returns_it(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.get_ssm_param_value.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_current_autogen_vni_called_AND_not_initialized_THEN_handles_gracefully(mock_ssm):
     # Set up our mock
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist
@@ -316,7 +316,7 @@ def test_WHEN_get_current_autogen_vni_called_AND_not_initialized_THEN_handles_gr
     ]
     assert expected_initialize_calls == mock_initialize.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_update_recycled_vnis_called_THEN_updates_it(mock_ssm):
     # Set up our mock
     mock_aws = mock.Mock()
@@ -340,7 +340,7 @@ def test_WHEN_update_recycled_vnis_called_THEN_updates_it(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.put_ssm_param.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_recycled_vnis_called_THEN_returns_them(mock_ssm):
     # Set up our mock
     mock_ssm.get_ssm_param_value.return_value = json.dumps([90210, 8675309])
@@ -359,7 +359,7 @@ def test_WHEN_get_recycled_vnis_called_THEN_returns_them(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.get_ssm_param_value.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_recycled_vnis_called_AND_not_initialized_THEN_handles_gracefully(mock_ssm):
     # Set up our mock
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist
@@ -383,7 +383,7 @@ def test_WHEN_get_recycled_vnis_called_AND_not_initialized_THEN_handles_graceful
     ]
     assert expected_initialize_calls == mock_initialize.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_update_user_vnis_mapping_called_THEN_sets_it(mock_ssm):
     # Set up our mock
     mock_aws = mock.Mock()
@@ -407,7 +407,7 @@ def test_WHEN_update_user_vnis_mapping_called_THEN_sets_it(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.put_ssm_param.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_user_vnis_mapping_called_THEN_returns_them(mock_ssm):
     # Set up our mock
     mock_ssm.get_ssm_param_value.return_value = json.dumps({42: ["vpc-1", "vpc-2"], 16: ["vpc-3"]})
@@ -426,7 +426,7 @@ def test_WHEN_get_user_vnis_mapping_called_THEN_returns_them(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.get_ssm_param_value.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_user_vnis_mapping_called_AND_not_initialized_THEN_handles_gracefully(mock_ssm):
     # Set up our mock
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist
@@ -450,7 +450,7 @@ def test_WHEN_get_user_vnis_mapping_called_AND_not_initialized_THEN_handles_grac
     ]
     assert expected_initialize_calls == mock_initialize.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_user_vnis_called_THEN_returns_them(mock_ssm):
     # Set up our mock
     mock_ssm.get_ssm_param_value.return_value = json.dumps({42: ["vpc-1", "vpc-2"], 16: ["vpc-3"]})
@@ -469,7 +469,7 @@ def test_WHEN_get_user_vnis_called_THEN_returns_them(mock_ssm):
     ]
     assert expected_ssm_calls == mock_ssm.get_ssm_param_value.call_args_list
 
-@mock.patch('vni_provider.ssm_ops')
+@mock.patch('core.vni_provider.ssm_ops')
 def test_WHEN_get_user_vnis_called_AND_not_initialized_THEN_handles_gracefully(mock_ssm):
     # Set up our mock
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist

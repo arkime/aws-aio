@@ -3,7 +3,7 @@ import shlex
 from typing import Dict, List
 
 from arkime_interactions.arkime_files import ArkimeFilesMap
-import constants as constants
+import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan, 
                                     MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS)

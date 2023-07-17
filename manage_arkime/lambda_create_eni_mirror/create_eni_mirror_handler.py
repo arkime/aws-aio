@@ -7,7 +7,7 @@ import aws_interactions.cloudwatch_interactions as cwi
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
-import constants as constants
+import core.constants as constants
 
 class CreateEniMirrorHandler:
     def __init__(self):
