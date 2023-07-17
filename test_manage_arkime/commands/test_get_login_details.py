@@ -2,7 +2,7 @@ import unittest.mock as mock
 
 from commands.get_login_details import cmd_get_login_details, LoginDetails, DEFAULT_UNKNOWN_VAL
 from aws_interactions.ssm_operations import ParamDoesNotExist
-import constants as constants
+import core.constants as constants
 
 @mock.patch("commands.get_login_details.AwsClientProvider")
 @mock.patch("commands.get_login_details.ssm_ops")

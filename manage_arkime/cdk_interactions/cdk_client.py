@@ -5,7 +5,7 @@ from typing import Dict, List
 import shell_interactions as shell
 from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_exceptions as exceptions
-import constants as constants
+import core.constants as constants
 
 logger = logging.getLogger(__name__)
 

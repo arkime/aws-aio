@@ -5,7 +5,7 @@ from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
-import constants as constants
+import core.constants as constants
 import cdk_interactions.cdk_context as context
 from vni_provider import SsmVniProvider
 

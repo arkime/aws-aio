@@ -3,7 +3,7 @@ import pytest
 import unittest.mock as mock
 
 from aws_interactions.ssm_operations import ParamDoesNotExist
-import constants as constants
+import core.constants as constants
 import vni_provider as vni
 
 

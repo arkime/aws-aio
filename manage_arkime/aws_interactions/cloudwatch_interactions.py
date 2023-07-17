@@ -5,7 +5,7 @@ import logging
 from typing import Dict, List
 
 from aws_interactions.aws_client_provider import AwsClientProvider
-import constants as constants
+import core.constants as constants
 
 
 logger = logging.getLogger(__name__)

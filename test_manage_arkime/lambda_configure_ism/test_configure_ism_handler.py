@@ -3,7 +3,7 @@ import unittest.mock as mock
 
 from lambda_configure_ism.configure_ism_handler import ConfigureIsmHandler
 import aws_interactions.cloudwatch_interactions as cwi
-import constants as constants
+import core.constants as constants
 
 @mock.patch("lambda_configure_ism.configure_ism_handler.os")
 @mock.patch("lambda_configure_ism.configure_ism_handler.ism.setup_sessions_ism")

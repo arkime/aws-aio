@@ -1,7 +1,7 @@
 import unittest.mock as mock
 
 from commands.list_clusters import cmd_list_clusters
-import constants as constants
+import core.constants as constants
 
 @mock.patch("commands.list_clusters.AwsClientProvider", mock.Mock())
 @mock.patch("commands.list_clusters.ssm_ops")

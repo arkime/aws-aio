@@ -7,7 +7,7 @@ from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
 from aws_interactions.s3_interactions import destroy_bucket
 from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
-import constants as constants
+import core.constants as constants
 import cdk_interactions.cdk_context as context
 
 logger = logging.getLogger(__name__)

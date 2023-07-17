@@ -13,7 +13,7 @@ import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
 from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_context as context
-import constants as constants
+import core.constants as constants
 from core.usage_report import UsageReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
