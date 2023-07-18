@@ -14,10 +14,12 @@ from cdk_interactions.cdk_client import CdkClient
 from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_context as context
 import core.constants as constants
+from core.local_file import TarGzDirectory, S3File
 from core.usage_report import UsageReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, CaptureNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
+from core.versioning import get_version_info
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
@@ -151,7 +153,8 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
 
 def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
     # Create a copy of the the default Arkime config (if necessary)
-    config_wrangling.set_up_arkime_config_dir(cluster_name, constants.get_cluster_config_parent_dir())
+    cluster_config_parent_dir_path = constants.get_cluster_config_parent_dir()
+    config_wrangling.set_up_arkime_config_dir(cluster_name, cluster_config_parent_dir_path)
 
     # Check if the Arkime config info exists in Param Store to see if we need to do any other work.
     # If it does exists, we can return.
@@ -163,16 +166,32 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
 
     try:
         s3.ensure_bucket_exists(bucket_name, aws_provider)
-    except s3.CouldntEnsureBucketExists as ex:
+    except s3.CouldntEnsureBucketExists:
         logger.error(f"Couldn't ensure S3 bucket {bucket_name} exists; aborting operation")
         sys.exit(1)
 
-    # Create the Capture and Viewer tarballs
+    # Create the Capture and Viewer config tarballs
+    capture_config_tarball = config_wrangling.get_capture_config_tarball(cluster_name)
+    viewer_config_tarball = config_wrangling.get_viewer_config_tarball(cluster_name)
+
     # Generate their hashes, config version, and aws-aio versions
-    # TODO
+    capture_version_info = get_version_info(capture_config_tarball)
+    viewer_version_info = get_version_info(capture_config_tarball)
     
-    # Upload the tarball to S3
-    # TODO
+    # Upload the tarballs to S3
+    logger.info(f"Uploading config tarballs to S3 bucket: {bucket_name}")
+    s3.put_file_to_bucket(
+        S3File(capture_config_tarball, metadata=capture_version_info),
+        bucket_name,
+        "capture/1/config.tgz",
+        aws_provider
+    )
+    s3.put_file_to_bucket(
+        S3File(viewer_config_tarball, metadata=viewer_version_info),
+        bucket_name,
+        "viewer/1/config.tgz",
+        aws_provider
+    )
 
     # Update Parameter Store
     # TODO

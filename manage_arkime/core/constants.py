@@ -144,5 +144,5 @@ def get_cluster_config_parent_dir() -> str:
     cluster
     """
     this_files_path = os.path.abspath(__file__)
-    two_levels_up = os.path.dirname(os.path.dirname(this_files_path)) # should be repo root
-    return two_levels_up
+    three_levels_up = os.path.dirname(os.path.dirname(os.path.dirname(this_files_path))) # should be repo root
+    return three_levels_up

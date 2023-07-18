@@ -2,7 +2,8 @@ import logging
 import os
 import shutil
 
-from core.constants import is_valid_cluster_name, InvalidClusterName
+from core.local_file import LocalFile, TarGzDirectory
+from core.constants import get_cluster_config_parent_dir, is_valid_cluster_name, InvalidClusterName
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,22 @@ def get_cluster_dir_path(cluster_name: str, parent_dir: str):
     cluster_dir_name = get_cluster_dir_name(cluster_name)
     return os.path.join(parent_dir, cluster_dir_name)
 
+def get_capture_dir_path(cluster_name: str, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+    return os.path.join(cluster_dir_path, "capture")
+
+def get_capture_tarball_path(cluster_name: str, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+    return os.path.join(cluster_dir_path, "capture.tgz")
+
+def get_viewer_dir_path(cluster_name: str, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+    return os.path.join(cluster_dir_path, "viewer")
+
+def get_viewer_tarball_path(cluster_name: str, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+    return os.path.join(cluster_dir_path, "viewer.tgz")
+
 def _create_config_dir(cluster_name: str, parent_dir: str) -> str:
     cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
 
@@ -57,11 +74,11 @@ def _copy_default_config_to_cluster_dir(cluster_name: str, parent_dir: str):
     logger.debug(f"Config dir for cluster {cluster_name} is empty; copying default config to: {cluster_dir_path}")
     shutil.copytree(
         _get_default_capture_config_dir_path(),
-        os.path.join(cluster_dir_path, "capture")
+        get_capture_dir_path(cluster_name, parent_dir)
     )
     shutil.copytree(
         _get_default_viewer_config_dir_path(),
-        os.path.join(cluster_dir_path, "viewer")
+        get_viewer_dir_path(cluster_name, parent_dir)
     )
 
 def set_up_arkime_config_dir(cluster_name: str, parent_dir: str):
@@ -74,6 +91,28 @@ def set_up_arkime_config_dir(cluster_name: str, parent_dir: str):
         _copy_default_config_to_cluster_dir(cluster_name, parent_dir)
     except ConfigDirNotEmpty as ex:
         logger.info("Cluster config directory not empty; skipping copy")
+
+def get_capture_config_tarball(cluster_name: str) -> LocalFile:
+    cluster_config_parent_dir_path = get_cluster_config_parent_dir()
+    capture_config_dir_path = get_capture_dir_path(cluster_name, cluster_config_parent_dir_path)
+    capture_config_tarball_path = get_capture_tarball_path(cluster_name, cluster_config_parent_dir_path)
+
+    logger.info(f"Turning Capture configuration at {capture_config_dir_path} into tarball at {capture_config_tarball_path}")
+    capture_config_tarball = TarGzDirectory(capture_config_dir_path, capture_config_tarball_path)
+    capture_config_tarball.generate()
+
+    return capture_config_tarball
+
+def get_viewer_config_tarball(cluster_name: str) -> LocalFile:
+    cluster_config_parent_dir_path = get_cluster_config_parent_dir()
+    viewer_config_dir_path = get_viewer_dir_path(cluster_name, cluster_config_parent_dir_path)
+    viewer_config_tarball_path = get_viewer_tarball_path(cluster_name, cluster_config_parent_dir_path)
+
+    logger.info(f"Turning Viewer configuration at {viewer_config_dir_path} into tarball at {viewer_config_tarball_path}")
+    viewer_config_tarball = TarGzDirectory(viewer_config_dir_path, viewer_config_tarball_path)
+    viewer_config_tarball.generate()
+
+    return viewer_config_tarball
 
 
 

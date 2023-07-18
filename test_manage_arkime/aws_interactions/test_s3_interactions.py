@@ -164,3 +164,47 @@ def test_WHEN_ensure_bucket_exists_called_THEN_as_expected(mock_get_status, mock
     mock_get_status.return_value = "blah"
     with pytest.raises(RuntimeError):
         s3.ensure_bucket_exists("bucket-name", mock_aws_provider)
+
+@mock.patch("aws_interactions.s3_interactions.open")
+def test_WHEN_put_file_to_bucket_called_THEN_as_expected(mock_open):
+    # Set up our mock
+    bucket_name = "my-bucket"
+    s3_key = "the/s3/key.tgz"
+    mock_s3_file = mock.Mock()
+    mock_s3_file.local_path = "/the/path/file.tgz"
+    mock_s3_file.metadata = {"key": "value"}
+
+    mock_s3_client = mock.Mock()
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_s3.return_value = mock_s3_client
+
+    mock_data = mock.Mock()
+    mock_open.return_value.__enter__.return_value = mock_data
+
+    # TEST: Everything goes right
+    s3.put_file_to_bucket(mock_s3_file, bucket_name, s3_key, mock_aws_provider)
+    assert [mock.call(mock_s3_file.local_path, "rb") == mock_open.call_args_list]
+    
+    expected_s3_put_calls = [
+        mock.call(
+            ACL="bucket-owner-full-control",
+            Body=mock_data,
+            Bucket=bucket_name,
+            Key=s3_key,
+            Metadata=mock_s3_file.metadata,
+            ServerSideEncryption='aws:kms',
+            StorageClass='STANDARD'            
+        )
+    ]
+    assert expected_s3_put_calls == mock_s3_client.put_object.call_args_list
+
+    # TEST: If no bucket access then raises
+    mock_s3_client.put_object.side_effect = s3.BucketAccessDenied(bucket_name)
+    with pytest.raises(s3.BucketAccessDenied):
+        s3.put_file_to_bucket(mock_s3_file, bucket_name, s3_key, mock_aws_provider)
+
+    # TEST: If the bucket doesn't exist then raises
+    mock_s3_client.put_object.side_effect = s3.BucketDoesntExist(bucket_name)
+    with pytest.raises(s3.BucketDoesntExist):
+        s3.put_file_to_bucket(mock_s3_file, bucket_name, s3_key, mock_aws_provider)
