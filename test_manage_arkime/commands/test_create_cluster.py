@@ -1,4 +1,5 @@
 import json
+import pytest
 import shlex
 import unittest.mock as mock
 
@@ -16,6 +17,7 @@ import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
+import core.local_file as local_file
 from core.user_config import UserConfig
 
 @mock.patch("commands.create_cluster.AwsClientProvider")
@@ -605,14 +607,27 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
     ]
     assert expected_put_events_calls == mock_events.put_events.call_args_list
 
+@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_tarball")
+@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_tarball")
+@mock.patch("commands.create_cluster.s3.put_file_to_bucket")
 @mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
 @mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
-def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket):
+def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
+                                                                          mock_get_capture_tarball, mock_get_viewer_tarball):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
+    bucket_name = constants.get_config_bucket_name(test_env.aws_account, test_env.aws_region, "cluster-name")
 
     mock_provider = mock.Mock()
     mock_provider.get_aws_env.return_value = test_env
+
+    test_capture_tarball = local_file.TarGzDirectory("/capture", "/capture.tgz")
+    test_capture_tarball._exists = True
+    mock_get_capture_tarball.return_value = test_capture_tarball
+
+    test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
+    test_viewer_tarball._exists = True
+    mock_get_viewer_tarball.return_value = test_viewer_tarball
 
     # Run our test
     _set_up_arkime_config("cluster-name", mock_provider)
@@ -624,10 +639,29 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
     assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
 
     expected_mock_ensure_bucket_calls = [
-        mock.call(constants.get_config_bucket_name("XXXXXXXXXXX", "my-region-1", "cluster-name"), mock_provider)
+        mock.call(bucket_name, mock_provider)
     ]
     assert expected_mock_ensure_bucket_calls == mock_ensure_bucket.call_args_list
 
+    expected_put_file_calls = [
+        mock.call(
+            local_file.S3File(test_capture_tarball, metadata={"config_version": "1"}),
+            bucket_name,
+            "capture/1/config.tgz",
+            mock.ANY
+        ),
+        mock.call(
+            local_file.S3File(test_viewer_tarball, metadata={"config_version": "1"}),
+            bucket_name,
+            "viewer/1/config.tgz",
+            mock.ANY
+        ),
+    ]
+    assert expected_put_file_calls == mock_put_file.call_args_list
+
+
+class SysExitCalled(Exception):
+    pass
 
 @mock.patch("commands.create_cluster.sys.exit")
 @mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
@@ -641,8 +675,11 @@ def test_WHEN_set_up_arkime_config_called_AND_couldnt_make_bucket_THEN_as_expect
 
     mock_ensure_bucket.side_effect = s3.CouldntEnsureBucketExists("")
 
+    mock_exit.side_effect = SysExitCalled()
+
     # Run our test
-    _set_up_arkime_config("cluster-name", mock_provider)
+    with pytest.raises(SysExitCalled):
+        _set_up_arkime_config("cluster-name", mock_provider)
 
     # Check our results
     expected_mock_ensure_bucket_calls = [

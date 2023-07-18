@@ -5,6 +5,7 @@ from botocore.exceptions import ClientError
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 import core.constants as constants
+from core.local_file import S3File
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,16 @@ class BucketStatus(Enum):
     DOES_NOT_EXIST="does not exist"
     EXISTS_HAVE_ACCESS="exists have access"
     EXISTS_NO_ACCESS="exists no access"
+
+class BucketAccessDenied(Exception):
+    def __init__(self, bucket_name: str):
+        self.bucket_name = bucket_name
+        super().__init__(f"You do not have access to S3 bucket {bucket_name}")
+
+class BucketDoesntExist(Exception):
+    def __init__(self, bucket_name: str):
+        self.bucket_name = bucket_name
+        super().__init__(f"The S3 bucket {bucket_name} does not exist")
 
 class BucketNameNotAvailable(Exception):
     def __init__(self, bucket_name: str):
@@ -80,6 +91,28 @@ def destroy_bucket(bucket_name: str, aws_provider: AwsClientProvider):
     logger.info(f"Deleting S3 Bucket {bucket_name}...")
     bucket.delete()
     logger.info(f"S3 Bucket {bucket_name} has been deleted")
+
+def put_file_to_bucket(file: S3File, bucket_name: str, s3_key: str, aws_provider: AwsClientProvider):
+    s3_client = aws_provider.get_s3()
+
+    try:
+        with open(file.local_path, "rb") as data:    
+            s3_client.put_object(
+                ACL="bucket-owner-full-control",
+                Body=data,
+                Bucket=bucket_name,
+                Key=s3_key,
+                Metadata=file.metadata,
+                ServerSideEncryption='aws:kms',
+                StorageClass='STANDARD'
+            )
+    except ClientError as ex:
+        if "NoSuchBucket" in str(ex):
+            raise BucketDoesntExist(bucket_name)
+        elif "AccessDenied" in str(ex):
+            raise BucketAccessDenied(bucket_name)
+        else:
+            raise ex
 
 def ensure_bucket_exists(bucket_name: str, aws_provider: AwsClientProvider):
     logger.info(f"Determining the status of S3 bucket: {bucket_name}")

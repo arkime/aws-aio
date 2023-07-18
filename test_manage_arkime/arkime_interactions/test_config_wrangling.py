@@ -110,3 +110,53 @@ def test_WHEN_set_up_arkime_config_dir_called_THEN_as_expected(mock_create, mock
         mock.call(cluster_name, parent_dir)
     ]
     assert expected_copy_calls == mock_copy.call_args_list
+
+@mock.patch("arkime_interactions.config_wrangling.get_cluster_config_parent_dir")
+@mock.patch("arkime_interactions.config_wrangling.TarGzDirectory")
+def test_WHEN_get_capture_config_tarball_called_THEN_as_expected(mock_tgz_class, mock_get_parent_dir):
+    # Set up our mock
+    cluster_name = "MyCluster01"
+
+    mock_get_parent_dir.return_value = "/parent/path"
+
+    mock_tgz_file = mock.Mock()
+    mock_tgz_class.return_value = mock_tgz_file
+
+    # Run the test
+    actual_tgz = config.get_capture_config_tarball(cluster_name)
+
+    # Check the results
+    assert actual_tgz.generate.called
+
+    expected_tgz_init_calls = [
+        mock.call(
+            "/parent/path/config-MyCluster01/capture",
+            "/parent/path/config-MyCluster01/capture.tgz"
+        )
+    ]
+    assert expected_tgz_init_calls == mock_tgz_class.call_args_list
+
+@mock.patch("arkime_interactions.config_wrangling.get_cluster_config_parent_dir")
+@mock.patch("arkime_interactions.config_wrangling.TarGzDirectory")
+def test_WHEN_get_viewer_config_tarball_called_THEN_as_expected(mock_tgz_class, mock_get_parent_dir):
+    # Set up our mock
+    cluster_name = "MyCluster01"
+
+    mock_get_parent_dir.return_value = "/parent/path"
+
+    mock_tgz_file = mock.Mock()
+    mock_tgz_class.return_value = mock_tgz_file
+
+    # Run the test
+    actual_tgz = config.get_viewer_config_tarball(cluster_name)
+
+    # Check the results
+    assert actual_tgz.generate.called
+
+    expected_tgz_init_calls = [
+        mock.call(
+            "/parent/path/config-MyCluster01/viewer",
+            "/parent/path/config-MyCluster01/viewer.tgz"
+        )
+    ]
+    assert expected_tgz_init_calls == mock_tgz_class.call_args_list
