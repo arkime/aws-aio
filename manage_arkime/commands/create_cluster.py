@@ -19,6 +19,7 @@ from core.usage_report import UsageReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, CaptureNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
+from core.versioning import get_version_info
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
@@ -174,20 +175,19 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
     viewer_config_tarball = config_wrangling.get_viewer_config_tarball(cluster_name)
 
     # Generate their hashes, config version, and aws-aio versions
-    # TODO
-    capture_metadata = {"config_version": "1"}
-    viewer_metadata = {"config_version": "1"}
+    capture_version_info = get_version_info(capture_config_tarball)
+    viewer_version_info = get_version_info(capture_config_tarball)
     
     # Upload the tarballs to S3
     logger.info(f"Uploading config tarballs to S3 bucket: {bucket_name}")
     s3.put_file_to_bucket(
-        S3File(capture_config_tarball, metadata=capture_metadata),
+        S3File(capture_config_tarball, metadata=capture_version_info),
         bucket_name,
         "capture/1/config.tgz",
         aws_provider
     )
     s3.put_file_to_bucket(
-        S3File(viewer_config_tarball, metadata=viewer_metadata),
+        S3File(viewer_config_tarball, metadata=viewer_version_info),
         bucket_name,
         "viewer/1/config.tgz",
         aws_provider

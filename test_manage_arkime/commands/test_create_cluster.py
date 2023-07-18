@@ -607,13 +607,15 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
     ]
     assert expected_put_events_calls == mock_events.put_events.call_args_list
 
+@mock.patch("commands.create_cluster.get_version_info")
 @mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_tarball")
 @mock.patch("commands.create_cluster.config_wrangling.get_capture_config_tarball")
 @mock.patch("commands.create_cluster.s3.put_file_to_bucket")
 @mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
 @mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
-                                                                          mock_get_capture_tarball, mock_get_viewer_tarball):
+                                                                          mock_get_capture_tarball, mock_get_viewer_tarball,
+                                                                          mock_get_version):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
     bucket_name = constants.get_config_bucket_name(test_env.aws_account, test_env.aws_region, "cluster-name")
@@ -628,6 +630,11 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
     test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
     test_viewer_tarball._exists = True
     mock_get_viewer_tarball.return_value = test_viewer_tarball
+
+    mock_get_version.side_effect = [
+        {"version": "1"},
+        {"version": "2"}
+    ]
 
     # Run our test
     _set_up_arkime_config("cluster-name", mock_provider)
@@ -645,13 +652,13 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 
     expected_put_file_calls = [
         mock.call(
-            local_file.S3File(test_capture_tarball, metadata={"config_version": "1"}),
+            local_file.S3File(test_capture_tarball, metadata={"version": "1"}),
             bucket_name,
             "capture/1/config.tgz",
             mock.ANY
         ),
         mock.call(
-            local_file.S3File(test_viewer_tarball, metadata={"config_version": "1"}),
+            local_file.S3File(test_viewer_tarball, metadata={"version": "2"}),
             bucket_name,
             "viewer/1/config.tgz",
             mock.ANY
