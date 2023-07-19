@@ -50,8 +50,9 @@ class ConfigDetails:
     
     @classmethod
     def from_dict(cls: Type[T_ConfigDetails], input: Dict[str, any]) -> T_ConfigDetails:
+        s3 = S3Details(**input["s3"])
         version = VersionInfo(**input["version"])
-        return cls(version)
+        return cls(s3, version)
 
 class ConfigDirNotEmpty(Exception):
     def __init__(self, cluster_dir_path: str):
