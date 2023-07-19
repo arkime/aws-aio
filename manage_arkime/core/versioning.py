@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
 from typing import Dict
 
@@ -36,12 +38,40 @@ def get_source_version() -> str:
     
     return stdout[0]
 
-def get_version_info(config_file: LocalFile, config_version: str = None) -> Dict[str, str]:
-    return {
-        "aws_aio_version": str(AWS_AIO_VERSION),
-        "config_version": config_version if config_version else "1",
-        "md5_version": get_md5_of_file(config_file),
-        "source_version": get_source_version(),
-    }
+@dataclass
+class VersionInfo:
+    aws_aio_version: str
+    config_version: str
+    md5_version: str
+    source_version: str
+    time_utc: str
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, VersionInfo):
+            return False
+
+        return (self.aws_aio_version == other.aws_aio_version
+                    and self.config_version == other.config_version
+                    and self.md5_version == other.md5_version
+                    and self.source_version == other.source_version
+                    and self.time_utc == other.time_utc)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "aws_aio_version": self.aws_aio_version,
+            "config_version": self.config_version,
+            "md5_version": self.md5_version,
+            "source_version": self.source_version,
+            "time_utc": self.time_utc
+        }
+
+def get_version_info(config_file: LocalFile, config_version: str = None) -> VersionInfo:
+    return VersionInfo(
+        str(AWS_AIO_VERSION),
+        config_version if config_version else "1",
+        get_md5_of_file(config_file),
+        get_source_version(),
+        datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    )
 
 
