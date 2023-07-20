@@ -40,32 +40,36 @@ def test_WHEN_get_source_version_called_THEN_as_expected(mock_shell):
     with pytest.raises(ver.CouldntReadSourceVersion):
         ver.get_source_version()
 
+@mock.patch("core.versioning.datetime")
 @mock.patch("core.versioning.get_source_version")
 @mock.patch("core.versioning.get_md5_of_file")
-def test_WHEN_get_version_info_called_THEN_as_expected(mock_get_md5, mock_get_source_v):
+def test_WHEN_get_version_info_called_THEN_as_expected(mock_get_md5, mock_get_source_v, mock_datetime):
     # Set up our mock
     mock_file = mock.Mock()
     mock_get_md5.return_value = "86d3f3a95c324c9479bd8986968f4327"
     mock_get_source_v.return_value = "v0.1.1-1-gd8e1200"
+    mock_datetime.now.return_value.strftime.return_value = "2023-05-11 07:13:42"
 
     # TEST: Config version default is 1
     actual_versions = ver.get_version_info(mock_file)
 
-    expected_versions = {
-        "aws_aio_version": "1",
-        "config_version": "1",
-        "md5_version": "86d3f3a95c324c9479bd8986968f4327",
-        "source_version": "v0.1.1-1-gd8e1200",
-    }
+    expected_versions = ver.VersionInfo(
+        "1",
+        "1",
+        "86d3f3a95c324c9479bd8986968f4327",
+        "v0.1.1-1-gd8e1200",
+        "2023-05-11 07:13:42",
+    )
     assert expected_versions == actual_versions
 
     # TEST: Config version is non-default
     actual_versions = ver.get_version_info(mock_file, config_version="3")
 
-    expected_versions = {
-        "aws_aio_version": "1",
-        "config_version": "3",
-        "md5_version": "86d3f3a95c324c9479bd8986968f4327",
-        "source_version": "v0.1.1-1-gd8e1200",
-    }
+    expected_versions = ver.VersionInfo(
+        "1",
+        "3",
+        "86d3f3a95c324c9479bd8986968f4327",
+        "v0.1.1-1-gd8e1200",
+        "2023-05-11 07:13:42",
+    )
     assert expected_versions == actual_versions

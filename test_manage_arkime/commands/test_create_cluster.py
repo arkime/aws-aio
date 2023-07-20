@@ -5,6 +5,7 @@ import unittest.mock as mock
 
 import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.generate_config as arkime_conf
+import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.s3_interactions as s3
@@ -19,6 +20,7 @@ from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMU
                                     DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
 import core.local_file as local_file
 from core.user_config import UserConfig
+from core.versioning import VersionInfo
 
 @mock.patch("commands.create_cluster.AwsClientProvider")
 @mock.patch("commands.create_cluster._set_up_arkime_config")
@@ -607,6 +609,8 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
     ]
     assert expected_put_events_calls == mock_events.put_events.call_args_list
 
+@mock.patch("commands.create_cluster.ssm_ops.get_ssm_param_value")
+@mock.patch("commands.create_cluster.ssm_ops.put_ssm_param")
 @mock.patch("commands.create_cluster.get_version_info")
 @mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_tarball")
 @mock.patch("commands.create_cluster.config_wrangling.get_capture_config_tarball")
@@ -615,10 +619,12 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
 @mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
                                                                           mock_get_capture_tarball, mock_get_viewer_tarball,
-                                                                          mock_get_version):
+                                                                          mock_get_version, mock_put_ssm_param, mock_get_ssm_param):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
     bucket_name = constants.get_config_bucket_name(test_env.aws_account, test_env.aws_region, "cluster-name")
+    capture_s3_key = constants.get_capture_config_s3_key("1")
+    viewer_s3_key = constants.get_viewer_config_s3_key("1")
 
     mock_provider = mock.Mock()
     mock_provider.get_aws_env.return_value = test_env
@@ -630,11 +636,21 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
     test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
     test_viewer_tarball._exists = True
     mock_get_viewer_tarball.return_value = test_viewer_tarball
-
+    
+    capture_metadata = config_wrangling.ConfigDetails(
+        s3=config_wrangling.S3Details(bucket_name, capture_s3_key),
+        version=VersionInfo("1", "1", "abcd1234", "v1-1-12312", "2023-01-01 01:01:01")
+    )
+    viewer_metadata = config_wrangling.ConfigDetails(
+        s3=config_wrangling.S3Details(bucket_name, viewer_s3_key),
+        version=VersionInfo("2", "1", "2345bcde", "v1-1-12312", "2023-01-01 01:01:01")
+    )
     mock_get_version.side_effect = [
-        {"version": "1"},
-        {"version": "2"}
+        capture_metadata.version,
+        viewer_metadata.version,
     ]
+
+    mock_get_ssm_param.side_effect = ssm_ops.ParamDoesNotExist("param")
 
     # Run our test
     _set_up_arkime_config("cluster-name", mock_provider)
@@ -652,20 +668,100 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 
     expected_put_file_calls = [
         mock.call(
-            local_file.S3File(test_capture_tarball, metadata={"version": "1"}),
+            local_file.S3File(test_capture_tarball, metadata=capture_metadata.version.to_dict()),
             bucket_name,
-            "capture/1/config.tgz",
+            capture_s3_key,
             mock.ANY
         ),
         mock.call(
-            local_file.S3File(test_viewer_tarball, metadata={"version": "2"}),
+            local_file.S3File(test_viewer_tarball, metadata=viewer_metadata.version.to_dict()),
             bucket_name,
-            "viewer/1/config.tgz",
+            viewer_s3_key,
             mock.ANY
         ),
     ]
     assert expected_put_file_calls == mock_put_file.call_args_list
 
+    expected_put_ssm_param_calls = [
+        mock.call(
+            constants.get_capture_config_details_ssm_param_name("cluster-name"),
+            json.dumps(capture_metadata.to_dict()),
+            mock.ANY,
+            description=mock.ANY,
+            overwrite=True,
+        ),
+        mock.call(
+            constants.get_viewer_config_details_ssm_param_name("cluster-name"),
+            json.dumps(viewer_metadata.to_dict()),
+            mock.ANY,
+            description=mock.ANY,
+            overwrite=True,
+        ),
+    ]
+    assert expected_put_ssm_param_calls == mock_put_ssm_param.call_args_list
+
+@mock.patch("commands.create_cluster.ssm_ops.get_ssm_param_value")
+@mock.patch("commands.create_cluster.ssm_ops.put_ssm_param")
+@mock.patch("commands.create_cluster.get_version_info")
+@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_tarball")
+@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_tarball")
+@mock.patch("commands.create_cluster.s3.put_file_to_bucket")
+@mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
+@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
+def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
+                                                                          mock_get_capture_tarball, mock_get_viewer_tarball,
+                                                                          mock_get_version, mock_put_ssm_param, mock_get_ssm_param):
+    # Set up our mock
+    test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
+    bucket_name = constants.get_config_bucket_name(test_env.aws_account, test_env.aws_region, "cluster-name")
+    capture_s3_key = constants.get_capture_config_s3_key("1")
+    viewer_s3_key = constants.get_viewer_config_s3_key("1")
+
+    mock_provider = mock.Mock()
+    mock_provider.get_aws_env.return_value = test_env
+
+    test_capture_tarball = local_file.TarGzDirectory("/capture", "/capture.tgz")
+    test_capture_tarball._exists = True
+    mock_get_capture_tarball.return_value = test_capture_tarball
+
+    test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
+    test_viewer_tarball._exists = True
+    mock_get_viewer_tarball.return_value = test_viewer_tarball
+    
+    capture_metadata = config_wrangling.ConfigDetails(
+        s3=config_wrangling.S3Details(bucket_name, capture_s3_key),
+        version=VersionInfo("1", "1", "abcd1234", "v1-1-12312", "2023-01-01 01:01:01")
+    )
+    viewer_metadata = config_wrangling.ConfigDetails(
+        s3=config_wrangling.S3Details(bucket_name, viewer_s3_key),
+        version=VersionInfo("2", "1", "2345bcde", "v1-1-12312", "2023-01-01 01:01:01")
+    )
+    mock_get_version.side_effect = [
+        capture_metadata.version,
+        viewer_metadata.version,
+    ]
+
+    mock_get_ssm_param.side_effect = ["blah", "bleh"] # Both configs exist
+
+    # Run our test
+    _set_up_arkime_config("cluster-name", mock_provider)
+
+    # Check our results
+    expected_set_up_config_dir_calls = [
+        mock.call("cluster-name", constants.get_cluster_config_parent_dir())
+    ]
+    assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
+
+    expected_mock_ensure_bucket_calls = [
+        mock.call(bucket_name, mock_provider)
+    ]
+    assert expected_mock_ensure_bucket_calls == mock_ensure_bucket.call_args_list
+
+    expected_put_file_calls = []
+    assert expected_put_file_calls == mock_put_file.call_args_list
+
+    expected_put_ssm_param_calls = []
+    assert expected_put_ssm_param_calls == mock_put_ssm_param.call_args_list
 
 class SysExitCalled(Exception):
     pass

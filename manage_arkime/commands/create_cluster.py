@@ -1,6 +1,7 @@
 import json
 import logging
 import sys
+from typing import Callable
 
 import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.config_wrangling as config_wrangling
@@ -14,7 +15,7 @@ from cdk_interactions.cdk_client import CdkClient
 from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_context as context
 import core.constants as constants
-from core.local_file import TarGzDirectory, S3File
+from core.local_file import LocalFile, TarGzDirectory, S3File
 from core.usage_report import UsageReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
@@ -151,18 +152,59 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
         return True
     return report.get_confirmation()
 
+def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_key: str, ssm_param: str,
+                                       tarball_provider: Callable[[str], LocalFile], aws_provider: AwsClientProvider):
+    """
+    The argument list is a bit ugly, but this allows us to avoid having too much duplicated logic.  Will be looking
+    for a better way to handle the two very similar but annoyingly different logics for the capture/viewer config.
+    """
+
+    # Check if the Arkime config info exists in Param Store to see if we need to do any other work.
+    # If it does exists, we can return.
+    try:
+        ssm_ops.get_ssm_param_value(ssm_param, aws_provider)
+        logger.info("Config has been uploaded previously; skipping")
+        return
+    except ssm_ops.ParamDoesNotExist:
+        pass # We need to actually do work
+
+    # Create the Capture and Viewer config tarballs
+    tarball = tarball_provider(cluster_name)
+
+    # Generate their metadata
+    next_metadata = config_wrangling.ConfigDetails(
+        s3=config_wrangling.S3Details(bucket_name, s3_key),
+        version=get_version_info(tarball)
+    )
+    
+    # Upload the tarballs to S3
+    logger.info(f"Uploading config tarball to S3 bucket: {bucket_name}")
+    s3.put_file_to_bucket(
+        S3File(tarball, metadata=next_metadata.version.to_dict()),
+        bucket_name,
+        s3_key,
+        aws_provider
+    )
+
+    # Update Parameter Store
+    ssm_ops.put_ssm_param(
+        ssm_param,
+        json.dumps(next_metadata.to_dict()),
+        aws_provider,
+        description="The currently deployed configuration details",
+        overwrite=True
+    )
+
 def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
     # Create a copy of the the default Arkime config (if necessary)
     cluster_config_parent_dir_path = constants.get_cluster_config_parent_dir()
     config_wrangling.set_up_arkime_config_dir(cluster_name, cluster_config_parent_dir_path)
 
-    # Check if the Arkime config info exists in Param Store to see if we need to do any other work.
-    # If it does exists, we can return.
-    # TODO
-
     # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
     aws_env = aws_provider.get_aws_env()
     bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
+    capture_s3_key = constants.get_capture_config_s3_key("1")
+    viewer_s3_key = constants.get_viewer_config_s3_key("1")
 
     try:
         s3.ensure_bucket_exists(bucket_name, aws_provider)
@@ -170,31 +212,27 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
         logger.error(f"Couldn't ensure S3 bucket {bucket_name} exists; aborting operation")
         sys.exit(1)
 
-    # Create the Capture and Viewer config tarballs
-    capture_config_tarball = config_wrangling.get_capture_config_tarball(cluster_name)
-    viewer_config_tarball = config_wrangling.get_viewer_config_tarball(cluster_name)
-
-    # Generate their hashes, config version, and aws-aio versions
-    capture_version_info = get_version_info(capture_config_tarball)
-    viewer_version_info = get_version_info(capture_config_tarball)
-    
-    # Upload the tarballs to S3
-    logger.info(f"Uploading config tarballs to S3 bucket: {bucket_name}")
-    s3.put_file_to_bucket(
-        S3File(capture_config_tarball, metadata=capture_version_info),
+    # Upload the Capture Config if we need to
+    logger.info("Uploading Arkime config for Capture Nodes...")
+    _upload_arkime_config_if_necessary(
+        cluster_name,
         bucket_name,
-        "capture/1/config.tgz",
-        aws_provider
-    )
-    s3.put_file_to_bucket(
-        S3File(viewer_config_tarball, metadata=viewer_version_info),
-        bucket_name,
-        "viewer/1/config.tgz",
+        capture_s3_key,
+        constants.get_capture_config_details_ssm_param_name(cluster_name),
+        config_wrangling.get_capture_config_tarball,
         aws_provider
     )
 
-    # Update Parameter Store
-    # TODO
+    # Upload the Viewer Config if we need to
+    logger.info("Uploading Arkime config for Viewer Nodes...")
+    _upload_arkime_config_if_necessary(
+        cluster_name,
+        bucket_name,
+        viewer_s3_key,
+        constants.get_viewer_config_details_ssm_param_name(cluster_name),
+        config_wrangling.get_viewer_config_tarball,
+        aws_provider
+    )
 
 def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan,
                                       aws_provider: AwsClientProvider) -> arkime_files.ArkimeFilesMap:

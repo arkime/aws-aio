@@ -1,12 +1,58 @@
+from dataclasses import dataclass
 import logging
 import os
 import shutil
+from typing import Dict, Type, TypeVar
 
-from core.local_file import LocalFile, TarGzDirectory
 from core.constants import get_cluster_config_parent_dir, is_valid_cluster_name, InvalidClusterName
-
+from core.local_file import LocalFile, TarGzDirectory
+from core.versioning import VersionInfo
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class S3Details:
+    bucket: str
+    key: str
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, S3Details):
+            return False
+
+        return (self.bucket == other.bucket) and (self.key == other.key)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "bucket": self.bucket,
+            "key": self.key
+        }
+
+T_ConfigDetails = TypeVar('T_ConfigDetails', bound='ConfigDetails')
+
+@dataclass
+class ConfigDetails:
+    s3: S3Details
+    version: VersionInfo
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ConfigDetails):
+            return False
+
+        return (self.s3 == other.s3
+                and self.version == other.version)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "s3": self.s3.to_dict(),
+            "version": self.version.to_dict()
+        }
+    
+    @classmethod
+    def from_dict(cls: Type[T_ConfigDetails], input: Dict[str, any]) -> T_ConfigDetails:
+        s3 = S3Details(**input["s3"])
+        version = VersionInfo(**input["version"])
+        return cls(s3, version)
 
 class ConfigDirNotEmpty(Exception):
     def __init__(self, cluster_dir_path: str):
