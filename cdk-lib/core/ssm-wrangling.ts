@@ -1,5 +1,4 @@
 import * as plan from './context-types';
-import * as user from '../core/user-config';
 
 /**
  * This file contains functions and types that define a shared interface with the Python management CLI; the two need
@@ -13,7 +12,7 @@ export interface ClusterSsmValue {
     readonly clusterName: string;
     readonly vpceServiceId: string;
     readonly capacityPlan: plan.ClusterPlan;
-    readonly userConfig: user.UserConfig;
+    readonly userConfig: plan.UserConfig;
 }
 
 export interface SubnetSsmValue {
