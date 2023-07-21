@@ -18,9 +18,11 @@ export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly arnViewerCert: string;
     readonly captureBucket: s3.Bucket;
     readonly viewerVpc: ec2.Vpc;
+    readonly clusterConfigBucketName: string;
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
+    readonly ssmParamNameViewerConfig: string;
     readonly ssmParamNameViewerDns: string;
     readonly ssmParamNameViewerPass: string;
     readonly ssmParamNameViewerUser: string;
@@ -67,8 +69,15 @@ export class ViewerNodesStack extends cdk.Stack {
         taskDefinition.addToTaskRolePolicy(
             new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
-                actions: ['ssm:GetParameter'], // Container pulls configuration from Parameter Store
+                actions: ['ssm:GetParameter'], // Container pulls configuration info from Parameter Store
                 resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter*`]
+            }),
+        );
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['s3:GetObject'], // Container pulls configuration from the Config S3 Bucket
+                resources: [`arn:aws:s3:::${props.clusterConfigBucketName}/*`]
             }),
         );
         props.osPassword.grantRead(taskDefinition.taskRole);
@@ -89,6 +98,7 @@ export class ViewerNodesStack extends cdk.Stack {
                 'CLUSTER_NAME': props.clusterName,
                 'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
                 'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
+                'VIEWER_CONFIG_SSM_PARAM': props.ssmParamNameViewerConfig,
                 'VIEWER_PASS_ARN': viewerPass.secretArn,
                 'VIEWER_PORT': viewerPort.toString(),
                 'VIEWER_USER': viewerUser,

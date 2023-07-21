@@ -5,6 +5,7 @@ set -e
 echo "============================================================"
 echo "Cluster: $CLUSTER_NAME"
 echo "Role: Viewer Node"
+echo "Viewer Config SSM Param: $VIEWER_CONFIG_SSM_PARAM"
 echo "Arkime Config INI Datastore Location: $ARKIME_CONFIG_INI_LOC"
 echo "Arkime Additional File Datastore Locations: $ARKIME_ADD_FILE_LOCS"
 echo "AWS Region: $AWS_REGION"

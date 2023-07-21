@@ -60,7 +60,14 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config, file_map)
+    create_context = context.generate_create_cluster_context(
+        name,
+        cert_arn,
+        next_capacity_plan,
+        next_user_config,
+        file_map,
+        constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, name)
+    )
     cdk_client.deploy(stacks_to_deploy, context=create_context)
 
     # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
