@@ -16,10 +16,7 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
     nameCaptureConfigSsmParam: string;
-<<<<<<< HEAD
     nameCaptureDetailsSsmParam: string;
-=======
->>>>>>> Checkpoint: Capture Node Stack pulling config from S3
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
     nameClusterConfigBucket: string;
@@ -28,13 +25,7 @@ export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     nameOSDomainSsmParam: string;
     nameViewerCertArn: string;
     nameViewerConfigSsmParam: string;
-<<<<<<< HEAD
     nameViewerDetailsSsmParam: string;
-=======
-    nameViewerDnsSsmParam: string;
-    nameViewerPassSsmParam: string;
-    nameViewerUserSsmParam: string;
->>>>>>> Checkpoint: Capture Node Stack pulling config from S3
     nameViewerNodesStack: string;
     planCluster: string;
     userConfig: string;
