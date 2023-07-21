@@ -12,7 +12,6 @@ export interface CommandParamsRaw { }
  */
 export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     type: 'ClusterMgmtParamsRaw';
-    arkimeFileMap: string;
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
@@ -81,7 +80,6 @@ export interface DestroyDemoTrafficParams extends CommandParams {
  */
 export interface ClusterMgmtParams extends CommandParams {
     type: 'ClusterMgmtParams'
-    arkimeFileMap: types.ArkimeFilesMap;
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;

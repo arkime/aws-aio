@@ -44,7 +44,6 @@ switch(params.type) {
 
         const captureNodesStack = new CaptureNodesStack(app, params.nameCaptureNodesStack, {
             env: env,
-            arkimeFilesMap: params.arkimeFileMap,
             captureBucket: captureBucketStack.bucket,
             captureBucketKey: captureBucketStack.bucketKey,
             captureVpc: captureVpcStack.vpc,
@@ -63,7 +62,6 @@ switch(params.type) {
 
         const viewerNodesStack = new ViewerNodesStack(app, params.nameViewerNodesStack, {
             env: env,
-            arkimeFilesMap: params.arkimeFileMap,
             arnViewerCert: params.nameViewerCertArn,
             captureBucket: captureBucketStack.bucket,
             viewerVpc: captureVpcStack.vpc,

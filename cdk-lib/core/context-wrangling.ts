@@ -85,7 +85,6 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 type: 'ClusterMgmtParams',
                 awsAccount: args.awsAccount,
                 awsRegion: args.awsRegion,
-                arkimeFileMap: JSON.parse(rawClusterMgmtParamsObj.arkimeFileMap),
                 nameCluster: rawClusterMgmtParamsObj.nameCluster,
                 nameCaptureBucketStack: rawClusterMgmtParamsObj.nameCaptureBucketStack,
                 nameCaptureBucketSsmParam: rawClusterMgmtParamsObj.nameCaptureBucketSsmParam,

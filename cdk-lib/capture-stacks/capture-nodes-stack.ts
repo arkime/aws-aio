@@ -22,7 +22,6 @@ import {ClusterSsmValue} from '../core/ssm-wrangling';
 import * as types from '../core/context-types';
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
-    readonly arkimeFilesMap: types.ArkimeFilesMap;
     readonly captureBucket: s3.Bucket;
     readonly captureBucketKey: kms.Key;
     readonly captureVpc: ec2.Vpc;
@@ -174,8 +173,6 @@ export class CaptureNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-capture-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'CaptureNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
-                'ARKIME_CONFIG_INI_LOC': props.arkimeFilesMap.captureIniLoc,
-                'ARKIME_ADD_FILE_LOCS': JSON.stringify(props.arkimeFilesMap.captureAddFileLocs),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CAPTURE_CONFIG_SSM_PARAM': props.ssmParamNameCaptureConfig,

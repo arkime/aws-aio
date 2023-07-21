@@ -77,13 +77,3 @@ export interface UserConfig {
     replicas: number;
     pcapDays: number;
 }
-
-/**
- * Structure to hold the mapping of Arkime files to their path in the data store
- */
-export interface ArkimeFilesMap {
-    captureIniLoc: string;
-    captureAddFileLocs: string[];
-    viewerIniLoc: string;
-    viewerAddFileLocs: string[];
-}
