@@ -27,7 +27,7 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
     fake_arn = "N/A"
     fake_cluster_plan = ClusterPlan(
         CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        CaptureVpcPlan(1),
+        CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)

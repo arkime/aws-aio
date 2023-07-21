@@ -35,7 +35,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(1),
+        CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
@@ -125,7 +125,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(1),
+        CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
@@ -285,10 +285,13 @@ def test_WHEN_destroy_viewer_cert_called_AND_doesnt_exist_THEN_skip(mock_ssm_get
     expected_delete_ssm_calls = []
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
 
+@mock.patch("commands.destroy_cluster.destroy_bucket")
 @mock.patch("commands.destroy_cluster.delete_ssm_param")
-def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_ssm_delete):
+def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_ssm_delete, mock_destroy_bucket):
     # Set up our mock
+    test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
     mock_provider = mock.Mock()
+    mock_provider.get_aws_env.return_value = test_env
 
     # Run our test
     _delete_arkime_config_from_datastore(TEST_CLUSTER, mock_provider)
@@ -305,3 +308,15 @@ def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_s
         ),
     ]
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
+
+    expected_destroy_bucket_calls = [
+        mock.call(
+            bucket_name=constants.get_config_bucket_name(
+                test_env.aws_account,
+                test_env.aws_region,
+                TEST_CLUSTER
+            ),
+        aws_provider=mock_provider
+        )
+    ]
+    assert expected_destroy_bucket_calls == mock_destroy_bucket.call_args_list

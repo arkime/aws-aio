@@ -87,3 +87,14 @@ def _delete_arkime_config_from_datastore(cluster_name: str, aws_provider: AwsCli
         constants.get_viewer_config_details_ssm_param_name(cluster_name),
         aws_provider
     )
+
+    # Tear down the S3 bucket containing the configuration tarballs
+    aws_env = aws_provider.get_aws_env()
+    destroy_bucket(
+        bucket_name=constants.get_config_bucket_name(
+            aws_env.aws_account,
+            aws_env.aws_region,
+            cluster_name
+        ),
+        aws_provider=aws_provider
+    )
