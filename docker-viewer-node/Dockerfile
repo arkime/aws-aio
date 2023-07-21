@@ -17,5 +17,6 @@ RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu
     apt-get install -y ./arkime.deb && \
     rm -rf ./arkime.deb
 
+COPY ./bootstrap_config.sh /bootstrap_config.sh
 COPY ./run_viewer_node.sh /run_viewer_node.sh
 CMD ["/run_viewer_node.sh"]

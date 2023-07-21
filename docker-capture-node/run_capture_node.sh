@@ -17,7 +17,8 @@ echo "============================================================"
 # Pull all required configuration files, scripts, etc from the cloud
 source /bootstrap_config.sh
 
-# Perform any final setup tasks; it's expected that this file should be placed on disk by /bootstrap_config.sh
+# Perform any final setup tasks
+# It's expected that this file should be placed on disk by /bootstrap_config.sh
 source /initialize_arkime.sh
 
 # Start Arkime Capture
