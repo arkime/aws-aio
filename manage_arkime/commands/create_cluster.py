@@ -154,7 +154,7 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
     return report.get_confirmation()
 
 def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_key: str, ssm_param: str,
-                                       tarball_provider: Callable[[str], LocalFile], aws_provider: AwsClientProvider):
+                                       archive_provider: Callable[[str], LocalFile], aws_provider: AwsClientProvider):
     """
     The argument list is a bit ugly, but this allows us to avoid having too much duplicated logic.  Will be looking
     for a better way to handle the two very similar but annoyingly different logics for the capture/viewer config.
@@ -169,19 +169,19 @@ def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_k
     except ssm_ops.ParamDoesNotExist:
         pass # We need to actually do work
 
-    # Create the Capture and Viewer config tarballs
-    tarball = tarball_provider(cluster_name)
+    # Create the config archive
+    archive = archive_provider(cluster_name)
 
-    # Generate their metadata
+    # Generate its metadata
     next_metadata = config_wrangling.ConfigDetails(
         s3=config_wrangling.S3Details(bucket_name, s3_key),
-        version=get_version_info(tarball)
+        version=get_version_info(archive)
     )
     
-    # Upload the tarballs to S3
-    logger.info(f"Uploading config tarball to S3 bucket: {bucket_name}")
+    # Upload the archive to S3
+    logger.info(f"Uploading config archive to S3 bucket: {bucket_name}")
     s3.put_file_to_bucket(
-        S3File(tarball, metadata=next_metadata.version.to_dict()),
+        S3File(archive, metadata=next_metadata.version.to_dict()),
         bucket_name,
         s3_key,
         aws_provider
@@ -220,7 +220,7 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
         bucket_name,
         capture_s3_key,
         constants.get_capture_config_details_ssm_param_name(cluster_name),
-        config_wrangling.get_capture_config_tarball,
+        config_wrangling.get_capture_config_archive,
         aws_provider
     )
 
@@ -231,7 +231,7 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
         bucket_name,
         viewer_s3_key,
         constants.get_viewer_config_details_ssm_param_name(cluster_name),
-        config_wrangling.get_viewer_config_tarball,
+        config_wrangling.get_viewer_config_archive,
         aws_provider
     )
 
