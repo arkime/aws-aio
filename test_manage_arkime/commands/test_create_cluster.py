@@ -547,13 +547,13 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
 @mock.patch("commands.create_cluster.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.create_cluster.ssm_ops.put_ssm_param")
 @mock.patch("commands.create_cluster.get_version_info")
-@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_tarball")
-@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_tarball")
+@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_archive")
+@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_archive")
 @mock.patch("commands.create_cluster.s3.put_file_to_bucket")
 @mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
 @mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
-                                                                          mock_get_capture_tarball, mock_get_viewer_tarball,
+                                                                          mock_get_capture_archive, mock_get_viewer_archive,
                                                                           mock_get_version, mock_put_ssm_param, mock_get_ssm_param):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
@@ -566,11 +566,11 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 
     test_capture_tarball = local_file.TarGzDirectory("/capture", "/capture.tgz")
     test_capture_tarball._exists = True
-    mock_get_capture_tarball.return_value = test_capture_tarball
+    mock_get_capture_archive.return_value = test_capture_tarball
 
     test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
     test_viewer_tarball._exists = True
-    mock_get_viewer_tarball.return_value = test_viewer_tarball
+    mock_get_viewer_archive.return_value = test_viewer_tarball
     
     capture_metadata = config_wrangling.ConfigDetails(
         s3=config_wrangling.S3Details(bucket_name, capture_s3_key),
@@ -638,13 +638,13 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 @mock.patch("commands.create_cluster.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.create_cluster.ssm_ops.put_ssm_param")
 @mock.patch("commands.create_cluster.get_version_info")
-@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_tarball")
-@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_tarball")
+@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_archive")
+@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_archive")
 @mock.patch("commands.create_cluster.s3.put_file_to_bucket")
 @mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
 @mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
-                                                                          mock_get_capture_tarball, mock_get_viewer_tarball,
+                                                                          mock_get_capture_archive, mock_get_viewer_archive,
                                                                           mock_get_version, mock_put_ssm_param, mock_get_ssm_param):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
@@ -657,11 +657,11 @@ def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(moc
 
     test_capture_tarball = local_file.TarGzDirectory("/capture", "/capture.tgz")
     test_capture_tarball._exists = True
-    mock_get_capture_tarball.return_value = test_capture_tarball
+    mock_get_capture_archive.return_value = test_capture_tarball
 
     test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
     test_viewer_tarball._exists = True
-    mock_get_viewer_tarball.return_value = test_viewer_tarball
+    mock_get_viewer_archive.return_value = test_viewer_tarball
     
     capture_metadata = config_wrangling.ConfigDetails(
         s3=config_wrangling.S3Details(bucket_name, capture_s3_key),

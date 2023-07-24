@@ -4,6 +4,7 @@ import logging
 import click
 
 from commands.add_vpc import cmd_add_vpc
+from commands.config_update import cmd_config_update
 from commands.create_cluster import cmd_create_cluster
 from commands.destroy_cluster import cmd_destroy_cluster
 from commands.deploy_demo_traffic import cmd_deploy_demo_traffic
@@ -158,6 +159,14 @@ def remove_vpc(ctx, cluster_name, vpc_id):
     cmd_remove_vpc(profile, region, cluster_name, vpc_id)
 cli.add_command(remove_vpc)
 
+@click.command(help="Updates specified Arkime Cluster's Capture/Viewer configuration")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
+@click.pass_context
+def config_update(ctx, cluster_name):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_config_update(profile, region, cluster_name)
+cli.add_command(config_update)
 
 def main():
     logging_wrangler = LoggingWrangler()

@@ -50,3 +50,24 @@ def test_WHEN_S3File_THEN_lifecycle_as_expected():
 
     assert tarball == s3_file_2.local_path
     assert metadata == s3_file_2.metadata
+
+@mock.patch("core.local_file.shutil.make_archive")
+def test_WHEN_ZipDirectory_THEN_lifecycle_as_expected(mock_make_archive):
+    # Set up our tests
+    source = "/my/source/dir"
+    archive = "/test/file.zip"
+    archive_no_suffix = "/test/file"
+    zip_dir = lf.ZipDirectory(source, archive)
+
+    # TEST: Raises when you try to get the path before generating
+    with pytest.raises(lf.FileNotGenerated):
+        zip_dir.local_path
+
+    # TEST: When generate called, then file is created
+    zip_dir.generate()
+
+    assert [mock.call(archive_no_suffix, 'zip', source)] == mock_make_archive.call_args_list
+
+    # TEST: After generate is called, you can get the path
+    actual_value = zip_dir.local_path
+    assert archive == actual_value

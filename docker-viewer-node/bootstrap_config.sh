@@ -14,14 +14,14 @@ s3_path="s3://$s3_bucket/$s3_key"
 
 echo "Setting up temp directory for the config"
 config_dir=/arkime_config
-config_path="$config_dir/config.tgz"
+config_path="$config_dir/archive.zip"
 rm -rf $config_dir
 mkdir $config_dir
 
-echo "Retrieving configuration tarball from $s3_path and writing to $config_path"
+echo "Retrieving configuration archive from $s3_path and writing to $config_path"
 aws s3 cp $s3_path $config_path
 
-echo "Unpacking the tarball..."
-tar -xvzf $config_path -C $config_dir
+echo "Unpacking the archive..."
+unzip $config_path -d $config_dir
 
-mv "$config_dir/viewer/initialize_arkime.sh" /initialize_arkime.sh
+mv "$config_dir/initialize_arkime.sh" /initialize_arkime.sh
