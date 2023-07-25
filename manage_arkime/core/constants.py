@@ -89,6 +89,9 @@ def get_viewer_config_details_ssm_param_name(cluster_name: str) -> str:
 def get_viewer_config_s3_key(config_version: str) -> str:
     return f"viewer/{config_version}/archive.zip"
 
+def get_viewer_details_ssm_param_name(cluster_name: str) -> str:
+    return f"/arkime/clusters/{cluster_name}/viewer-details"
+
 def get_viewer_dns_ssm_param_name(cluster_name: str) -> str:
     return f"/arkime/clusters/{cluster_name}/viewer-dns"
 

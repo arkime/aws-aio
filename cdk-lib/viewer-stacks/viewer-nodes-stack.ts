@@ -11,6 +11,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
+import * as ssmwrangling from '../core/ssm-wrangling';
 import * as types from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
@@ -22,9 +23,7 @@ export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
     readonly ssmParamNameViewerConfig: string;
-    readonly ssmParamNameViewerDns: string;
-    readonly ssmParamNameViewerPass: string;
-    readonly ssmParamNameViewerUser: string;
+    readonly ssmParamNameViewerDetails: string;
 }
 
 export class ViewerNodesStack extends cdk.Stack {
@@ -170,27 +169,17 @@ export class ViewerNodesStack extends cdk.Stack {
             },
         });
 
-        // This SSM parameter will be share the DNS name of the ALB fronting the Viewer nodes.
-        new ssm.StringParameter(this, 'ViewerDNS', {
-            description: 'The DNS name of the Viewer for the cluster',
-            parameterName: props.ssmParamNameViewerDns,
-            stringValue: lb.loadBalancerDnsName,
-            tier: ssm.ParameterTier.STANDARD,
-        });
-
-        // This SSM parameter will be share the login password for the Viewer nodes.
-        new ssm.StringParameter(this, 'ViewerPassArn', {
-            description: 'The ARN of the AWS Secret Manager Secret containing the admin password',
-            parameterName: props.ssmParamNameViewerPass,
-            stringValue: viewerPass.secretArn,
-            tier: ssm.ParameterTier.STANDARD,
-        });
-
-        // This SSM parameter will be share the login username for the Viewer nodes.
-        new ssm.StringParameter(this, 'ViewerUserArn', {
-            description: 'The login username for the Viewers',
-            parameterName: props.ssmParamNameViewerUser,
-            stringValue: viewerUser,
+        // This SSM parameter will be share details about the Viewer nodes.
+        const viewerParamValue: ssmwrangling.ViewerSsmValue = {
+            dns: lb.loadBalancerDnsName,
+            ecsService: service.serviceName,
+            passwordArn: viewerPass.secretArn,
+            user: viewerUser
+        }
+        new ssm.StringParameter(this, 'ViewerDetails', {
+            description: 'Details about the Arkime Viewer Nodes',
+            parameterName: `/arkime/clusters/${props.clusterName}/viewer-details`,
+            stringValue: JSON.stringify(viewerParamValue),
             tier: ssm.ParameterTier.STANDARD,
         });
     }
