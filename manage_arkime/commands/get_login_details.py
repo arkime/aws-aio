@@ -1,7 +1,10 @@
 from dataclasses import dataclass
+import json
 import logging
+import sys
 from typing import Dict, List
 
+from arkime_interactions.config_wrangling import ViewerDetails
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
@@ -25,28 +28,19 @@ def cmd_get_login_details(profile: str, region: str, name: str) -> LoginDetails:
     logger.info("Retrieving login details...")
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
-    # Get the URL
+    # Get the Viewer Details
     try:
-        login_url = ssm_ops.get_ssm_param_value(constants.get_viewer_dns_ssm_param_name(name), aws_provider)
+        raw_viewer_details = ssm_ops.get_ssm_param_value(constants.get_viewer_details_ssm_param_name(name), aws_provider)
+        viewer_details = ViewerDetails(**json.loads(raw_viewer_details))
     except ssm_ops.ParamDoesNotExist:
-        logger.warning("Unable to retrieve Login URL from SSM Parameter Store")
-        login_url = DEFAULT_UNKNOWN_VAL
+        logger.warning("Unable to retrieve viewer details from SSM Parameter Store")
+        logger.error(f"We weren't able to pull the Viewer details for cluster '{name}'; is it deployed correctly?")
+        sys.exit(1)
 
-    # Get the username
-    try:
-        username = ssm_ops.get_ssm_param_value(constants.get_viewer_user_ssm_param_name(name), aws_provider)
-    except ssm_ops.ParamDoesNotExist:
-        logger.warning("Unable to retrieve Username from SSM Parameter Store")
-        username = DEFAULT_UNKNOWN_VAL
-
-    # Get the password
-    try:
-        pass_arn = ssm_ops.get_ssm_param_value(constants.get_viewer_password_ssm_param_name(name), aws_provider)
-        secrets_client = aws_provider.get_secretsmanager()
-        password = secrets_client.get_secret_value(SecretId=pass_arn)["SecretString"]
-    except ssm_ops.ParamDoesNotExist:
-        logger.warning("Unable to retrieve Password from SSM Parameter Store")
-        password = DEFAULT_UNKNOWN_VAL
+    username = viewer_details.user
+    login_url = viewer_details.dns
+    secrets_client = aws_provider.get_secretsmanager()
+    password = secrets_client.get_secret_value(SecretId=viewer_details.passwordArn)["SecretString"]
 
     # Display the result without logging it
     login_details = LoginDetails(password=password, username=username, url=login_url)
