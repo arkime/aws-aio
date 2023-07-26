@@ -1,9 +1,12 @@
 import json
 import logging
+from sys import exit
+from time import sleep
 from typing import Callable, Dict, List
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.ecs_interactions as ecs
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
@@ -14,16 +17,15 @@ logger = logging.getLogger(__name__)
 
 def cmd_config_update(profile: str, region: str, cluster_name: str):
     logger.debug(f"Invoking config-update with profile '{profile}' and region '{region}'")
-
-    # Confirm that the config directory exists; abort if it doesn't
-
-    # Update Capture/Viewer config in the cloud, if there's a new version locally
+    
+    # Update Capture/Viewer config in the cloud, if there's a new version locally.  Bounce the associated ECS Tasks
+    # if we updated the configuration so that they pick it up.
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     aws_env = aws_provider.get_aws_env()
     bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
 
     logger.info("Updating Arkime config for Capture Nodes, if necessary...")
-    _update_config_if_necessary(
+    should_bounce_capture_nodes = _update_config_if_necessary(
         cluster_name,
         bucket_name,
         constants.get_capture_config_s3_key,
@@ -31,9 +33,21 @@ def cmd_config_update(profile: str, region: str, cluster_name: str):
         config_wrangling.get_capture_config_archive,
         aws_provider
     )
+    if should_bounce_capture_nodes:
+        raw_capture_details = ssm_ops.get_ssm_param_value(
+            constants.get_capture_details_ssm_param_name(cluster_name),
+            aws_provider
+        )
+        capture_details = config_wrangling.CaptureDetails(**json.loads(raw_capture_details))
+        _bounce_ecs_service(
+            capture_details.ecsCluster,
+            capture_details.ecsService,
+            constants.get_capture_config_details_ssm_param_name(cluster_name),
+            aws_provider
+        )
 
     logger.info("Updating Arkime config for Viewer Nodes, if necessary...")
-    _update_config_if_necessary(
+    should_bounce_viewer_nodes = _update_config_if_necessary(
         cluster_name,
         bucket_name,
         constants.get_viewer_config_s3_key,
@@ -41,14 +55,21 @@ def cmd_config_update(profile: str, region: str, cluster_name: str):
         config_wrangling.get_viewer_config_archive,
         aws_provider
     )
-
-    # Kick off ECS force deployment; poll using DescribeService and look for failed tasks; revert param store if see them
-
-
+    if should_bounce_viewer_nodes:
+        raw_viewer_details = ssm_ops.get_ssm_param_value(
+            constants.get_viewer_details_ssm_param_name(cluster_name),
+            aws_provider
+        )
+        viewer_details = config_wrangling.ViewerDetails(**json.loads(raw_viewer_details))
+        _bounce_ecs_service(
+            viewer_details.ecsCluster,
+            viewer_details.ecsService,
+            constants.get_viewer_config_details_ssm_param_name(cluster_name),
+            aws_provider
+        )
 
 def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_provider: Callable[[str], str], ssm_param: str,
-                                archive_provider: Callable[[str], LocalFile], aws_provider: AwsClientProvider
-                                ):
+                                archive_provider: Callable[[str], LocalFile], aws_provider: AwsClientProvider) -> bool:
     # Create the local config archive and its metadata
     archive = archive_provider(cluster_name)
     archive_md5 = get_version_info(archive).md5_version
@@ -64,7 +85,7 @@ def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_prov
 
     if cloud_config_details and cloud_config_details.version.md5_version == archive_md5:
         logger.info(f"Local config is the same as what's currently deployed; skipping")
-        return
+        return False
     
     # Create the config details for the local archive.  The ConfigDetails contains a reference to the previous,
     # which means it's a recursive data structure.  For now, we limit ourselves to only tracking the current and
@@ -100,3 +121,72 @@ def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_prov
         description="The currently deployed configuration details",
         overwrite=True
     )
+
+    return True
+
+class NoPreviousConfig(Exception):
+    def __init__(self):
+        super().__init__(f"There is no known previous configuration to roll back to.")
+
+def _revert_arkime_config(ssm_param: str, aws_provider: AwsClientProvider):
+    # Pull the existing Arkime config details
+    logger.info(f"Pulling in-progress configuration details from Param Store at: {ssm_param}")
+    raw_param_val = ssm_ops.get_ssm_param_value(ssm_param, aws_provider)
+    in_progress_config_details = config_wrangling.ConfigDetails.from_dict(json.loads(raw_param_val))
+
+    # Revert to the previous configuration
+    reverted_config_details = in_progress_config_details.previous
+
+    if not reverted_config_details:
+        logger.error(f"The parameter store value {ssm_param} does not have a set previous configuration to roll back"
+                     + " to.  This is unexpected, and should not occur in normal operation.  You will need to take"
+                     + " manual action in order to rectify the situation.  You can find your other configuration"
+                     + f" versions in the S3 bucket {in_progress_config_details.s3.bucket}; each object has the"
+                     + " version information embedded in the S3 metadata.  You can manually update the SSM parameter"
+                     + " to refer to a specific config version you know is good using that metadata.  The ECS service"
+                     + " will keep attemping to spin up new containers and pulling down the configuration specified in"
+                     + " the SSM parameter until it succeeds (or times out).")
+        raise NoPreviousConfig()
+
+    # Upload new object
+    logger.info(f"Uploading reverted config details to Param Store at: {ssm_param}")
+    ssm_ops.put_ssm_param(
+        ssm_param,
+        json.dumps(reverted_config_details.to_dict()),
+        aws_provider,
+        description="The currently deployed configuration details",
+        overwrite=True
+    )
+
+def _bounce_ecs_service(ecs_cluster: str, ecs_service: str, ssm_param: str, aws_provider: AwsClientProvider):
+    logger.info(f"Bouncing ECS Service {ecs_service} to pick up the new Arkime config...")
+    # Kick off a force deployment to recycle the ECS containers
+    ecs.force_ecs_deployment(ecs_cluster, ecs_service, aws_provider)
+
+    try:
+        failed_task_limit = 3 # arbitrarily chosen
+        wait_time_sec = 15 # arbitrarily chosen
+        reverted = False
+        while ecs.is_deployment_in_progress(ecs_cluster, ecs_service, aws_provider):
+            failed_task_count = ecs.get_failed_task_count(ecs_cluster, ecs_service, aws_provider)
+            if failed_task_count >= failed_task_limit and not reverted:
+                logger.warning(f"Failed task limit of {failed_task_limit} exceeded; rolling back to previous config")
+                _revert_arkime_config(ssm_param, aws_provider)
+                reverted = True
+            logger.info(f"Waiting {wait_time_sec} more seconds for ECS service to finish bouncing...")
+            sleep(wait_time_sec)
+        
+        logger.info(f"ECS Service {ecs_service} bounced successfully")
+    except NoPreviousConfig:
+        logger.error("Unable to roll back to previous config; exiting")
+        exit(1)
+    except KeyboardInterrupt:
+        logger.info("Received a keyboard interrupt")
+        
+        if not reverted:
+            logger.info("Rolling back to previous configuration")
+            _revert_arkime_config(ssm_param, aws_provider)
+
+        logger.info("Exiting...")
+        exit(0)
+        

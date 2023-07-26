@@ -46,6 +46,7 @@ def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: Clu
         "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
         "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(name),
         "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(name),
+        "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name(name),
         "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(name),
         "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(name),
         "nameClusterConfigBucket": cluster_config_bucket_name,

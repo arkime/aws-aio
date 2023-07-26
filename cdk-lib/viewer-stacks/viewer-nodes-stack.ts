@@ -12,7 +12,6 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
 import * as ssmwrangling from '../core/ssm-wrangling';
-import * as types from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly arnViewerCert: string;
@@ -84,7 +83,6 @@ export class ViewerNodesStack extends cdk.Stack {
         viewerPass.grantRead(taskDefinition.taskRole);
 
         // Our Arkime Capture container
-
         const container = taskDefinition.addContainer('ViewerContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
@@ -172,15 +170,17 @@ export class ViewerNodesStack extends cdk.Stack {
         // This SSM parameter will be share details about the Viewer nodes.
         const viewerParamValue: ssmwrangling.ViewerSsmValue = {
             dns: lb.loadBalancerDnsName,
+            ecsCluster: service.cluster.clusterName,
             ecsService: service.serviceName,
             passwordArn: viewerPass.secretArn,
             user: viewerUser
         }
-        new ssm.StringParameter(this, 'ViewerDetails', {
+        const viewerParam = new ssm.StringParameter(this, 'ViewerDetails', {
             description: 'Details about the Arkime Viewer Nodes',
-            parameterName: `/arkime/clusters/${props.clusterName}/viewer-details`,
+            parameterName: props.ssmParamNameViewerDetails,
             stringValue: JSON.stringify(viewerParamValue),
             tier: ssm.ParameterTier.STANDARD,
         });
+        viewerParam.node.addDependency(service);
     }
 }

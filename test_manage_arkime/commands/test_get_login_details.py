@@ -15,7 +15,8 @@ def test_WHEN_cmd_get_login_details_called_THEN_retrieves_them(mock_ssm_ops, moc
     mock_provider.get_secretsmanager.return_value = mock_secrets_client
     mock_provider_cls.return_value = mock_provider
 
-    mock_ssm_ops.get_ssm_param_value.return_value = '{"dns":"dns-name.com","ecsService":"service-name","passwordArn":"secrets-arn","user":"username"}'
+    mock_ssm_ops.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm_ops.get_ssm_param_value.return_value = '{"dns":"dns-name.com","ecsCluster":"cluster-name","ecsService":"service-name","passwordArn":"secrets-arn","user":"username"}'
 
     # Run our test
     result = cmd_get_login_details("profile", "region", "cluster-1")

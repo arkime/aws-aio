@@ -89,6 +89,7 @@ function validateArgs(args: ValidateArgs) : (prms.ClusterMgmtParams | prms.Deplo
                 nameCaptureBucketStack: rawClusterMgmtParamsObj.nameCaptureBucketStack,
                 nameCaptureBucketSsmParam: rawClusterMgmtParamsObj.nameCaptureBucketSsmParam,
                 nameCaptureConfigSsmParam: rawClusterMgmtParamsObj.nameCaptureConfigSsmParam,
+                nameCaptureDetailsSsmParam: rawClusterMgmtParamsObj.nameCaptureDetailsSsmParam,
                 nameCaptureNodesStack: rawClusterMgmtParamsObj.nameCaptureNodesStack,
                 nameCaptureVpcStack: rawClusterMgmtParamsObj.nameCaptureVpcStack,
                 nameClusterConfigBucket: rawClusterMgmtParamsObj.nameClusterConfigBucket,

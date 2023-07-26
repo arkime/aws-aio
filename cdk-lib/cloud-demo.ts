@@ -53,6 +53,7 @@ switch(params.type) {
             osPassword: osDomainStack.osPassword,
             planCluster: params.planCluster,
             ssmParamNameCaptureConfig: params.nameCaptureConfigSsmParam,
+            ssmParamNameCaptureDetails: params.nameCaptureDetailsSsmParam,
             ssmParamNameCluster: params.nameClusterSsmParam,
             userConfig: params.userConfig
         });
