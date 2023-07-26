@@ -6,6 +6,11 @@ import * as context from './context-types';
  * TypeScript sides can pull from.
  */
 
+export interface CaptureSsmValue {
+    readonly ecsCluster: string;
+    readonly ecsService: string;
+}
+
 export interface ClusterSsmValue {
     readonly busArn: string;
     readonly busName: string;
@@ -23,6 +28,7 @@ export interface SubnetSsmValue {
 
 export interface ViewerSsmValue {
     readonly dns: string;
+    readonly ecsCluster: string;
     readonly ecsService: string;
     readonly passwordArn: string;
     readonly user: string;

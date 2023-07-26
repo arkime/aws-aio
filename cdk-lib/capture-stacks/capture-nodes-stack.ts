@@ -18,7 +18,7 @@ import { Construct } from 'constructs';
 
 import * as constants from '../core/constants';
 import * as plan from '../core/context-types';
-import {ClusterSsmValue} from '../core/ssm-wrangling';
+import {CaptureSsmValue, ClusterSsmValue} from '../core/ssm-wrangling';
 import * as types from '../core/context-types';
 
 export interface CaptureNodesStackProps extends cdk.StackProps {
@@ -31,6 +31,7 @@ export interface CaptureNodesStackProps extends cdk.StackProps {
     readonly osPassword: secretsmanager.Secret;
     readonly planCluster: plan.ClusterPlan;
     readonly ssmParamNameCaptureConfig: string;
+    readonly ssmParamNameCaptureDetails: string;
     readonly ssmParamNameCluster: string;
     readonly userConfig: types.UserConfig;
 }
@@ -113,13 +114,13 @@ export class CaptureNodesStack extends cdk.Stack {
         cfnAsg.node.addDependency(gwlbListener);
 
         // Key to encrypt SSM traffic when using ECS Exec to shell into the container
-        const ksmEncryptionKey = new kms.Key(this, 'ECSClusterKey', {
+        const kmsEncryptionKey = new kms.Key(this, 'ECSClusterKey', {
             enableKeyRotation: true,
         });
 
         const cluster = new ecs.Cluster(this, 'Cluster', {
             vpc: props.captureVpc,
-            executeCommandConfiguration: { kmsKey: ksmEncryptionKey }
+            executeCommandConfiguration: { kmsKey: kmsEncryptionKey }
         });
 
         const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
@@ -140,7 +141,7 @@ export class CaptureNodesStack extends cdk.Stack {
             new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
                 actions: ['kms:Decrypt'], // Required for ECS Exec & shelling into the container
-                resources: [ksmEncryptionKey.keyArn]
+                resources: [kmsEncryptionKey.keyArn]
             }),
         );
         taskDefinition.addToTaskRolePolicy(
@@ -255,7 +256,7 @@ export class CaptureNodesStack extends cdk.Stack {
         });
         
         /**
-         * This SSM parameter will enable us share the details of our Capture setup.
+         * This SSM parameter will enable us share the details of our Cluster.
          */
         const clusterParamValue: ClusterSsmValue = {
             busArn: clusterBus.eventBusArn,
@@ -274,6 +275,21 @@ export class CaptureNodesStack extends cdk.Stack {
         });
         clusterParam.node.addDependency(gwlbEndpointService);
         clusterParam.node.addDependency(clusterBus);
+
+        /**
+         * This SSM parameter will enable us share the details of our Capture Setup.
+         */
+        const captureParamValue: CaptureSsmValue = {
+            ecsCluster: service.cluster.clusterName,
+            ecsService: service.serviceName,
+        }
+        const captureParam = new ssm.StringParameter(this, 'CaptureDetails', {
+            description: 'Details about the Arkime Capture Nodes',
+            parameterName: props.ssmParamNameCaptureDetails,
+            stringValue: JSON.stringify(captureParamValue),
+            tier: ssm.ParameterTier.STANDARD,
+        });
+        captureParam.node.addDependency(service);
 
         /**
          * Create the Lambda set up the ISM policy for the OpenSearch Domain.  It receives events via a rule on the

@@ -58,10 +58,29 @@ class ConfigDetails:
         version = VersionInfo(**input["version"])
         previous = ConfigDetails.from_dict(input["previous"]) if input["previous"] != "None" else None
         return cls(s3, version, previous)
+    
+@dataclass
+class CaptureDetails:
+    ecsCluster: str
+    ecsService: str
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CaptureDetails):
+            return False
+
+        return (self.ecsCluster == other.ecsCluster
+                and self.ecsService == other.ecsService)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "ecsCluster": self.ecsCluster,
+            "ecsService": self.ecsService,
+        }
 
 @dataclass
 class ViewerDetails:
     dns: str
+    ecsCluster: str
     ecsService: str
     passwordArn: str
     user: str
@@ -71,6 +90,7 @@ class ViewerDetails:
             return False
 
         return (self.dns == other.dns
+                and self.ecsCluster == other.ecsCluster
                 and self.ecsService == other.ecsService
                 and self.passwordArn == other.passwordArn
                 and self.user == other.user)
@@ -78,6 +98,7 @@ class ViewerDetails:
     def to_dict(self) -> Dict[str, str]:
         return {
             "dns": self.dns,
+            "ecsCluster": self.ecsCluster,
             "ecsService": self.ecsService,
             "passwordArn": self.passwordArn,
             "user": self.user

@@ -78,6 +78,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
                     "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name("my-cluster"),
+                    "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name("my-cluster"),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
                     "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, "my-cluster"),

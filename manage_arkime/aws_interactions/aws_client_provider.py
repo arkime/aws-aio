@@ -50,12 +50,17 @@ class AwsClientProvider:
     def get_cloudwatch(self):
         session = self._get_session()
         client = session.client("cloudwatch")
-        return client    
+        return client 
 
     def get_ec2(self):
         session = self._get_session()
         client = session.client("ec2")
-        return client    
+        return client 
+
+    def get_ecs(self):
+        session = self._get_session()
+        client = session.client("ecs")
+        return client
 
     def get_events(self):
         session = self._get_session()
