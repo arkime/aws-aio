@@ -12,8 +12,8 @@ from core.vni_provider import SsmVniProvider
 logger = logging.getLogger(__name__)
 
 
-def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
-    logger.debug(f"Invoking remove-vpc with profile '{profile}' and region '{region}'")
+def cmd_vpc_remove(profile: str, region: str, cluster_name: str, vpc_id: str):
+    logger.debug(f"Invoking vpc-remove with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     cdk_client = CdkClient(aws_provider.get_aws_env())
@@ -23,7 +23,7 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
         vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
         event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
     except ssm_ops.ParamDoesNotExist:
-        logger.error(f"The cluster {cluster_name} does not exist; try using the list-clusters command to see the clusters you have created.")
+        logger.error(f"The cluster {cluster_name} does not exist; try using the clusters-list command to see the clusters you have created.")
         logger.warning("Aborting...")
         return
 
@@ -52,6 +52,6 @@ def cmd_remove_vpc(profile: str, region: str, cluster_name: str, vpc_id: str):
     stacks_to_destroy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    add_vpc_context = context.generate_remove_vpc_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn)
+    vpc_add_context = context.generate_vpc_remove_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn)
 
-    cdk_client.destroy(stacks_to_destroy, context=add_vpc_context)
+    cdk_client.destroy(stacks_to_destroy, context=vpc_add_context)

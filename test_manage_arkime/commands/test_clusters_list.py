@@ -1,11 +1,11 @@
 import unittest.mock as mock
 
-from commands.list_clusters import cmd_list_clusters
+from commands.clusters_list import cmd_clusters_list
 import core.constants as constants
 
-@mock.patch("commands.list_clusters.AwsClientProvider", mock.Mock())
-@mock.patch("commands.list_clusters.ssm_ops")
-def test_WHEN_cmd_list_clusters_called_THEN_lists_them(mock_ssm_ops):
+@mock.patch("commands.clusters_list.AwsClientProvider", mock.Mock())
+@mock.patch("commands.clusters_list.ssm_ops")
+def test_WHEN_cmd_clusters_list_called_THEN_lists_them(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.get_ssm_param_json_value.side_effect = ["vni-1", "vni-2", "vni-3"]
 
@@ -16,7 +16,7 @@ def test_WHEN_cmd_list_clusters_called_THEN_lists_them(mock_ssm_ops):
     ]
 
     # Run our test
-    result = cmd_list_clusters("profile", "region")
+    result = cmd_clusters_list("profile", "region")
 
     # Check our results
     expected_get_names_calls = [

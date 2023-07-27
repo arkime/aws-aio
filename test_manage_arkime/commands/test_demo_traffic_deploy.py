@@ -1,12 +1,12 @@
 import unittest.mock as mock
 
 from aws_interactions.aws_environment import AwsEnvironment
-from commands.deploy_demo_traffic import cmd_deploy_demo_traffic
+from commands.demo_traffic_deploy import cmd_demo_traffic_deploy
 import core.constants as constants
 
-@mock.patch("commands.deploy_demo_traffic.AwsClientProvider")
-@mock.patch("commands.deploy_demo_traffic.CdkClient")
-def test_WHEN_cmd_deploy_demo_traffic_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_aws_provider_cls):
+@mock.patch("commands.demo_traffic_deploy.AwsClientProvider")
+@mock.patch("commands.demo_traffic_deploy.CdkClient")
+def test_WHEN_cmd_demo_traffic_deploy_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_aws_provider_cls):
     # Set up our mock
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
@@ -17,7 +17,7 @@ def test_WHEN_cmd_deploy_demo_traffic_called_THEN_cdk_command_correct(mock_cdk_c
     mock_aws_provider_cls.return_value = mock_aws_provider
 
     # Run our test
-    cmd_deploy_demo_traffic("profile", "region")
+    cmd_demo_traffic_deploy("profile", "region")
 
     # Check our results
     expected_calls = [
