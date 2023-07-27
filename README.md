@@ -9,7 +9,7 @@ The AWS Cloud Development Kit (CDK) is used to perform infrastructure specificat
 
 This tool provides a Python CLI which the user can interact with to manage the Arkime installation(s) in their account.  The Python CLI wraps a CDK App.  The CLI provides orchestration; the CDK App provides the CloudFormation Templates based on inputs from the CLI and performs CloudFormation create/update/destroy operations.  State about the user's deployed Arkime Clusters is stored in the user's AWS Account using [the AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html).  The capture itself is performed by using [VPC Traffic Mirroring](https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html) to mirror traffic to/from [the elastic network interfaces](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html) in the user's VPC through [a Gateway Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html) and into another VPC (the Capture VPC), created by the CLI, in the user's account.  The Arkime Capture Nodes live in the Capture VPC.
 
-When a VPC is added to a Cluster with the `add-vpc` command, we attempt to set up monitoring for all network interfaces in the target VPC.  After initial this setup, we listen for changes in the VPC [using AWS EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) and attempt to automatically create/destroy mirroring accordingly.  This should enable the user's fleet to scale naturally while still having its traffic captured/monitored by Arkime.  We currently provide automated, on-going monitoring of the following resource types:
+When a VPC is added to a Cluster with the `vpc-add` command, we attempt to set up monitoring for all network interfaces in the target VPC.  After initial this setup, we listen for changes in the VPC [using AWS EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) and attempt to automatically create/destroy mirroring accordingly.  This should enable the user's fleet to scale naturally while still having its traffic captured/monitored by Arkime.  We currently provide automated, on-going monitoring of the following resource types:
 * EC2 Instances
 * EC2 Autoscaling Groups
 * ECS-on-EC2 Container Instances
@@ -77,13 +77,13 @@ npm ci
 Finally, invoke the management CLI.  It will use your default AWS Credentials and Region unless you specify otherwise (see `./manage_arkime.py --help`).
 
 ```
-./manage_arkime.py deploy-demo-traffic
+./manage_arkime.py demo-traffic-deploy
 ```
 
 You can tear down the demo stacks using an additional command:
 
 ```
-./manage_arkime.py deploy-demo-traffic
+./manage_arkime.py demo-traffic-deploy
 ```
 
 ### Setting up your Arkime Cluster
@@ -91,7 +91,7 @@ You can tear down the demo stacks using an additional command:
 You can deploy the Arkime Cluster into your AWS account like so:
 
 ```
-./manage_arkime.py create-cluster --name MyCluster
+./manage_arkime.py cluster-create --name MyCluster
 ```
 
 **NOTE:** You must perform a manual action in your AWS Account in order for this deployment to succeed.  Specifically you must [create an IAM Service Linked Role for AWS OpenSearch](https://docs.aws.amazon.com/opensearch-service/latest/developerguide/slr.html) to be able to manage the OpenSearch Domain.  This is very easy to do with the AWS CLI, and only needs to be done once per AWS Account:
@@ -100,24 +100,24 @@ You can deploy the Arkime Cluster into your AWS account like so:
 aws iam create-service-linked-role --aws-service-name es.amazonaws.com
 ```
 
-You can see your created cluster and the VPCs it is currently monitoring using the `list-clusters` command, like so:
+You can see your created cluster and the VPCs it is currently monitoring using the `clusters-list` command, like so:
 
 ```
-./manage_arkime.py create-cluster --name MyCluster
+./manage_arkime.py cluster-create --name MyCluster
 ```
 
 By default, you will be given the minimum-size Capture Cluster.  You can provision a Cluster that will serve your expected usage using a set of optional command-line parameters, which will ensure the EC2 Capture Nodes and OpenSearch Domain are suitably provisioned (plus a little extra for safety):
 
 ```
-./manage_arkime.py create-cluster --name MyCluster --expected-traffic 1 --spi-days 30 --replicas 1
+./manage_arkime.py cluster-create --name MyCluster --expected-traffic 1 --spi-days 30 --replicas 1
 ```
 
 ### Setting up capture for a VPC
 
-Once you have an Arkime Cluster, you can begin capturing traffic in a target VPC using the `add-vpc` command, like so:
+Once you have an Arkime Cluster, you can begin capturing traffic in a target VPC using the `vpc-add` command, like so:
 
 ```
-./manage_arkime.py add-vpc --cluster-name MyCluster --vpc-id vpc-123456789
+./manage_arkime.py vpc-add --cluster-name MyCluster --vpc-id vpc-123456789
 ```
 
 **NOTE:** There are some caveats you need to be aware of.  First, the VPC must be in the same AWS Account and Region as the Arkime Cluster.  Second, the capture setup is currently static, meaning if the network configuration of your VPC changes or your compute fleet changes (due to instance replacement, scaling events, etc), those changes will not be reflected in the capture.  We're working on a solution for this.
@@ -136,7 +136,7 @@ You can log into your Viewer Dashboard using credentials from the `get-login-det
 
 We deploy default configuration for the Arkime Capture and Viewer processes that work "out of the box".  However, you can customize the configuration for those processes - and add custom behavior to your Capture and Viewer Nodes.
 
-As part of running `create-cluster`, the CLI will create a new, cluster-specific directory at the root of this repo on-disk that contains the configuration/scripts that will be deployed into your containers (currently at: `./config-YourClusterName`).  This directory contains two sub directories which contain all the scripts/configuration that are copied onto the Capture (`./config-YourClusterName/capture/`) and Viewer (`./config-YourClusterName/viewer/`) Nodes as part of their startup process.  By default, these directories will just contain the aforementioned "default configuration", but you're free to edit the files there or even add new ones.  Any files in the `./config-YourClusterName/capture/` will end copied to your Capture Nodes; any files in the `./config-YourClusterName/viewer/` will end copied to your Viewer Nodes.
+As part of running `cluster-create`, the CLI will create a new, cluster-specific directory at the root of this repo on-disk that contains the configuration/scripts that will be deployed into your containers (currently at: `./config-YourClusterName`).  This directory contains two sub directories which contain all the scripts/configuration that are copied onto the Capture (`./config-YourClusterName/capture/`) and Viewer (`./config-YourClusterName/viewer/`) Nodes as part of their startup process.  By default, these directories will just contain the aforementioned "default configuration", but you're free to edit the files there or even add new ones.  Any files in the `./config-YourClusterName/capture/` will end copied to your Capture Nodes; any files in the `./config-YourClusterName/viewer/` will end copied to your Viewer Nodes.
 
 ```
 chelma@3c22fba4e266 aws-aio % tree config-YourClusterName
@@ -151,7 +151,7 @@ config-YourClusterName
 ```
 
 To help understand how this process works (and how to leverage the system to your benefit), here's an overview of how this currently works:
-1. During `create-cluster`, we turn the `capture/` and `viewer/` config directories into tarballs and stick them in AWS S3.
+1. During `cluster-create`, we turn the `capture/` and `viewer/` config directories into tarballs and stick them in AWS S3.
 2. When ECS starts the Capture and Viewer Nodes, it invokes the `run_*_node.sh` scripts embedded in their Docker Image
 3. The `run_*_node.sh` script invokes the `bootstrap_config.sh` script, also embedded in their Docker Image, which pulls the configuration tarball from S3 and unpacks it onto disk
 4. The `run_*_node.sh` script invokes the `initialize_arkime.sh` script, which is one of the files in your `capture/` and `viewer/` config directories locally, and sent to the container via the tarball in S3.  By default, it performs some final initialization to make the pre-canned behavior "go".  You can modify this script to perform any steps you'd like, and stick any new files you need in the container in the `capture/` and `viewer/` config directories.
@@ -164,13 +164,13 @@ Note: Currently, you can only set the cluster's configuration using this mechani
 You can destroy the Arkime Cluster in your AWS account by first turning off traffic capture for all VPCs:
 
 ```
-./manage_arkime.py remove-vpc --cluster-name MyCluster --vpc-id vpc-123456789
+./manage_arkime.py vpc-remove --cluster-name MyCluster --vpc-id vpc-123456789
 ```
 
 and then terminating the Arkime Cluster:
 
 ```
-./manage_arkime.py destroy-cluster --name MyCluster
+./manage_arkime.py cluster-destroy --name MyCluster
 ```
 
 By default, this will tear down the Capture/Viewer Nodes and leave the OpenSearch Domain and Capture Bucket intact.  Consequently, it will also leave a number of CloudFormation stacks in place as well.  
@@ -178,7 +178,7 @@ By default, this will tear down the Capture/Viewer Nodes and leave the OpenSearc
 If you want to tear down **EVERYTHING** and are willing to blow away all your data, you can use the "nuke" option:
 
 ```
-./manage_arkime.py destroy-cluster --name MyCluster --destroy-everything
+./manage_arkime.py cluster-destroy --name MyCluster --destroy-everything
 ```
 
 ## How to shell into the ECS containers

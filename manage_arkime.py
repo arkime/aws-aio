@@ -3,15 +3,15 @@ import logging
 
 import click
 
-from commands.add_vpc import cmd_add_vpc
+from commands.vpc_add import cmd_vpc_add
 from commands.config_update import cmd_config_update
-from commands.create_cluster import cmd_create_cluster
-from commands.destroy_cluster import cmd_destroy_cluster
-from commands.deploy_demo_traffic import cmd_deploy_demo_traffic
-from commands.destroy_demo_traffic import cmd_destroy_demo_traffic
+from commands.cluster_create import cmd_cluster_create
+from commands.cluster_destroy import cmd_cluster_destroy
+from commands.demo_traffic_deploy import cmd_demo_traffic_deploy
+from commands.demo_traffic_destroy import cmd_demo_traffic_destroy
 from commands.get_login_details import cmd_get_login_details
-from commands.list_clusters import cmd_list_clusters
-from commands.remove_vpc import cmd_remove_vpc
+from commands.clusters_list import cmd_clusters_list
+from commands.vpc_remove import cmd_vpc_remove
 import core.constants as constants
 from core.capacity_planning import MAX_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS
 from core.logging_wrangler import LoggingWrangler, set_boto_log_level
@@ -40,19 +40,19 @@ def cli(ctx, profile, region):
 
 @click.command(help="Uses CDK to deploy a sample traffic source to your account")
 @click.pass_context
-def deploy_demo_traffic(ctx):
+def demo_traffic_deploy(ctx):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_deploy_demo_traffic(profile, region)
-cli.add_command(deploy_demo_traffic)
+    cmd_demo_traffic_deploy(profile, region)
+cli.add_command(demo_traffic_deploy)
 
 @click.command(help="Uses CDK to destroy previously-deployed sample traffic sources in your account")
 @click.pass_context
-def destroy_demo_traffic(ctx):
+def demo_traffic_destroy(ctx):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_destroy_demo_traffic(profile, region)
-cli.add_command(destroy_demo_traffic)
+    cmd_demo_traffic_destroy(profile, region)
+cli.add_command(demo_traffic_destroy)
 
 @click.command(help="Creates an Arkime Cluster in your account")
 @click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have", required=True)
@@ -95,11 +95,11 @@ cli.add_command(destroy_demo_traffic)
     default=False
 )
 @click.pass_context
-def create_cluster(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage):
+def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_create_cluster(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage)
-cli.add_command(create_cluster)
+    cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage)
+cli.add_command(cluster_create)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")
 @click.option("--name", help="The name of the Arkime Cluster to tear down", required=True)
@@ -111,11 +111,11 @@ cli.add_command(create_cluster)
     default=False
 )
 @click.pass_context
-def destroy_cluster(ctx, name, destroy_everything):
+def cluster_destroy(ctx, name, destroy_everything):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_destroy_cluster(profile, region, name, destroy_everything)
-cli.add_command(destroy_cluster)
+    cmd_cluster_destroy(profile, region, name, destroy_everything)
+cli.add_command(cluster_destroy)
 
 @click.command(help="Retrieves the login details of a cluster's the Arkime Viewer(s)")
 @click.option("--name", help="The name of the Arkime Cluster to get the login details for", required=True)
@@ -128,11 +128,11 @@ cli.add_command(get_login_details)
 
 @click.command(help="Lists the currently deployed Arkime Clusters and their VPCs")
 @click.pass_context
-def list_clusters(ctx):
+def clusters_list(ctx):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_list_clusters(profile, region)
-cli.add_command(list_clusters)
+    cmd_clusters_list(profile, region)
+cli.add_command(clusters_list)
 
 @click.command(help=("Sets up the specified VPC to have its traffic monitored by the specified, existing Arkime Cluster."
                     + "  By default, each VPC is assigned a Virtual Network Interface ID (VNI) unused by any other VPC"
@@ -143,21 +143,21 @@ cli.add_command(list_clusters)
               + " result in multiple VPCs using the same VNI, and VNIs to potentially be re-used long after they are"
               + " relinquished."), default=None, type=int)
 @click.pass_context
-def add_vpc(ctx, cluster_name, vpc_id, force_vni):
+def vpc_add(ctx, cluster_name, vpc_id, force_vni):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_add_vpc(profile, region, cluster_name, vpc_id, force_vni)
-cli.add_command(add_vpc)
+    cmd_vpc_add(profile, region, cluster_name, vpc_id, force_vni)
+cli.add_command(vpc_add)
 
 @click.command(help="Removes traffic monitoring from the specified VPC being performed by the specified Arkime Cluster")
 @click.option("--cluster-name", help="The name of the Arkime Cluster performing monitoring", required=True)
 @click.option("--vpc-id", help="The VPC ID to remove monitoring from", required=True)
 @click.pass_context
-def remove_vpc(ctx, cluster_name, vpc_id):
+def vpc_remove(ctx, cluster_name, vpc_id):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_remove_vpc(profile, region, cluster_name, vpc_id)
-cli.add_command(remove_vpc)
+    cmd_vpc_remove(profile, region, cluster_name, vpc_id)
+cli.add_command(vpc_remove)
 
 @click.command(help="Updates specified Arkime Cluster's Capture/Viewer configuration")
 @click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)

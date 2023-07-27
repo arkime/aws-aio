@@ -8,8 +8,8 @@ import core.constants as constants
 
 logger = logging.getLogger(__name__)
 
-def cmd_list_clusters(profile: str, region: str) -> List[Dict[str, str]]:
-    logger.debug(f"Invoking list-clusters with profile '{profile}' and region '{region}'")
+def cmd_clusters_list(profile: str, region: str) -> List[Dict[str, str]]:
+    logger.debug(f"Invoking clusters-list with profile '{profile}' and region '{region}'")
 
     logger.info("Retrieving cluster details...")
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)

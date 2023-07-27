@@ -6,14 +6,14 @@ import core.constants as constants
 
 logger = logging.getLogger(__name__)
 
-def cmd_destroy_demo_traffic(profile: str, region: str):
-    logger.debug(f"Invoking destroy-demo-traffic with profile '{profile}' and region '{region}'")
+def cmd_demo_traffic_deploy(profile: str, region: str):
+    logger.debug(f"Invoking demo-traffic-deploy with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     cdk_client = CdkClient(aws_provider.get_aws_env())
 
-    stacks_to_destroy = [constants.NAME_DEMO_STACK_1, constants.NAME_DEMO_STACK_2]
+    stacks_to_deploy = [constants.NAME_DEMO_STACK_1, constants.NAME_DEMO_STACK_2]
     context = {
-        constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_DEMO
+        constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DEPLOY_DEMO
     }
-    cdk_client.destroy(stacks_to_destroy, context=context)
+    cdk_client.deploy(stacks_to_deploy, context=context)

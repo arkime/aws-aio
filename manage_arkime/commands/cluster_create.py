@@ -23,9 +23,9 @@ from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
 
-def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
+def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
                        pcap_days: int, preconfirm_usage: bool):
-    logger.debug(f"Invoking create-cluster with profile '{profile}' and region '{region}'")
+    logger.debug(f"Invoking cluster-create with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     aws_env = aws_provider.get_aws_env()
@@ -55,7 +55,7 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(
+    create_context = context.generate_cluster_create_context(
         name,
         cert_arn,
         next_capacity_plan,

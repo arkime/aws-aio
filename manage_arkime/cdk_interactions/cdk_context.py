@@ -8,7 +8,7 @@ from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPla
                                     DEFAULT_S3_STORAGE_CLASS)
 from core.user_config import UserConfig
 
-def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan,
+def generate_cluster_create_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan,
                                     user_config: UserConfig, cluster_config_bucket_name: str) -> Dict[str, str]:
     create_context = _generate_cluster_context(
         name,
@@ -17,10 +17,10 @@ def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_pla
         user_config,
         cluster_config_bucket_name
     )
-    create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_CREATE_CLUSTER
+    create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_cluster_create
     return create_context
 
-def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
+def generate_cluster_destroy_context(name: str) -> Dict[str, str]:
     # Hardcode these value because it saves us some implementation headaches and it doesn't matter what it is. Since
     # we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are irrelevant
     # or it fails/rolls back they are irrelevant.
@@ -36,7 +36,7 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
     fake_bucket_name = ""
 
     destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config, fake_bucket_name)
-    destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER
+    destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_cluster_destroy
     return destroy_context
 
 def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig,
@@ -65,20 +65,20 @@ def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: Clu
         constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps(cmd_params))
     }
 
-def generate_add_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str, vni: int,
+def generate_vpc_add_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str, vni: int,
                              cidrs: List[str]) -> Dict[str, str]:
     add_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, bus_arn, vni, cidrs)
-    add_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_ADD_VPC
+    add_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_vpc_add
     return add_context
 
-def generate_remove_vpc_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str) -> Dict[str, str]:
+def generate_vpc_remove_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str) -> Dict[str, str]:
     # Hardcode these values because it saves us some implementation headaches and it doesn't matter what they are. Since
     # we're tearing down the Cfn stack in which it would be used, the operation either succeeds and the it's
     # irrelevant or it fails/rolls back and it's irrelevant.
     vni = constants.VNI_DEFAULT
     cidrs = ["0.0.0.0/0"]
     remove_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, bus_arn, vni, cidrs)
-    remove_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_REMOVE_VPC
+    remove_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_vpc_remove
     return remove_context
 
 def _generate_mirroring_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str, vni: int,
