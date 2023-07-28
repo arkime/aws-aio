@@ -197,15 +197,15 @@ An explanation of the returned fields is as follows:
 * **cluster_name:** The name of your Arkime Cluster
 * **opensearch_domain:** The name of your Arkime Cluster's OpenSearch Domain
 * **configuration_capture:** The details of your Capture Nodes' deployed configuration
-* **configuration_capture.aws_aio_version:** A version number used to track backwards compatibility within the AWS AIO project
-* **configuration_capture.config_version:** An integer that's incremented every time new Arkime Configuration is deployed (e.g. whenever you run `config-update` with new configuration).  Used to keep track of which configuration archive in S3 is deployed to your ECS Containers.
-* **configuration_capture.md5_version:** The md5 hash of the deployed Arkime Configuration archive.  Used to find changes in configuration.
-* **configuration_capture.source_version:** A version tracker for the AWS AIO CLI source code running on the client machine.
-* **configuration_capture.time_utc:** A UTC timestamp for when the Arkime Configuration archive deployed to your Nodes was created.
+    * **aws_aio_version:** A version number used to track backwards compatibility within the AWS AIO project
+    * **config_version:** An integer that's incremented every time new Arkime Configuration is deployed (e.g. whenever you run `config-update` with new configuration).  Used to keep track of which configuration archive in S3 is deployed to your ECS Containers.
+    * **md5_version:** The md5 hash of the deployed Arkime Configuration archive.  Used to find changes in configuration.
+    * **source_version:** A version tracker for the AWS AIO CLI source code running on the client machine.
+    * **time_utc:** A UTC timestamp for when the Arkime Configuration archive deployed to your Nodes was created.
 * **configuration_viewer:** The details of your Viewer Nodes' deployed configuration
 * **monitored_vpcs:** The VPCs your Arkime Cluster is currently monitoring
-* **monitored_vpcs.vpc_id:** The AWS VPC ID of the VPC being monitored
-* **monitored_vpcs.vni:** The Virtual Network Identifier (VNI) assigned to this VPC within Arkime.  Makes it possible to uniquely identify traffic from each VPC being monitored.
+    * **vpc_id:** The AWS VPC ID of the VPC being monitored
+    * **vni:** The Virtual Network Identifier (VNI) assigned to this VPC within Arkime.  Makes it possible to uniquely identify traffic from each VPC being monitored.
 
 ### Tearing down your Arkime Cluster
 
