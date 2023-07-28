@@ -176,7 +176,10 @@ def _bounce_ecs_service(ecs_cluster: str, ecs_service: str, ssm_param: str, aws_
             logger.info(f"Waiting {wait_time_sec} more seconds for ECS service to finish bouncing...")
             sleep(wait_time_sec)
         
-        logger.info(f"ECS Service {ecs_service} bounced successfully")
+        if not reverted:
+            logger.info(f"ECS Service {ecs_service} bounced successfully")
+        else:
+            logger.warning(f"ECS Service {ecs_service} did not stabilize with the new config.  Config was reverted.")
     except NoPreviousConfig:
         logger.error("Unable to roll back to previous config; exiting")
         exit(1)
