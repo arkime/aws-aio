@@ -24,8 +24,4 @@ aws s3 cp $s3_path $config_path
 echo "Unpacking the archive..."
 unzip $config_path -d $config_dir
 
-<<<<<<< HEAD
 mv "$config_dir/initialize_arkime.sh" /initialize_arkime.sh
-=======
-mv "$config_dir/initialize_arkime.sh" /initialize_arkime.sh
->>>>>>> Checkpoint: partial config-update cmd; tarball -> zip
