@@ -261,7 +261,8 @@ export class CaptureNodesStack extends cdk.Stack {
         const clusterParamValue: ClusterSsmValue = {
             busArn: clusterBus.eventBusArn,
             busName: clusterBus.eventBusName,
-            clusterName: props.clusterName, 
+            clusterName: props.clusterName,
+            osDomainName: props.osDomain.domainName,
             vpceServiceId: gwlbEndpointService.ref,
             capacityPlan: props.planCluster,
             userConfig: props.userConfig

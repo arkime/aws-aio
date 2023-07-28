@@ -15,6 +15,7 @@ export interface ClusterSsmValue {
     readonly busArn: string;
     readonly busName: string;
     readonly clusterName: string;
+    readonly osDomainName: string;
     readonly vpceServiceId: string;
     readonly capacityPlan: context.ClusterPlan;
     readonly userConfig: context.UserConfig;

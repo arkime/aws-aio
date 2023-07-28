@@ -103,7 +103,7 @@ aws iam create-service-linked-role --aws-service-name es.amazonaws.com
 You can see your created cluster and the VPCs it is currently monitoring using the `clusters-list` command, like so:
 
 ```
-./manage_arkime.py cluster-create --name MyCluster
+./manage_arkime.py clusters-list
 ```
 
 By default, you will be given the minimum-size Capture Cluster.  You can provision a Cluster that will serve your expected usage using a set of optional command-line parameters, which will ensure the EC2 Capture Nodes and OpenSearch Domain are suitably provisioned (plus a little extra for safety):
@@ -151,13 +151,61 @@ config-YourClusterName
 ```
 
 To help understand how this process works (and how to leverage the system to your benefit), here's an overview of how this currently works:
-1. During `cluster-create`, we turn the `capture/` and `viewer/` config directories into tarballs and stick them in AWS S3.
+1. During `cluster-create`, we turn the `capture/` and `viewer/` config directories into archives and stick them in AWS S3.
 2. When ECS starts the Capture and Viewer Nodes, it invokes the `run_*_node.sh` scripts embedded in their Docker Image
 3. The `run_*_node.sh` script invokes the `bootstrap_config.sh` script, also embedded in their Docker Image, which pulls the configuration tarball from S3 and unpacks it onto disk
 4. The `run_*_node.sh` script invokes the `initialize_arkime.sh` script, which is one of the files in your `capture/` and `viewer/` config directories locally, and sent to the container via the tarball in S3.  By default, it performs some final initialization to make the pre-canned behavior "go".  You can modify this script to perform any steps you'd like, and stick any new files you need in the container in the `capture/` and `viewer/` config directories.
 5. The `run_*_node.sh` script starts the Arkime Capture/Viewer process
 
-Note: Currently, you can only set the cluster's configuration using this mechanism during its initial deployment, but we will be changing that shortly.
+After running `cluster-create` and uploading the initial configuration, you'll need to use the `config-update` CLI call to deploy changed configuration to your Capture/Viewer Nodes.  This is to improve deployment safety by providing a clearer rollback path in the event the new configuration doesn't work out as expected.
+
+`config-update` will take a look at the local configuration and compare it what is currently deployed on your Nodes.  If the local configuration is different, it will be archived, sent to S3, and your ECS Containers recycled to pull down the new configuration.  If we see that Containers with the new configuration fail to start up correctly, we automatically revert to the previously deployed configuration.
+
+### Viewing the Deployed Clusters
+
+To see the clusters you currently have deployed, you can use the `clusters-list` CLI command.  This will return a list of clusters and their associated details like so:
+```
+[
+    {
+        "cluster_name": "MyCluster",
+        "opensearch_domain": "arkimedomain872-1nzuztrqm7dl",
+        "configuration_capture": {
+            "aws_aio_version": "1",
+            "config_version": "7",
+            "md5_version": "64295265159ac577cf741bb4d1966fcc",
+            "source_version": "v0.1.1-10-g3487548",
+            "time_utc": "2023-07-27 18:26:23"
+        },
+        "configuration_viewer": {
+            "aws_aio_version": "1",
+            "config_version": "1",
+            "md5_version": "be13e172a6440fcd6a7e73c8ae41457b",
+            "source_version": "v0.1.1-7-g9c2d7ca",
+            "time_utc": "2023-07-24 17:04:25"
+        },
+        "monitored_vpcs": [
+            {
+                "vpc_id": "vpc-008d258d7c536384b",
+                "vni": "15"
+            }
+        ]
+    }
+]
+```
+
+An explanation of the returned fields is as follows:
+* **cluster_name:** The name of your Arkime Cluster
+* **opensearch_domain:** The name of your Arkime Cluster's OpenSearch Domain
+* **configuration_capture:** The details of your Capture Nodes' deployed configuration
+* **configuration_capture.aws_aio_version:** A version number used to track backwards compatibility within the AWS AIO project
+* **configuration_capture.config_version:** An integer that's incremented every time new Arkime Configuration is deployed (e.g. whenever you run `config-update` with new configuration).  Used to keep track of which configuration archive in S3 is deployed to your ECS Containers.
+* **configuration_capture.md5_version:** The md5 hash of the deployed Arkime Configuration archive.  Used to find changes in configuration.
+* **configuration_capture.source_version:** A version tracker for the AWS AIO CLI source code running on the client machine.
+* **configuration_capture.time_utc:** A UTC timestamp for when the Arkime Configuration archive deployed to your Nodes was created.
+* **configuration_viewer:** The details of your Viewer Nodes' deployed configuration
+* **monitored_vpcs:** The VPCs your Arkime Cluster is currently monitoring
+* **monitored_vpcs.vpc_id:** The AWS VPC ID of the VPC being monitored
+* **monitored_vpcs.vni:** The Virtual Network Identifier (VNI) assigned to this VPC within Arkime.  Makes it possible to uniquely identify traffic from each VPC being monitored.
 
 ### Tearing down your Arkime Cluster
 
