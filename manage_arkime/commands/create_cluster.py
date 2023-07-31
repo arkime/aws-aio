@@ -3,9 +3,7 @@ import logging
 import sys
 from typing import Callable
 
-import arkime_interactions.arkime_files as arkime_files
 import arkime_interactions.config_wrangling as config_wrangling
-import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.events_interactions as events
@@ -49,9 +47,6 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
     # Set up the Arkime Config so it's available in-AWS
     _set_up_arkime_config(name, aws_provider)
 
-    # Set up any additional state
-    file_map = _write_arkime_config_to_datastore(name, next_capacity_plan, aws_provider)
-
     # Deploy the CFN Resources
     stacks_to_deploy = [
         constants.get_capture_bucket_stack_name(name),
@@ -60,7 +55,13 @@ def cmd_create_cluster(profile: str, region: str, name: str, expected_traffic: f
         constants.get_opensearch_domain_stack_name(name),
         constants.get_viewer_nodes_stack_name(name)
     ]
-    create_context = context.generate_create_cluster_context(name, cert_arn, next_capacity_plan, next_user_config, file_map)
+    create_context = context.generate_create_cluster_context(
+        name,
+        cert_arn,
+        next_capacity_plan,
+        next_user_config,
+        constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, name)
+    )
     cdk_client.deploy(stacks_to_deploy, context=create_context)
 
     # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
@@ -233,53 +234,6 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
         config_wrangling.get_viewer_config_tarball,
         aws_provider
     )
-
-def _write_arkime_config_to_datastore(cluster_name: str, next_capacity_plan: ClusterPlan,
-                                      aws_provider: AwsClientProvider) -> arkime_files.ArkimeFilesMap:
-    # Initialize our map
-    map = arkime_files.ArkimeFilesMap(
-        constants.get_capture_config_ini_ssm_param_name(cluster_name),
-        [],
-        constants.get_viewer_config_ini_ssm_param_name(cluster_name),
-        [],
-    )
-
-    # Write the Arkime INI files
-    capture_ini = arkime_conf.get_capture_ini(next_capacity_plan.s3.pcapStorageClass)
-    ssm_ops.put_ssm_param(
-        map.captureIniLoc,
-        json.dumps(capture_ini.to_dict()),
-        aws_provider,
-        description="Contents of the Capture Nodes' .ini file",
-        overwrite=True
-    )
-
-    viewer_ini = arkime_conf.get_viewer_ini()
-    ssm_ops.put_ssm_param(
-        map.viewerIniLoc,
-        json.dumps(viewer_ini.to_dict()),
-        aws_provider,
-        description="Contents of the Viewer Nodes' .ini file",
-        overwrite=True
-    )
-
-    # Write any/all additional Capture Node files
-    capture_additional_files = [
-        arkime_conf.get_capture_rules_default()
-    ]
-    for capture_file in capture_additional_files:
-        new_path = constants.get_capture_file_ssm_param_name(cluster_name, capture_file.system_path)
-        ssm_ops.put_ssm_param(
-            new_path,
-            json.dumps(capture_file.to_dict()),
-            aws_provider,
-            description="A Capture Node file",
-            overwrite=True
-        )
-
-        map.captureAddFileLocs.append(new_path)
-
-    return map
 
 def _set_up_viewer_cert(name: str, aws_provider: AwsClientProvider) -> str:
     # Only set up the certificate if it doesn't exist

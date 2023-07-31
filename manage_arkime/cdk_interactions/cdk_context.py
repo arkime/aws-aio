@@ -2,7 +2,6 @@ import json
 import shlex
 from typing import Dict, List
 
-from arkime_interactions.arkime_files import ArkimeFilesMap
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan, 
                                     MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS, S3Plan,
@@ -10,8 +9,14 @@ from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPla
 from core.user_config import UserConfig
 
 def generate_create_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan,
-                                    user_config: UserConfig, file_map: ArkimeFilesMap) -> Dict[str, str]:
-    create_context = _generate_cluster_context(name, viewer_cert_arn, cluster_plan, user_config, file_map)
+                                    user_config: UserConfig, cluster_config_bucket_name: str) -> Dict[str, str]:
+    create_context = _generate_cluster_context(
+        name,
+        viewer_cert_arn,
+        cluster_plan,
+        user_config,
+        cluster_config_bucket_name
+    )
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_CREATE_CLUSTER
     return create_context
 
@@ -22,31 +27,33 @@ def generate_destroy_cluster_context(name: str) -> Dict[str, str]:
     fake_arn = "N/A"
     fake_cluster_plan = ClusterPlan(
         CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        CaptureVpcPlan(1),
+        CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
     )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
-    fake_map = ArkimeFilesMap("", [], "", [])
+    fake_bucket_name = ""
 
-    destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config, fake_map)
+    destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config, fake_bucket_name)
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_DESTROY_CLUSTER
     return destroy_context
 
 def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig,
-                              file_map: ArkimeFilesMap) -> Dict[str, str]:
+                              cluster_config_bucket_name: str) -> Dict[str, str]:
     cmd_params = {
-        "arkimeFileMap": json.dumps(file_map.to_dict()),
         "nameCluster": name,
         "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
         "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(name),
+        "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(name),
         "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(name),
         "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(name),
+        "nameClusterConfigBucket": cluster_config_bucket_name,
         "nameClusterSsmParam": constants.get_cluster_ssm_param_name(name),
         "nameOSDomainStack": constants.get_opensearch_domain_stack_name(name),
         "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(name),
         "nameViewerCertArn": viewer_cert_arn,
+        "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(name),
         "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(name),
         "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(name),
         "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(name),

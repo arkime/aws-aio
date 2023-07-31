@@ -3,8 +3,6 @@ import pytest
 import shlex
 import unittest.mock as mock
 
-import arkime_interactions.arkime_files as arkime_files
-import arkime_interactions.generate_config as arkime_conf
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.events_interactions import ConfigureIsmEvent
@@ -12,8 +10,7 @@ import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 
 from commands.create_cluster import (cmd_create_cluster, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
-                                     _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _write_arkime_config_to_datastore,
-                                     _set_up_arkime_config)
+                                     _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config)
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
@@ -24,7 +21,6 @@ from core.versioning import VersionInfo
 
 @mock.patch("commands.create_cluster.AwsClientProvider")
 @mock.patch("commands.create_cluster._set_up_arkime_config")
-@mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_previous_user_config")
 @mock.patch("commands.create_cluster._get_previous_capacity_plan")
@@ -35,7 +31,7 @@ from core.versioning import VersionInfo
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                  mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                 mock_write_arkime, mock_set_up_arkime_conf, mock_aws_provider_cls):
+                                                                 mock_set_up_arkime_conf, mock_aws_provider_cls):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -61,8 +57,6 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 
     mock_confirm.return_value = True
 
-    map = arkime_files.ArkimeFilesMap("cap", ["f1"], "view", ["f2", "f3"])
-    mock_write_arkime.return_value = map
 
     # Run our test
     cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
@@ -80,16 +74,18 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "arkimeFileMap": json.dumps(map.to_dict()),
                     "nameCluster": "my-cluster",
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
+                    "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name("my-cluster"),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
+                    "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, "my-cluster"),
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name("my-cluster"),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
                     "nameViewerCertArn": "arn",
+                    "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name("my-cluster"),
                     "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name("my-cluster"),
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name("my-cluster"),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name("my-cluster"),
@@ -117,11 +113,6 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_configure_calls == mock_configure.call_args_list
 
-    expected_write_arkime_calls = [
-        mock.call("my-cluster", cluster_plan, mock.ANY)
-    ]
-    assert expected_write_arkime_calls == mock_write_arkime.call_args_list
-
     expected_set_up_arkime_conf_calls = [
         mock.call("my-cluster", mock.ANY)
     ]
@@ -129,7 +120,6 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 
 @mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
 @mock.patch("commands.create_cluster._set_up_arkime_config")
-@mock.patch("commands.create_cluster._write_arkime_config_to_datastore")
 @mock.patch("commands.create_cluster._configure_ism")
 @mock.patch("commands.create_cluster._get_previous_user_config")
 @mock.patch("commands.create_cluster._get_previous_capacity_plan")
@@ -140,7 +130,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 @mock.patch("commands.create_cluster.CdkClient")
 def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                          mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_write_arkime, mock_set_up_arkime_conf):
+                                                                         mock_set_up_arkime_conf):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -173,9 +163,6 @@ def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cd
     
     expected_configure_calls = []
     assert expected_configure_calls == mock_configure.call_args_list
-
-    expected_write_arkime_calls = []
-    assert expected_write_arkime_calls == mock_write_arkime.call_args_list
 
     expected_set_up_arkime_conf_calls = []
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
@@ -460,58 +447,6 @@ def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
 
     assert False == actual_value
     assert mock_report.get_confirmation.called
-
-@mock.patch("commands.create_cluster.ssm_ops")
-def test_WHEN_write_arkime_config_to_datastore_called_THEN_as_expected(mock_ssm_ops):
-    # Set up our mock
-    cluster_plan = ClusterPlan(
-        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        CaptureVpcPlan(DEFAULT_NUM_AZS),
-        EcsSysResourcePlan(3584, 15360),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
-    )
-
-    mock_provider = mock.Mock()
-
-    # Run our test
-    actual_value = _write_arkime_config_to_datastore("my-cluster", cluster_plan, mock_provider)
-
-    # Check our results
-    expected_map = arkime_files.ArkimeFilesMap(
-        constants.get_capture_config_ini_ssm_param_name("my-cluster"),
-        [
-            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().system_path)
-        ],
-        constants.get_viewer_config_ini_ssm_param_name("my-cluster"),
-        [],
-    )
-    assert expected_map == actual_value
-
-    expected_put_ssm_calls = [
-        mock.call(
-            constants.get_capture_config_ini_ssm_param_name("my-cluster"),
-            mock.ANY,
-            mock_provider,
-            description=mock.ANY,
-            overwrite=True
-        ),
-        mock.call(
-            constants.get_viewer_config_ini_ssm_param_name("my-cluster"),
-            mock.ANY,
-            mock_provider,
-            description=mock.ANY,
-            overwrite=True
-        ),
-        mock.call(
-            constants.get_capture_file_ssm_param_name("my-cluster", arkime_conf.get_capture_rules_default().system_path),
-            mock.ANY,
-            mock_provider,
-            description=mock.ANY,
-            overwrite=True
-        ),
-    ]
-    assert expected_put_ssm_calls == mock_ssm_ops.put_ssm_param.call_args_list
 
 @mock.patch("commands.create_cluster.upload_default_elb_cert")
 @mock.patch("commands.create_cluster.ssm_ops")

@@ -44,14 +44,15 @@ switch(params.type) {
 
         const captureNodesStack = new CaptureNodesStack(app, params.nameCaptureNodesStack, {
             env: env,
-            arkimeFilesMap: params.arkimeFileMap,
             captureBucket: captureBucketStack.bucket,
             captureBucketKey: captureBucketStack.bucketKey,
             captureVpc: captureVpcStack.vpc,
+            clusterConfigBucketName: params.nameClusterConfigBucket,
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
             osPassword: osDomainStack.osPassword,
             planCluster: params.planCluster,
+            ssmParamNameCaptureConfig: params.nameCaptureConfigSsmParam,
             ssmParamNameCluster: params.nameClusterSsmParam,
             userConfig: params.userConfig
         });
@@ -61,13 +62,14 @@ switch(params.type) {
 
         const viewerNodesStack = new ViewerNodesStack(app, params.nameViewerNodesStack, {
             env: env,
-            arkimeFilesMap: params.arkimeFileMap,
             arnViewerCert: params.nameViewerCertArn,
             captureBucket: captureBucketStack.bucket,
             viewerVpc: captureVpcStack.vpc,
+            clusterConfigBucketName: params.nameClusterConfigBucket,
             clusterName: params.nameCluster,
             osDomain: osDomainStack.domain,
             osPassword: osDomainStack.osPassword,
+            ssmParamNameViewerConfig: params.nameViewerConfigSsmParam,
             ssmParamNameViewerDns: params.nameViewerDnsSsmParam,
             ssmParamNameViewerPass: params.nameViewerPassSsmParam,
             ssmParamNameViewerUser: params.nameViewerUserSsmParam,

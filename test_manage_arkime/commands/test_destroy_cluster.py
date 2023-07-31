@@ -2,8 +2,6 @@ import json
 import shlex
 import unittest.mock as mock
 
-import arkime_interactions.arkime_files as arkime_files
-import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert, _delete_arkime_config_from_datastore
@@ -37,7 +35,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(1),
+        CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
@@ -59,16 +57,18 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "arkimeFileMap": json.dumps(arkime_files.ArkimeFilesMap("", [], "", []).to_dict()),
                     "nameCluster": TEST_CLUSTER,
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(TEST_CLUSTER),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
+                    "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(TEST_CLUSTER),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(TEST_CLUSTER),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(TEST_CLUSTER),
+                    "nameClusterConfigBucket": "",
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
                     "nameViewerCertArn": "N/A",
+                    "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(TEST_CLUSTER),
                     "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(TEST_CLUSTER),
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
@@ -125,7 +125,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(1),
+        CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
@@ -164,16 +164,18 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "arkimeFileMap": json.dumps(arkime_files.ArkimeFilesMap("", [], "", []).to_dict()),
                     "nameCluster": TEST_CLUSTER,
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(TEST_CLUSTER),
                     "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
+                    "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(TEST_CLUSTER),
                     "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(TEST_CLUSTER),
                     "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(TEST_CLUSTER),
+                    "nameClusterConfigBucket": "",
                     "nameClusterSsmParam": constants.get_cluster_ssm_param_name(TEST_CLUSTER),
                     "nameOSDomainStack": constants.get_opensearch_domain_stack_name(TEST_CLUSTER),
                     "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
                     "nameViewerCertArn": "N/A",
+                    "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(TEST_CLUSTER),
                     "nameViewerDnsSsmParam": constants.get_viewer_dns_ssm_param_name(TEST_CLUSTER),
                     "nameViewerPassSsmParam": constants.get_viewer_password_ssm_param_name(TEST_CLUSTER),
                     "nameViewerUserSsmParam": constants.get_viewer_user_ssm_param_name(TEST_CLUSTER),
@@ -283,10 +285,13 @@ def test_WHEN_destroy_viewer_cert_called_AND_doesnt_exist_THEN_skip(mock_ssm_get
     expected_delete_ssm_calls = []
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
 
+@mock.patch("commands.destroy_cluster.destroy_bucket")
 @mock.patch("commands.destroy_cluster.delete_ssm_param")
-def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_ssm_delete):
+def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_ssm_delete, mock_destroy_bucket):
     # Set up our mock
+    test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
     mock_provider = mock.Mock()
+    mock_provider.get_aws_env.return_value = test_env
 
     # Run our test
     _delete_arkime_config_from_datastore(TEST_CLUSTER, mock_provider)
@@ -294,16 +299,24 @@ def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_s
     # Check our results
     expected_delete_ssm_calls = [
         mock.call(
-            constants.get_capture_config_ini_ssm_param_name(TEST_CLUSTER),
+            constants.get_capture_config_details_ssm_param_name(TEST_CLUSTER),
             mock_provider
         ),
         mock.call(
-            constants.get_viewer_config_ini_ssm_param_name(TEST_CLUSTER),
-            mock_provider
-        ),
-        mock.call(
-            constants.get_capture_file_ssm_param_name(TEST_CLUSTER, arkime_conf.get_capture_rules_default().system_path),
+            constants.get_viewer_config_details_ssm_param_name(TEST_CLUSTER),
             mock_provider
         ),
     ]
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
+
+    expected_destroy_bucket_calls = [
+        mock.call(
+            bucket_name=constants.get_config_bucket_name(
+                test_env.aws_account,
+                test_env.aws_region,
+                TEST_CLUSTER
+            ),
+        aws_provider=mock_provider
+        )
+    ]
+    assert expected_destroy_bucket_calls == mock_destroy_bucket.call_args_list

@@ -132,6 +132,33 @@ You can log into your Viewer Dashboard using credentials from the `get-login-det
 
 **NOTE:** By default, we set up HTTPS using a self-signed certificate which your browser will give you a warning about when you visit the dashboard URL.  In \*most\* situations, you can just acknowledge the risk and click through.  However, if you're using Chrome on Mac OS you might not be allowed to click through ([see here](https://stackoverflow.com/questions/58802767/no-proceed-anyway-option-on-neterr-cert-invalid-in-chrome-on-macos)).  In that case, you'll need to click on the browser window so it's in focus and type the exact phrase `thisisunsafe` and it will let you through.
 
+### Changing Arkime Configuration
+
+We deploy default configuration for the Arkime Capture and Viewer processes that work "out of the box".  However, you can customize the configuration for those processes - and add custom behavior to your Capture and Viewer Nodes.
+
+As part of running `create-cluster`, the CLI will create a new, cluster-specific directory at the root of this repo on-disk that contains the configuration/scripts that will be deployed into your containers (currently at: `./config-YourClusterName`).  This directory contains two sub directories which contain all the scripts/configuration that are copied onto the Capture (`./config-YourClusterName/capture/`) and Viewer (`./config-YourClusterName/viewer/`) Nodes as part of their startup process.  By default, these directories will just contain the aforementioned "default configuration", but you're free to edit the files there or even add new ones.  Any files in the `./config-YourClusterName/capture/` will end copied to your Capture Nodes; any files in the `./config-YourClusterName/viewer/` will end copied to your Viewer Nodes.
+
+```
+chelma@3c22fba4e266 aws-aio % tree config-YourClusterName
+config-YourClusterName
+├── capture
+│   ├── config.ini
+│   ├── default.rules
+│   └── initialize_arkime.sh
+├── viewer
+│   ├── config.ini
+│   └── initialize_arkime.sh
+```
+
+To help understand how this process works (and how to leverage the system to your benefit), here's an overview of how this currently works:
+1. During `create-cluster`, we turn the `capture/` and `viewer/` config directories into tarballs and stick them in AWS S3.
+2. When ECS starts the Capture and Viewer Nodes, it invokes the `run_*_node.sh` scripts embedded in their Docker Image
+3. The `run_*_node.sh` script invokes the `bootstrap_config.sh` script, also embedded in their Docker Image, which pulls the configuration tarball from S3 and unpacks it onto disk
+4. The `run_*_node.sh` script invokes the `initialize_arkime.sh` script, which is one of the files in your `capture/` and `viewer/` config directories locally, and sent to the container via the tarball in S3.  By default, it performs some final initialization to make the pre-canned behavior "go".  You can modify this script to perform any steps you'd like, and stick any new files you need in the container in the `capture/` and `viewer/` config directories.
+5. The `run_*_node.sh` script starts the Arkime Capture/Viewer process
+
+Note: Currently, you can only set the cluster's configuration using this mechanism during its initial deployment, but we will be changing that shortly.
+
 ### Tearing down your Arkime Cluster
 
 You can destroy the Arkime Cluster in your AWS account by first turning off traffic capture for all VPCs:

@@ -12,16 +12,18 @@ export interface CommandParamsRaw { }
  */
 export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     type: 'ClusterMgmtParamsRaw';
-    arkimeFileMap: string;
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
+    nameCaptureConfigSsmParam: string;
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
+    nameClusterConfigBucket: string;
     nameClusterSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
     nameViewerCertArn: string;
+    nameViewerConfigSsmParam: string;
     nameViewerDnsSsmParam: string;
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;
@@ -78,16 +80,18 @@ export interface DestroyDemoTrafficParams extends CommandParams {
  */
 export interface ClusterMgmtParams extends CommandParams {
     type: 'ClusterMgmtParams'
-    arkimeFileMap: types.ArkimeFilesMap;
     nameCluster: string;
     nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
+    nameCaptureConfigSsmParam: string;
     nameCaptureNodesStack: string;
     nameCaptureVpcStack: string;
+    nameClusterConfigBucket: string;
     nameClusterSsmParam: string;
     nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
     nameViewerCertArn: string;
+    nameViewerConfigSsmParam: string;
     nameViewerDnsSsmParam: string;
     nameViewerPassSsmParam: string;
     nameViewerUserSsmParam: string;

@@ -1,6 +1,5 @@
 import logging
 
-import arkime_interactions.generate_config as arkime_conf
 from aws_interactions.acm_interactions import destroy_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
@@ -78,23 +77,24 @@ def _destroy_viewer_cert(cluster_name: str, aws_provider: AwsClientProvider):
     delete_ssm_param(cert_ssm_param, aws_provider)
 
 def _delete_arkime_config_from_datastore(cluster_name: str, aws_provider: AwsClientProvider):
-    # Delete the Arkime INI files
+    # Delete the Arkime config details in Param Store
     delete_ssm_param(
-        constants.get_capture_config_ini_ssm_param_name(cluster_name),
+        constants.get_capture_config_details_ssm_param_name(cluster_name),
         aws_provider
     )
 
     delete_ssm_param(
-        constants.get_viewer_config_ini_ssm_param_name(cluster_name),
+        constants.get_viewer_config_details_ssm_param_name(cluster_name),
         aws_provider
     )
 
-    # Write any/all additional Capture Node files
-    capture_additional_files = [
-        arkime_conf.get_capture_rules_default()
-    ]
-    for capture_file in capture_additional_files:
-        delete_ssm_param(
-            constants.get_capture_file_ssm_param_name(cluster_name, capture_file.system_path),
-            aws_provider
-        )
+    # Tear down the S3 bucket containing the configuration tarballs
+    aws_env = aws_provider.get_aws_env()
+    destroy_bucket(
+        bucket_name=constants.get_config_bucket_name(
+            aws_env.aws_account,
+            aws_env.aws_region,
+            cluster_name
+        ),
+        aws_provider=aws_provider
+    )

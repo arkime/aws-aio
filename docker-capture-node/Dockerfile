@@ -20,5 +20,6 @@ RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu
 # Download the rir & oui files
 RUN /opt/arkime/bin/arkime_update_geo.sh
 
+COPY ./bootstrap_config.sh /bootstrap_config.sh
 COPY ./run_capture_node.sh /run_capture_node.sh
 CMD ["/run_capture_node.sh"]

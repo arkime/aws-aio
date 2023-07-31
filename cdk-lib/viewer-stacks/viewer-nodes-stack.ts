@@ -14,13 +14,14 @@ import { Construct } from 'constructs';
 import * as types from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
-    readonly arkimeFilesMap: types.ArkimeFilesMap;
     readonly arnViewerCert: string;
     readonly captureBucket: s3.Bucket;
     readonly viewerVpc: ec2.Vpc;
+    readonly clusterConfigBucketName: string;
     readonly clusterName: string;
     readonly osDomain: opensearch.Domain;
     readonly osPassword: secretsmanager.Secret;
+    readonly ssmParamNameViewerConfig: string;
     readonly ssmParamNameViewerDns: string;
     readonly ssmParamNameViewerPass: string;
     readonly ssmParamNameViewerUser: string;
@@ -67,8 +68,15 @@ export class ViewerNodesStack extends cdk.Stack {
         taskDefinition.addToTaskRolePolicy(
             new iam.PolicyStatement({
                 effect: iam.Effect.ALLOW,
-                actions: ['ssm:GetParameter'], // Container pulls configuration from Parameter Store
+                actions: ['ssm:GetParameter'], // Container pulls configuration info from Parameter Store
                 resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter*`]
+            }),
+        );
+        taskDefinition.addToTaskRolePolicy(
+            new iam.PolicyStatement({
+                effect: iam.Effect.ALLOW,
+                actions: ['s3:GetObject'], // Container pulls configuration from the Config S3 Bucket
+                resources: [`arn:aws:s3:::${props.clusterConfigBucketName}/*`]
             }),
         );
         props.osPassword.grantRead(taskDefinition.taskRole);
@@ -82,13 +90,12 @@ export class ViewerNodesStack extends cdk.Stack {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
-                'ARKIME_CONFIG_INI_LOC': props.arkimeFilesMap.viewerIniLoc,
-                'ARKIME_ADD_FILE_LOCS': JSON.stringify(props.arkimeFilesMap.viewerAddFileLocs),
                 'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
                 'BUCKET_NAME': props.captureBucket.bucketName,
                 'CLUSTER_NAME': props.clusterName,
                 'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
                 'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
+                'VIEWER_CONFIG_SSM_PARAM': props.ssmParamNameViewerConfig,
                 'VIEWER_PASS_ARN': viewerPass.secretArn,
                 'VIEWER_PORT': viewerPort.toString(),
                 'VIEWER_USER': viewerUser,
