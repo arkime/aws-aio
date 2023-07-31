@@ -82,27 +82,6 @@ export class ViewerNodesStack extends cdk.Stack {
         props.osDomain.grantReadWrite(taskDefinition.taskRole);
         viewerPass.grantRead(taskDefinition.taskRole);
 
-        // Our Arkime Capture container
-        const container = taskDefinition.addContainer('ViewerContainer', {
-            image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
-            logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
-            environment: {
-                'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
-                'BUCKET_NAME': props.captureBucket.bucketName,
-                'CLUSTER_NAME': props.clusterName,
-                'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
-                'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
-                'VIEWER_CONFIG_SSM_PARAM': props.ssmParamNameViewerConfig,
-                'VIEWER_PASS_ARN': viewerPass.secretArn,
-                'VIEWER_PORT': viewerPort.toString(),
-                'VIEWER_USER': viewerUser,
-            }
-        });
-        container.addPortMappings({
-            containerPort: viewerPort,
-            hostPort: viewerPort
-        })
-        
         const service = new ecs.FargateService(this, 'Service', {
             cluster,
             taskDefinition,
@@ -128,6 +107,28 @@ export class ViewerNodesStack extends cdk.Stack {
             port: 80,
             open: true
         });
+
+        // Our Arkime Capture container
+        const container = taskDefinition.addContainer('ViewerContainer', {
+            image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
+            logging: new ecs.AwsLogDriver({ streamPrefix: 'ViewerNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
+            environment: {
+                'AWS_REGION': this.region, // Seems not to be defined in this container, strangely
+                'BUCKET_NAME': props.captureBucket.bucketName,
+                'CLUSTER_NAME': props.clusterName,
+                'OPENSEARCH_ENDPOINT': props.osDomain.domainEndpoint,
+                'OPENSEARCH_SECRET_ARN': props.osPassword.secretArn,
+                'VIEWER_CONFIG_SSM_PARAM': props.ssmParamNameViewerConfig,
+                'VIEWER_DNS': lb.loadBalancerDnsName,
+                'VIEWER_PASS_ARN': viewerPass.secretArn,
+                'VIEWER_PORT': viewerPort.toString(),
+                'VIEWER_USER': viewerUser,
+            }
+        });
+        container.addPortMappings({
+            containerPort: viewerPort,
+            hostPort: viewerPort
+        })
 
         listener.addTargets('TargetGroup', {
             protocol: elbv2.ApplicationProtocol.HTTP,
