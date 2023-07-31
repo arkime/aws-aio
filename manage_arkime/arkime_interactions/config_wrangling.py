@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import os
@@ -5,7 +6,7 @@ import shutil
 from typing import Dict, Type, TypeVar
 
 from core.constants import get_cluster_config_parent_dir, is_valid_cluster_name, InvalidClusterName
-from core.local_file import LocalFile, TarGzDirectory
+from core.local_file import LocalFile, ZipDirectory
 from core.versioning import VersionInfo
 
 logger = logging.getLogger(__name__)
@@ -34,25 +35,74 @@ T_ConfigDetails = TypeVar('T_ConfigDetails', bound='ConfigDetails')
 class ConfigDetails:
     s3: S3Details
     version: VersionInfo
+    previous: ConfigDetails = None
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ConfigDetails):
             return False
 
         return (self.s3 == other.s3
-                and self.version == other.version)
+                and self.version == other.version
+                and self.previous == other.previous)
 
     def to_dict(self) -> Dict[str, str]:
         return {
             "s3": self.s3.to_dict(),
-            "version": self.version.to_dict()
+            "version": self.version.to_dict(),
+            "previous": self.previous.to_dict() if self.previous else "None",
         }
     
     @classmethod
     def from_dict(cls: Type[T_ConfigDetails], input: Dict[str, any]) -> T_ConfigDetails:
         s3 = S3Details(**input["s3"])
         version = VersionInfo(**input["version"])
-        return cls(s3, version)
+        previous = ConfigDetails.from_dict(input["previous"]) if input["previous"] != "None" else None
+        return cls(s3, version, previous)
+    
+@dataclass
+class CaptureDetails:
+    ecsCluster: str
+    ecsService: str
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CaptureDetails):
+            return False
+
+        return (self.ecsCluster == other.ecsCluster
+                and self.ecsService == other.ecsService)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "ecsCluster": self.ecsCluster,
+            "ecsService": self.ecsService,
+        }
+
+@dataclass
+class ViewerDetails:
+    dns: str
+    ecsCluster: str
+    ecsService: str
+    passwordArn: str
+    user: str
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ViewerDetails):
+            return False
+
+        return (self.dns == other.dns
+                and self.ecsCluster == other.ecsCluster
+                and self.ecsService == other.ecsService
+                and self.passwordArn == other.passwordArn
+                and self.user == other.user)
+
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "dns": self.dns,
+            "ecsCluster": self.ecsCluster,
+            "ecsService": self.ecsService,
+            "passwordArn": self.passwordArn,
+            "user": self.user
+        }
 
 class ConfigDirNotEmpty(Exception):
     def __init__(self, cluster_dir_path: str):
@@ -82,17 +132,17 @@ def get_capture_dir_path(cluster_name: str, parent_dir: str):
     cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
     return os.path.join(cluster_dir_path, "capture")
 
-def get_capture_tarball_path(cluster_name: str, parent_dir: str):
+def get_capture_archive_path(cluster_name: str, parent_dir: str):
     cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
-    return os.path.join(cluster_dir_path, "capture.tgz")
+    return os.path.join(cluster_dir_path, "capture.zip")
 
 def get_viewer_dir_path(cluster_name: str, parent_dir: str):
     cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
     return os.path.join(cluster_dir_path, "viewer")
 
-def get_viewer_tarball_path(cluster_name: str, parent_dir: str):
+def get_viewer_archive_path(cluster_name: str, parent_dir: str):
     cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
-    return os.path.join(cluster_dir_path, "viewer.tgz")
+    return os.path.join(cluster_dir_path, "viewer.zip")
 
 def _create_config_dir(cluster_name: str, parent_dir: str) -> str:
     cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
@@ -138,27 +188,27 @@ def set_up_arkime_config_dir(cluster_name: str, parent_dir: str):
     except ConfigDirNotEmpty as ex:
         logger.info("Cluster config directory not empty; skipping copy")
 
-def get_capture_config_tarball(cluster_name: str) -> LocalFile:
+def get_capture_config_archive(cluster_name: str) -> LocalFile:
     cluster_config_parent_dir_path = get_cluster_config_parent_dir()
     capture_config_dir_path = get_capture_dir_path(cluster_name, cluster_config_parent_dir_path)
-    capture_config_tarball_path = get_capture_tarball_path(cluster_name, cluster_config_parent_dir_path)
+    capture_config_archive_path = get_capture_archive_path(cluster_name, cluster_config_parent_dir_path)
 
-    logger.info(f"Turning Capture configuration at {capture_config_dir_path} into tarball at {capture_config_tarball_path}")
-    capture_config_tarball = TarGzDirectory(capture_config_dir_path, capture_config_tarball_path)
-    capture_config_tarball.generate()
+    logger.info(f"Turning Capture configuration at {capture_config_dir_path} into archive at {capture_config_archive_path}")
+    capture_config_archive = ZipDirectory(capture_config_dir_path, capture_config_archive_path)
+    capture_config_archive.generate()
 
-    return capture_config_tarball
+    return capture_config_archive
 
-def get_viewer_config_tarball(cluster_name: str) -> LocalFile:
+def get_viewer_config_archive(cluster_name: str) -> LocalFile:
     cluster_config_parent_dir_path = get_cluster_config_parent_dir()
     viewer_config_dir_path = get_viewer_dir_path(cluster_name, cluster_config_parent_dir_path)
-    viewer_config_tarball_path = get_viewer_tarball_path(cluster_name, cluster_config_parent_dir_path)
+    viewer_config_archive_path = get_viewer_archive_path(cluster_name, cluster_config_parent_dir_path)
 
-    logger.info(f"Turning Viewer configuration at {viewer_config_dir_path} into tarball at {viewer_config_tarball_path}")
-    viewer_config_tarball = TarGzDirectory(viewer_config_dir_path, viewer_config_tarball_path)
-    viewer_config_tarball.generate()
+    logger.info(f"Turning Viewer configuration at {viewer_config_dir_path} into archive at {viewer_config_archive_path}")
+    viewer_config_archive = ZipDirectory(viewer_config_dir_path, viewer_config_archive_path)
+    viewer_config_archive.generate()
 
-    return viewer_config_tarball
+    return viewer_config_archive
 
 
 

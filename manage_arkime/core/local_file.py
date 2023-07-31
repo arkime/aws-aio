@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import os
+import shutil
 import tarfile
 from typing import Dict, List
 
@@ -69,6 +70,38 @@ class S3File(LocalFile):
     @property
     def metadata(self) -> Dict[str, str]:
         return self._metadata
+    
+class ZipDirectory(LocalFile):
+    """
+    Encapsulates the ability to take a directory on disk, turn it into a zip archive, and provide a reference to the
+    final file afterwards.
+    """
+
+    def __init__(self, source_dir_path: str, archive_path: str):
+        self._source_dir_path = source_dir_path
+        self._archive_path = archive_path
+        self._exists = False
+
+    def __eq__(self, other):
+        return (self._source_dir_path == other._source_dir_path 
+                and self._archive_path == other._tarball_path
+                and self._exists == other._exists)
+
+    def generate(self):
+        """
+        Turns the source_dir_path into a archive at archive_path.  Overwrites archive_path if it already exists.
+        """
+        suffixless_path = self._archive_path[:-4] if self._archive_path.endswith(".zip") else self._archive_path
+        shutil.make_archive(suffixless_path, 'zip', self._source_dir_path)
+
+        self._exists = True
+
+    @property
+    def local_path(self) -> str:
+        if not self._exists:
+            raise FileNotGenerated(self._archive_path)
+
+        return self._archive_path
 
     
 

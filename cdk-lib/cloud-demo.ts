@@ -53,6 +53,7 @@ switch(params.type) {
             osPassword: osDomainStack.osPassword,
             planCluster: params.planCluster,
             ssmParamNameCaptureConfig: params.nameCaptureConfigSsmParam,
+            ssmParamNameCaptureDetails: params.nameCaptureDetailsSsmParam,
             ssmParamNameCluster: params.nameClusterSsmParam,
             userConfig: params.userConfig
         });
@@ -70,9 +71,7 @@ switch(params.type) {
             osDomain: osDomainStack.domain,
             osPassword: osDomainStack.osPassword,
             ssmParamNameViewerConfig: params.nameViewerConfigSsmParam,
-            ssmParamNameViewerDns: params.nameViewerDnsSsmParam,
-            ssmParamNameViewerPass: params.nameViewerPassSsmParam,
-            ssmParamNameViewerUser: params.nameViewerUserSsmParam,
+            ssmParamNameViewerDetails: params.nameViewerDetailsSsmParam,
         });
         viewerNodesStack.addDependency(captureBucketStack)
         viewerNodesStack.addDependency(captureVpcStack)

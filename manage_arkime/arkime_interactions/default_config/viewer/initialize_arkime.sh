@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Move the files we pulled from the cloud to their correct locations
-mv /arkime_config/viewer/config.ini /opt/arkime/etc/config.ini
+mv /arkime_config/config.ini /opt/arkime/etc/config.ini
 
 # Pull configuration from ENV and AWS in order to set up our Arkime install.  The ENV variables come from the Fargate
 # Container definition.  We perform some escaping of the our replacement strings for safety.

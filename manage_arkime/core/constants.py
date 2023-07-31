@@ -54,7 +54,10 @@ def get_capture_config_details_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/capture-config-details"
 
 def get_capture_config_s3_key(config_version: str) -> str:
-    return f"capture/{config_version}/config.tgz"
+    return f"capture/{config_version}/archive.zip"
+
+def get_capture_details_ssm_param_name(cluster_name: str) -> str:
+    return f"/arkime/clusters/{cluster_name}/capture-details"
 
 def get_capture_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureNodes"
@@ -87,7 +90,10 @@ def get_viewer_config_details_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/viewer-config-details"
 
 def get_viewer_config_s3_key(config_version: str) -> str:
-    return f"viewer/{config_version}/config.tgz"
+    return f"viewer/{config_version}/archive.zip"
+
+def get_viewer_details_ssm_param_name(cluster_name: str) -> str:
+    return f"/arkime/clusters/{cluster_name}/viewer-details"
 
 def get_viewer_dns_ssm_param_name(cluster_name: str) -> str:
     return f"/arkime/clusters/{cluster_name}/viewer-dns"
