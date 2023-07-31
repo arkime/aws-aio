@@ -2,19 +2,19 @@ import json
 import shlex
 import unittest.mock as mock
 
-from commands.remove_vpc import cmd_remove_vpc
+from commands.vpc_remove import cmd_vpc_remove
 from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
 import core.constants as constants
 
 
-@mock.patch("commands.remove_vpc.AwsClientProvider")
-@mock.patch("commands.remove_vpc.SsmVniProvider")
-@mock.patch("commands.remove_vpc.ssm_ops")
-@mock.patch("commands.remove_vpc.events")
-@mock.patch("commands.remove_vpc.CdkClient")
-def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, mock_events, mock_ssm,
+@mock.patch("commands.vpc_remove.AwsClientProvider")
+@mock.patch("commands.vpc_remove.SsmVniProvider")
+@mock.patch("commands.vpc_remove.ssm_ops")
+@mock.patch("commands.vpc_remove.events")
+@mock.patch("commands.vpc_remove.CdkClient")
+def test_WHEN_cmd_vpc_remove_called_THEN_removes_mirroring(mock_cdk_client_cls, mock_events, mock_ssm,
                                                            mock_vni_provider_cls, mock_aws_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()
@@ -38,7 +38,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_remove_vpc("profile", "region", "cluster-1", "vpc-1")
+    cmd_vpc_remove("profile", "region", "cluster-1", "vpc-1")
 
     # Check our results
     expected_cdk_calls = [
@@ -47,7 +47,7 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
                 constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
             ],
             context={
-                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_REMOVE_VPC,
+                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_vpc_remove,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "arnEventBus": "bus-1",
                     "nameCluster": "cluster-1",
@@ -79,12 +79,12 @@ def test_WHEN_cmd_remove_vpc_called_THEN_removes_mirroring(mock_cdk_client_cls, 
     expected_vni_calls = [mock.call(1337, "vpc-1")]
     assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
 
-@mock.patch("commands.remove_vpc.AwsClientProvider", mock.Mock())
-@mock.patch("commands.remove_vpc.SsmVniProvider")
-@mock.patch("commands.remove_vpc.ssm_ops")
-@mock.patch("commands.remove_vpc.events")
-@mock.patch("commands.remove_vpc.CdkClient")
-def test_WHEN_cmd_remove_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_events, mock_ssm, mock_vni_provider_cls):
+@mock.patch("commands.vpc_remove.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_remove.SsmVniProvider")
+@mock.patch("commands.vpc_remove.ssm_ops")
+@mock.patch("commands.vpc_remove.events")
+@mock.patch("commands.vpc_remove.CdkClient")
+def test_WHEN_cmd_vpc_remove_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_events, mock_ssm, mock_vni_provider_cls):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider_cls.return_value = mock_vni_provider
@@ -96,7 +96,7 @@ def test_WHEN_cmd_remove_vpc_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cd
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_remove_vpc("profile", "region", "cluster-1", "vpc-1")
+    cmd_vpc_remove("profile", "region", "cluster-1", "vpc-1")
 
     # Check our results
     expected_cdk_calls = []

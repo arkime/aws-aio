@@ -11,8 +11,8 @@ import cdk_interactions.cdk_context as context
 
 logger = logging.getLogger(__name__)
 
-def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything: bool):
-    logger.debug(f"Invoking destroy-cluster with profile '{profile}' and region '{region}'")
+def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything: bool):
+    logger.debug(f"Invoking cluster-destroy with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     cdk_client = CdkClient(aws_provider.get_aws_env())
@@ -21,7 +21,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
     monitored_vpcs = get_ssm_names_by_path(vpcs_search_path, aws_provider)
     if monitored_vpcs:
         logger.error("Your cluster is currently monitoring VPCs.  Please stop monitoring these VPCs using the"
-            + f" remove-vpc command before destroying your cluster:\n{monitored_vpcs}")
+            + f" vpc-remove command before destroying your cluster:\n{monitored_vpcs}")
         logger.warning("Aborting...")
         return
 
@@ -34,7 +34,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
         destroy_bucket(bucket_name=bucket_name, aws_provider=aws_provider)
 
     if not destroy_everything:
-        # By default, destroy-cluster just tears down the capture/viewer nodes in order to preserve the user's data.  We
+        # By default, cluster-destroy just tears down the capture/viewer nodes in order to preserve the user's data.  We
         # could tear down the OpenSearch Domain and Bucket stacks, but that would leave loose (non-CloudFormation managed)
         # resources in the user's account that they'd likely stumble across later, so it's probably better to leave those
         # stacks intact.  We can't delete the VPC stack because the OpenSearch Domain has the VPC as a dependency, as we're
@@ -52,7 +52,7 @@ def cmd_destroy_cluster(profile: str, region: str, name: str, destroy_everything
             constants.get_opensearch_domain_stack_name(name),
             constants.get_viewer_nodes_stack_name(name)
         ]
-    destroy_context = context.generate_destroy_cluster_context(name)
+    destroy_context = context.generate_cluster_destroy_context(name)
 
     cdk_client.destroy(stacks_to_destroy, context=destroy_context)
 

@@ -22,10 +22,10 @@ CDK_CONTEXT_REGION_VAR: str = "ARKIME_REGION"
 # The names of the management operations we can perform; will be received/parsed on the CDK side so needs to match.
 CMD_DEPLOY_DEMO = "DeployDemoTraffic"
 CMD_DESTROY_DEMO = "DestroyDemoTraffic"
-CMD_CREATE_CLUSTER = "CreateCluster"
-CMD_DESTROY_CLUSTER = "DestroyCluster"
-CMD_ADD_VPC = "AddVpc"
-CMD_REMOVE_VPC = "RemoveVpc"
+CMD_cluster_create = "CreateCluster"
+CMD_cluster_destroy = "DestroyCluster"
+CMD_vpc_add = "AddVpc"
+CMD_vpc_remove = "RemoveVpc"
 
 # The names of static CDK Stacks defined in our App
 NAME_DEMO_STACK_1: str = "DemoTrafficGen01"

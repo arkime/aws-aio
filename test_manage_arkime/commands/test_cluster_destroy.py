@@ -4,7 +4,7 @@ import unittest.mock as mock
 
 from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.ssm_operations import ParamDoesNotExist
-from commands.destroy_cluster import cmd_destroy_cluster, _destroy_viewer_cert, _delete_arkime_config_from_datastore
+from commands.cluster_destroy import cmd_cluster_destroy, _destroy_viewer_cert, _delete_arkime_config_from_datastore
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     ClusterPlan, CaptureVpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS)
@@ -12,14 +12,14 @@ from core.user_config import UserConfig
 
 TEST_CLUSTER = "my-cluster"
 
-@mock.patch("commands.destroy_cluster.AwsClientProvider")
-@mock.patch("commands.destroy_cluster._delete_arkime_config_from_datastore")
-@mock.patch("commands.destroy_cluster._destroy_viewer_cert")
-@mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
-@mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("commands.destroy_cluster.destroy_bucket")
-@mock.patch("commands.destroy_cluster.CdkClient")
-def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_destroy_bucket,
+@mock.patch("commands.cluster_destroy.AwsClientProvider")
+@mock.patch("commands.cluster_destroy._delete_arkime_config_from_datastore")
+@mock.patch("commands.cluster_destroy._destroy_viewer_cert")
+@mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
+@mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
+@mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.CdkClient")
+def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_destroy_bucket,
                                                                                         mock_destroy_domain, mock_ssm_get, mock_destroy_cert,
                                                                                         mock_delete_arkime, mock_aws_provider_cls):
     # Set up our mock
@@ -42,7 +42,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
     )
 
     # Run our test
-    cmd_destroy_cluster("profile", "region", TEST_CLUSTER, False)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False)
 
     # Check our results
     mock_destroy_bucket.assert_not_called()
@@ -55,7 +55,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
                 constants.get_viewer_nodes_stack_name(TEST_CLUSTER),
             ],
             context={
-                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
+                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "nameCluster": TEST_CLUSTER,
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(TEST_CLUSTER),
@@ -95,15 +95,15 @@ def test_WHEN_cmd_destroy_cluster_called_AND_dont_destroy_everything_THEN_expect
     ]
     assert expected_delete_arkime_calls == mock_delete_arkime.call_args_list
 
-@mock.patch("commands.destroy_cluster.AwsClientProvider")
-@mock.patch("commands.destroy_cluster._delete_arkime_config_from_datastore")
-@mock.patch("commands.destroy_cluster._destroy_viewer_cert")
-@mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
-@mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("commands.destroy_cluster.destroy_bucket")
-@mock.patch("commands.destroy_cluster.get_ssm_param_value")
-@mock.patch("commands.destroy_cluster.CdkClient")
-def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket,
+@mock.patch("commands.cluster_destroy.AwsClientProvider")
+@mock.patch("commands.cluster_destroy._delete_arkime_config_from_datastore")
+@mock.patch("commands.cluster_destroy._destroy_viewer_cert")
+@mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
+@mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
+@mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.get_ssm_param_value")
+@mock.patch("commands.cluster_destroy.CdkClient")
+def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket,
                                                                                    mock_destroy_domain, mock_ssm_names, mock_destroy_cert,
                                                                                    mock_delete_arkime, mock_aws_provider_cls):
     # Set up our mock
@@ -131,7 +131,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
     )
 
     # Run our test
-    cmd_destroy_cluster("profile", "region", TEST_CLUSTER, True)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, True)
 
     # Check our results
     expected_destroy_domain_calls = [
@@ -161,7 +161,7 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
                 constants.get_viewer_nodes_stack_name(TEST_CLUSTER)
             ],
             context={
-                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_DESTROY_CLUSTER,
+                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "nameCluster": TEST_CLUSTER,
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(TEST_CLUSTER),
@@ -201,12 +201,12 @@ def test_WHEN_cmd_destroy_cluster_called_AND_destroy_everything_THEN_expected_cm
     ]
     assert expected_delete_arkime_calls == mock_delete_arkime.call_args_list
 
-@mock.patch("commands.destroy_cluster.AwsClientProvider", mock.Mock())
-@mock.patch("commands.destroy_cluster.get_ssm_names_by_path")
-@mock.patch("commands.destroy_cluster.destroy_os_domain_and_wait")
-@mock.patch("commands.destroy_cluster.destroy_bucket")
-@mock.patch("commands.destroy_cluster.CdkClient")
-def test_WHEN_cmd_destroy_cluster_called_AND_existing_captures_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain,
+@mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
+@mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
+@mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.CdkClient")
+def test_WHEN_cmd_cluster_destroy_called_AND_existing_captures_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain,
                                                                           mock_ssm_names):
     # Set up our mock
     mock_ssm_names.return_value = ["vpc-1", "vpc-2"]
@@ -215,16 +215,16 @@ def test_WHEN_cmd_destroy_cluster_called_AND_existing_captures_THEN_abort(mock_c
     mock_cdk_client_cls.return_value = mock_client
 
     # Run our test
-    cmd_destroy_cluster("profile", "region", TEST_CLUSTER, False)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False)
 
     # Check our results
     mock_destroy_bucket.assert_not_called()
     mock_destroy_domain.assert_not_called()
     mock_client.destroy.assert_not_called()
 
-@mock.patch("commands.destroy_cluster.delete_ssm_param")
-@mock.patch("commands.destroy_cluster.destroy_cert")
-@mock.patch("commands.destroy_cluster.get_ssm_param_value")
+@mock.patch("commands.cluster_destroy.delete_ssm_param")
+@mock.patch("commands.cluster_destroy.destroy_cert")
+@mock.patch("commands.cluster_destroy.get_ssm_param_value")
 def test_WHEN_destroy_viewer_cert_called_THEN_as_expected(mock_ssm_get, mock_destroy_cert, mock_ssm_delete):
     # Set up our mock
     mock_ssm_get.return_value = "arn"
@@ -256,9 +256,9 @@ def test_WHEN_destroy_viewer_cert_called_THEN_as_expected(mock_ssm_get, mock_des
     ]
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
 
-@mock.patch("commands.destroy_cluster.delete_ssm_param")
-@mock.patch("commands.destroy_cluster.destroy_cert")
-@mock.patch("commands.destroy_cluster.get_ssm_param_value")
+@mock.patch("commands.cluster_destroy.delete_ssm_param")
+@mock.patch("commands.cluster_destroy.destroy_cert")
+@mock.patch("commands.cluster_destroy.get_ssm_param_value")
 def test_WHEN_destroy_viewer_cert_called_AND_doesnt_exist_THEN_skip(mock_ssm_get, mock_destroy_cert, mock_ssm_delete):
     # Set up our mock
     mock_ssm_get.side_effect = ParamDoesNotExist("")
@@ -283,8 +283,8 @@ def test_WHEN_destroy_viewer_cert_called_AND_doesnt_exist_THEN_skip(mock_ssm_get
     expected_delete_ssm_calls = []
     assert expected_delete_ssm_calls == mock_ssm_delete.call_args_list
 
-@mock.patch("commands.destroy_cluster.destroy_bucket")
-@mock.patch("commands.destroy_cluster.delete_ssm_param")
+@mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.delete_ssm_param")
 def test_WHEN_delete_arkime_config_from_datastore_called_THEN_as_expected(mock_ssm_delete, mock_destroy_bucket):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")

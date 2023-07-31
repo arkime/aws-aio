@@ -9,7 +9,7 @@ from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 
-from commands.create_cluster import (cmd_create_cluster, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
+from commands.cluster_create import (cmd_cluster_create, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config)
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
@@ -19,17 +19,17 @@ import core.local_file as local_file
 from core.user_config import UserConfig
 from core.versioning import VersionInfo
 
-@mock.patch("commands.create_cluster.AwsClientProvider")
-@mock.patch("commands.create_cluster._set_up_arkime_config")
-@mock.patch("commands.create_cluster._configure_ism")
-@mock.patch("commands.create_cluster._get_previous_user_config")
-@mock.patch("commands.create_cluster._get_previous_capacity_plan")
-@mock.patch("commands.create_cluster._confirm_usage")
-@mock.patch("commands.create_cluster._get_next_user_config")
-@mock.patch("commands.create_cluster._get_next_capacity_plan")
-@mock.patch("commands.create_cluster._set_up_viewer_cert")
-@mock.patch("commands.create_cluster.CdkClient")
-def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
+@mock.patch("commands.cluster_create.AwsClientProvider")
+@mock.patch("commands.cluster_create._set_up_arkime_config")
+@mock.patch("commands.cluster_create._configure_ism")
+@mock.patch("commands.cluster_create._get_previous_user_config")
+@mock.patch("commands.cluster_create._get_previous_capacity_plan")
+@mock.patch("commands.cluster_create._confirm_usage")
+@mock.patch("commands.cluster_create._get_next_user_config")
+@mock.patch("commands.cluster_create._get_next_capacity_plan")
+@mock.patch("commands.cluster_create._set_up_viewer_cert")
+@mock.patch("commands.cluster_create.CdkClient")
+def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                  mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
                                                                  mock_set_up_arkime_conf, mock_aws_provider_cls):
     # Set up our mock
@@ -59,7 +59,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
 
 
     # Run our test
-    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True)
 
     # Check our results
     expected_calls = [
@@ -72,7 +72,7 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
                 constants.get_viewer_nodes_stack_name("my-cluster"),
             ],
             context={
-                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_CREATE_CLUSTER,
+                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_create,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
                     "nameCluster": "my-cluster",
                     "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
@@ -117,17 +117,17 @@ def test_WHEN_cmd_create_cluster_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
-@mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
-@mock.patch("commands.create_cluster._set_up_arkime_config")
-@mock.patch("commands.create_cluster._configure_ism")
-@mock.patch("commands.create_cluster._get_previous_user_config")
-@mock.patch("commands.create_cluster._get_previous_capacity_plan")
-@mock.patch("commands.create_cluster._confirm_usage")
-@mock.patch("commands.create_cluster._get_next_user_config")
-@mock.patch("commands.create_cluster._get_next_capacity_plan")
-@mock.patch("commands.create_cluster._set_up_viewer_cert")
-@mock.patch("commands.create_cluster.CdkClient")
-def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
+@mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_create._set_up_arkime_config")
+@mock.patch("commands.cluster_create._configure_ism")
+@mock.patch("commands.cluster_create._get_previous_user_config")
+@mock.patch("commands.cluster_create._get_previous_capacity_plan")
+@mock.patch("commands.cluster_create._confirm_usage")
+@mock.patch("commands.cluster_create._get_next_user_config")
+@mock.patch("commands.cluster_create._get_next_capacity_plan")
+@mock.patch("commands.cluster_create._set_up_viewer_cert")
+@mock.patch("commands.cluster_create.CdkClient")
+def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                          mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
                                                                          mock_set_up_arkime_conf):
     # Set up our mock
@@ -151,7 +151,7 @@ def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cd
     mock_confirm.return_value = False
 
     # Run our test
-    cmd_create_cluster("profile", "region", "my-cluster", None, None, None, None, None, True)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True)
 
     # Check our results
     expected_calls = []
@@ -166,7 +166,7 @@ def test_WHEN_cmd_create_cluster_called_AND_abort_usage_THEN_as_expected(mock_cd
     expected_set_up_arkime_conf_calls = []
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.get_ssm_param_json_value.return_value = {
@@ -192,7 +192,7 @@ def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_s
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_previous_user_config_called_AND_doesnt_exist_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -212,7 +212,7 @@ def test_WHEN_get_previous_user_config_called_AND_doesnt_exist_THEN_as_expected(
     ]
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_next_user_config_called_AND_use_existing_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -238,7 +238,7 @@ def test_WHEN_get_next_user_config_called_AND_use_existing_THEN_as_expected(mock
     ]
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_next_user_config_called_AND_partial_update_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -264,7 +264,7 @@ def test_WHEN_get_next_user_config_called_AND_partial_update_THEN_as_expected(mo
     ]
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_next_user_config_called_AND_use_default_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -283,7 +283,7 @@ def test_WHEN_get_next_user_config_called_AND_use_default_THEN_as_expected(mock_
     ]
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_next_user_config_called_AND_specify_all_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -300,7 +300,7 @@ def test_WHEN_get_next_user_config_called_AND_specify_all_THEN_as_expected(mock_
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.get_ssm_param_json_value.return_value = {
@@ -355,7 +355,7 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expected(mock_ssm_ops):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -382,9 +382,9 @@ def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expecte
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
-@mock.patch("commands.create_cluster.get_os_domain_plan")
-@mock.patch("commands.create_cluster.get_capture_node_capacity_plan")
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.get_os_domain_plan")
+@mock.patch("commands.cluster_create.get_capture_node_capacity_plan")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -415,7 +415,7 @@ def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_
     ]
     assert expected_get_os_calls == mock_get_os.call_args_list
 
-@mock.patch("commands.create_cluster.UsageReport")
+@mock.patch("commands.cluster_create.UsageReport")
 def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
     # Shared Setup
     mock_plan_prev = mock.Mock()
@@ -447,8 +447,8 @@ def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
     assert False == actual_value
     assert mock_report.get_confirmation.called
 
-@mock.patch("commands.create_cluster.upload_default_elb_cert")
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.upload_default_elb_cert")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_set_up_viewer_cert_called_THEN_set_up_correctly(mock_ssm_ops, mock_upload):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -484,9 +484,9 @@ def test_WHEN_set_up_viewer_cert_called_THEN_set_up_correctly(mock_ssm_ops, mock
     ]
     assert expected_put_ssm_calls == mock_ssm_ops.put_ssm_param.call_args_list
 
-@mock.patch("commands.create_cluster.AwsClientProvider", mock.Mock())
-@mock.patch("commands.create_cluster.upload_default_elb_cert")
-@mock.patch("commands.create_cluster.ssm_ops")
+@mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_create.upload_default_elb_cert")
+@mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_set_up_viewer_cert_called_AND_already_exists_THEN_skips_creation(mock_ssm_ops, mock_upload):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
@@ -512,8 +512,8 @@ def test_WHEN_set_up_viewer_cert_called_AND_already_exists_THEN_skips_creation(m
     assert expected_put_ssm_calls == mock_ssm_ops.put_ssm_param.call_args_list
 
 
-@mock.patch("commands.create_cluster.ssm_ops")
-@mock.patch("commands.create_cluster.events")
+@mock.patch("commands.cluster_create.ssm_ops")
+@mock.patch("commands.cluster_create.events")
 def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
     # Set up our mock
     mock_ssm.get_ssm_param_json_value.return_value = "arn"
@@ -543,14 +543,14 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
     ]
     assert expected_put_events_calls == mock_events.put_events.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops.get_ssm_param_value")
-@mock.patch("commands.create_cluster.ssm_ops.put_ssm_param")
-@mock.patch("commands.create_cluster.get_version_info")
-@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_archive")
-@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_archive")
-@mock.patch("commands.create_cluster.s3.put_file_to_bucket")
-@mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
-@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
+@mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_value")
+@mock.patch("commands.cluster_create.ssm_ops.put_ssm_param")
+@mock.patch("commands.cluster_create.get_version_info")
+@mock.patch("commands.cluster_create.config_wrangling.get_viewer_config_archive")
+@mock.patch("commands.cluster_create.config_wrangling.get_capture_config_archive")
+@mock.patch("commands.cluster_create.s3.put_file_to_bucket")
+@mock.patch("commands.cluster_create.s3.ensure_bucket_exists")
+@mock.patch("commands.cluster_create.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
                                                                           mock_get_capture_archive, mock_get_viewer_archive,
                                                                           mock_get_version, mock_put_ssm_param, mock_get_ssm_param):
@@ -634,14 +634,14 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
     ]
     assert expected_put_ssm_param_calls == mock_put_ssm_param.call_args_list
 
-@mock.patch("commands.create_cluster.ssm_ops.get_ssm_param_value")
-@mock.patch("commands.create_cluster.ssm_ops.put_ssm_param")
-@mock.patch("commands.create_cluster.get_version_info")
-@mock.patch("commands.create_cluster.config_wrangling.get_viewer_config_archive")
-@mock.patch("commands.create_cluster.config_wrangling.get_capture_config_archive")
-@mock.patch("commands.create_cluster.s3.put_file_to_bucket")
-@mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
-@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
+@mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_value")
+@mock.patch("commands.cluster_create.ssm_ops.put_ssm_param")
+@mock.patch("commands.cluster_create.get_version_info")
+@mock.patch("commands.cluster_create.config_wrangling.get_viewer_config_archive")
+@mock.patch("commands.cluster_create.config_wrangling.get_capture_config_archive")
+@mock.patch("commands.cluster_create.s3.put_file_to_bucket")
+@mock.patch("commands.cluster_create.s3.ensure_bucket_exists")
+@mock.patch("commands.cluster_create.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_put_file,
                                                                           mock_get_capture_archive, mock_get_viewer_archive,
                                                                           mock_get_version, mock_put_ssm_param, mock_get_ssm_param):
@@ -700,9 +700,9 @@ def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(moc
 class SysExitCalled(Exception):
     pass
 
-@mock.patch("commands.create_cluster.sys.exit")
-@mock.patch("commands.create_cluster.s3.ensure_bucket_exists")
-@mock.patch("commands.create_cluster.config_wrangling.set_up_arkime_config_dir")
+@mock.patch("commands.cluster_create.sys.exit")
+@mock.patch("commands.cluster_create.s3.ensure_bucket_exists")
+@mock.patch("commands.cluster_create.config_wrangling.set_up_arkime_config_dir")
 def test_WHEN_set_up_arkime_config_called_AND_couldnt_make_bucket_THEN_as_expected(mock_set_up_config_dir, mock_ensure_bucket, mock_exit):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
