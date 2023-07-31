@@ -159,7 +159,7 @@ def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cd
 
     expected_set_up_calls = []
     assert expected_set_up_calls == mock_set_up.call_args_list
-    
+
     expected_configure_calls = []
     assert expected_configure_calls == mock_configure.call_args_list
 
@@ -416,7 +416,8 @@ def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_
     assert expected_get_os_calls == mock_get_os.call_args_list
 
 @mock.patch("commands.cluster_create.UsageReport")
-def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
+@mock.patch("commands.cluster_create.PriceReport")
+def test_WHEN_confirm_usage_called_THEN_as_expected(mock_price_report_cls, mock_report_cls):
     # Shared Setup
     mock_plan_prev = mock.Mock()
     mock_plan_next = mock.Mock()
@@ -424,12 +425,15 @@ def test_WHEN_confirm_usage_called_THEN_as_expected(mock_report_cls):
     mock_config_next = mock.Mock()
     mock_report = mock.Mock()
     mock_report_cls.return_value = mock_report
-    
+    mock_price_report = mock.Mock()
+    mock_price_report_cls.return_value = mock_price_report
+
     # TEST: pre-confirm is true
     actual_value = _confirm_usage(mock_plan_prev, mock_plan_next, mock_config_prev, mock_config_next, True)
 
     assert True == actual_value
     assert not mock_report.get_confirmation.called
+    assert mock_price_report.get_report.called
 
     # TEST: pre-confirm is false, user says yes
     mock_report.get_confirmation.return_value = True
@@ -570,7 +574,7 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
     test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
     test_viewer_tarball._exists = True
     mock_get_viewer_archive.return_value = test_viewer_tarball
-    
+
     capture_metadata = config_wrangling.ConfigDetails(
         s3=config_wrangling.S3Details(bucket_name, capture_s3_key),
         version=VersionInfo("1", "1", "abcd1234", "v1-1-12312", "2023-01-01 01:01:01")
@@ -661,7 +665,7 @@ def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(moc
     test_viewer_tarball = local_file.TarGzDirectory("/viewer", "/viewer.tgz")
     test_viewer_tarball._exists = True
     mock_get_viewer_archive.return_value = test_viewer_tarball
-    
+
     capture_metadata = config_wrangling.ConfigDetails(
         s3=config_wrangling.S3Details(bucket_name, capture_s3_key),
         version=VersionInfo("1", "1", "abcd1234", "v1-1-12312", "2023-01-01 01:01:01")
