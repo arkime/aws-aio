@@ -7,7 +7,8 @@ import math
 AWS_HOURS_PER_MONTH=730
 AWS_SECS_PER_MONTH=60*60*AWS_HOURS_PER_MONTH
 
-us_east_1_prices: Dict[str, float] = {
+US_EAST_1_PRICES: Dict[str, float] = {
+    # https://aws.amazon.com/opensearch-service/pricing/
     "t3.small.search": 0.0360 * AWS_HOURS_PER_MONTH,
     "m5.large.search": 0.1420 * AWS_HOURS_PER_MONTH,
     "m6g.large.search": 0.1280  * AWS_HOURS_PER_MONTH,
@@ -16,6 +17,7 @@ us_east_1_prices: Dict[str, float] = {
     "r6g.2xlarge.search": 0.6690 * AWS_HOURS_PER_MONTH,
     "r6g.4xlarge.search": 1.3390 * AWS_HOURS_PER_MONTH,
     "r6g.12xlarge.search": 4.0160 * AWS_HOURS_PER_MONTH,
+
     "m5.xlarge": 0.1920 * AWS_HOURS_PER_MONTH,
 
     "s3-STANDARD-50-GB": 0.023, # https://aws.amazon.com/s3/pricing/
@@ -31,40 +33,40 @@ us_east_1_prices: Dict[str, float] = {
 }
 
 
-@dataclass
 class PriceReport:
-    plan: ClusterPlan
-    config: UserConfig
-    prices = us_east_1_prices # ALW - Not sure how to do type hint, was getting errors
+    def __init__(self, plan: ClusterPlan, config: UserConfig, prices: Dict[str, float] = None):
+        self._plan = plan
+        self._config = config
+        self._prices = prices if prices else US_EAST_1_PRICES.copy()
 
-    total: float = 0 # ALW - Not sure how to do a class variable that isn't passed in
+        self._total = 0
 
     def _line(self, name: str, key: str, num: float) -> str:
         if key == "total":
-            return f"   {name:23}                             ${self.total:10.2f}/mo\n"
+            return f"   {name:23}                             ${self._total:10.2f}/mo\n"
 
         if num <= 0:
             return ""
 
-        cost: float = self.prices[key]
-        self.total += cost * num
+        cost: float = self._prices[key]
+        self._total += cost * num
         if key.endswith("-GB"):
             return f"   {name:23} {num:9,} * ${cost:9.4f}/GB = ${cost * num:10.2f}/mo\n"
         else:
             return f"   {name:23} {num:9,} * ${cost:9.4f}/mo = ${cost * num:10.2f}/mo\n"
 
     def get_report(self) -> str:
-        expectedTraffic = self.config.expectedTraffic/8
+        expectedTraffic = self._config.expectedTraffic/8
         # Expect to only saving 25% of pcap because of TLS and zlib
-        s3 = math.ceil(self.plan.s3.pcapStorageDays * expectedTraffic * 0.25 * 60 * 60 * 24)
+        s3 = math.ceil(self._plan.s3.pcapStorageDays * expectedTraffic * 0.25 * 60 * 60 * 24)
         report_text = (
             "OnDemand us-east-1 cost estimate, your cost may be different based on region, discounts or reserve instances:\n"
             + "Fixed:\n"
-            + self._line("Capture", self.plan.captureNodes.instanceType, self.plan.captureNodes.desiredCount)
-            + self._line("Viewer", "fargate", 2) # ALW - Not sure where to get number of viewer nodes from
-            + self._line("OS Master Node", self.plan.osDomain.masterNodes.instanceType, self.plan.osDomain.masterNodes.count)
-            + self._line("OS Data Node", self.plan.osDomain.dataNodes.instanceType, self.plan.osDomain.dataNodes.count)
-            + self._line("OS Storage", "ebs-GB", self.plan.osDomain.dataNodes.count*self.plan.osDomain.dataNodes.volumeSize)
+            + self._line("Capture", self._plan.captureNodes.instanceType, self._plan.captureNodes.desiredCount)
+            + self._line("Viewer", "fargate", 2)
+            + self._line("OS Master Node", self._plan.osDomain.masterNodes.instanceType, self._plan.osDomain.masterNodes.count)
+            + self._line("OS Data Node", self._plan.osDomain.dataNodes.instanceType, self._plan.osDomain.dataNodes.count)
+            + self._line("OS Storage", "ebs-GB", self._plan.osDomain.dataNodes.count*self._plan.osDomain.dataNodes.volumeSize)
             + "Variable:\n"
             + self._line("PCAP Storage first 50TB", "s3-STANDARD-50-GB", min(s3, 50000))
             + self._line("PCAP Storage next 450TB", "s3-STANDARD-450-GB", min(s3 - 50000, 450000))
