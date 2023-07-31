@@ -15,6 +15,7 @@ import cdk_interactions.cdk_context as context
 import core.constants as constants
 from core.local_file import LocalFile, TarGzDirectory, S3File
 from core.usage_report import UsageReport
+from core.price_report import PriceReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
                                     CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, CaptureNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
@@ -81,7 +82,7 @@ def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider
     except ssm_ops.ParamDoesNotExist:
         return UserConfig(None, None, None, None, None)
 
-def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int, 
+def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
                      pcap_days: int, aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
     if None in [expected_traffic, spi_days, replicas, pcap_days, history_days]:
@@ -113,7 +114,7 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
     # All of the parameters defined
     else:
         return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days)
-    
+
 def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvider) -> ClusterPlan:
     # Pull the existing plan, if possible
     try:
@@ -147,7 +148,9 @@ def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterP
                    next_user_config: UserConfig, preconfirm_usage: bool) -> bool:
 
     report = UsageReport(prev_capacity_plan, next_capacity_plan, prev_user_config, next_user_config)
+    price_report = PriceReport(next_capacity_plan, next_user_config)
 
+    logger.info(f"Cost estimate report:\n{price_report.get_report()}")
     if preconfirm_usage:
         logger.info(f"Usage report:\n{report.get_report()}")
         return True
@@ -177,7 +180,7 @@ def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_k
         s3=config_wrangling.S3Details(bucket_name, s3_key),
         version=get_version_info(archive)
     )
-    
+
     # Upload the archive to S3
     logger.info(f"Uploading config archive to S3 bucket: {bucket_name}")
     s3.put_file_to_bucket(
