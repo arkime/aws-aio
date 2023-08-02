@@ -58,14 +58,17 @@ def create_bucket(bucket_name: str, aws_provider: AwsClientProvider):
     aws_env = aws_provider.get_aws_env()
 
     try:
-        s3_client.create_bucket(
-            ACL="private",
-            Bucket=bucket_name,
-            CreateBucketConfiguration={
+        create_args = {
+            "ACL": "private",
+            "Bucket": bucket_name,
+            "ObjectOwnership": "BucketOwnerPreferred"
+        }
+
+        if aws_env.aws_region != "us-east-1":
+            create_args["CreateBucketConfiguration"] = {
                 "LocationConstraint": aws_env.aws_region
-            },
-            ObjectOwnership="BucketOwnerPreferred"
-        )
+            }
+        s3_client.create_bucket(**create_args)
     except ClientError as ex:
         if "BucketAlreadyOwnedByYou" in str(ex):
             logger.debug(f"Bucket {bucket_name} already exists and is owned by this account")

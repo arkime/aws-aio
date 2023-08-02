@@ -37,13 +37,19 @@ def test_WHEN_create_bucket_called_THEN_as_expected():
     # Set up our mock    
     mock_s3_client = mock.Mock()
     test_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
+    test_env_use1 = AwsEnvironment("XXXXXXXXXXX", "us-east-1", "profile")
 
     mock_aws_provider = mock.Mock()
     mock_aws_provider.get_s3.return_value = mock_s3_client
-    mock_aws_provider.get_aws_env.return_value = test_env
 
     # TEST: Bucket doesn't exist and we create it
+    mock_aws_provider.get_aws_env.return_value = test_env
     s3.create_bucket("bucket-name", mock_aws_provider)
+
+    mock_aws_provider.get_aws_env.return_value = test_env_use1
+    s3.create_bucket("bucket-name", mock_aws_provider)
+
+
     create_bucket_calls = [
         mock.call(        
             ACL="private",
@@ -51,6 +57,11 @@ def test_WHEN_create_bucket_called_THEN_as_expected():
             CreateBucketConfiguration={
                 "LocationConstraint": "my-region-1"
             },
+            ObjectOwnership="BucketOwnerPreferred"
+        ),
+        mock.call(        
+            ACL="private",
+            Bucket="bucket-name",
             ObjectOwnership="BucketOwnerPreferred"
         )
     ]
