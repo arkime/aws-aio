@@ -100,7 +100,7 @@ export class ViewerNodesStack extends cdk.Stack {
         const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', { 
             vpc: props.viewerVpc,
             internetFacing: true,
-            loadBalancerName: `${props.clusterName}-Viewer` // Receives a random suffix, which minimizes DNS collisions
+            loadBalancerName: `${props.clusterName}-Viewer`.toLowerCase() // Receives a random suffix, which minimizes DNS collisions
         });
         const listener = lb.addListener('Listener', {
             protocol: elbv2.ApplicationProtocol.HTTP,
@@ -138,7 +138,7 @@ export class ViewerNodesStack extends cdk.Stack {
                 containerPort: viewerPort
             })],
             healthCheck: {
-                healthyHttpCodes: '200,401',
+                healthyHttpCodes: '200,302,401',
                 path: '/',
                 unhealthyThresholdCount: 2,
                 healthyThresholdCount: 5,
@@ -160,7 +160,7 @@ export class ViewerNodesStack extends cdk.Stack {
                 containerPort: viewerPort
             })],
             healthCheck: {
-                healthyHttpCodes: '200,401',
+                healthyHttpCodes: '200,302,401',
                 path: '/',
                 unhealthyThresholdCount: 2,
                 healthyThresholdCount: 5,
