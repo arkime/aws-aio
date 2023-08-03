@@ -38,7 +38,7 @@ def test_WHEN_cmd_config_update_called_AND_happy_path_THEN_as_expected(mock_prov
     ]    
 
     # Run our test
-    cmd_config_update("profile", "region", cluster_name)
+    cmd_config_update("profile", "region", cluster_name, False, False)
 
     # Check our results
     expected_update_config_calls = [
@@ -109,7 +109,7 @@ def test_WHEN_cmd_config_update_called_AND_shouldnt_bounce_THEN_as_expected(mock
     mock_update_config.side_effect = [False, False]
 
     # Run our test
-    cmd_config_update("profile", "region", cluster_name)
+    cmd_config_update("profile", "region", cluster_name, False, False)
 
     # Check our results
     expected_update_config_calls = [
@@ -137,6 +137,81 @@ def test_WHEN_cmd_config_update_called_AND_shouldnt_bounce_THEN_as_expected(mock
     assert expected_get_param_calls == mock_get_param.call_args_list
 
     expected_bounce_calls = []
+    assert expected_bounce_calls == mock_bounce.call_args_list
+
+@mock.patch("commands.config_update._bounce_ecs_service")
+@mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
+@mock.patch("commands.config_update._update_config_if_necessary")
+@mock.patch("commands.config_update.AwsClientProvider")
+def test_WHEN_cmd_config_update_called_AND_force_bounce_THEN_as_expected(mock_provider_cls, mock_update_config,
+                                                                       mock_get_param, mock_bounce):
+    # Set up our mock
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    cluster_name = "cluster_name"
+    bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
+
+    mock_provider = mock.Mock()
+    mock_provider.get_aws_env.return_value = aws_env
+    mock_provider_cls.return_value = mock_provider
+
+    mock_update_config.side_effect = [False, False]
+    mock_get_param.side_effect = [
+        '{"ecsCluster": "cluster-name-cap", "ecsService": "service-name-cap"}',
+        '{"dns": "dns-v", "ecsCluster": "cluster-name-v", "ecsService": "service-name-v", "passwordArn": "pass-arn", "user": "user-v"}',
+    ]
+
+    # Run our test
+    cmd_config_update("profile", "region", cluster_name, True, True)
+
+    # Check our results
+    expected_update_config_calls = [
+        mock.call(
+            cluster_name,
+            bucket_name,
+            constants.get_capture_config_s3_key,
+            constants.get_capture_config_details_ssm_param_name(cluster_name),
+            config_wrangling.get_capture_config_archive,
+            mock_provider
+
+        ),
+        mock.call(
+            cluster_name,
+            bucket_name,
+            constants.get_viewer_config_s3_key,
+            constants.get_viewer_config_details_ssm_param_name(cluster_name),
+            config_wrangling.get_viewer_config_archive,
+            mock_provider
+        ),
+    ]
+    assert expected_update_config_calls == mock_update_config.call_args_list
+
+    expected_get_param_calls = [
+        mock.call(
+            constants.get_capture_details_ssm_param_name(cluster_name),
+            mock_provider
+
+        ),
+        mock.call(
+            constants.get_viewer_details_ssm_param_name(cluster_name),
+            mock_provider
+        ),
+    ]
+    assert expected_get_param_calls == mock_get_param.call_args_list
+
+    expected_bounce_calls = [
+        mock.call(
+            "cluster-name-cap",
+            "service-name-cap",
+            constants.get_capture_config_details_ssm_param_name(cluster_name),
+            mock_provider
+        ),
+        mock.call(
+            "cluster-name-v",
+            "service-name-v",
+            constants.get_viewer_config_details_ssm_param_name(cluster_name),
+            mock_provider
+        ),
+    ]
     assert expected_bounce_calls == mock_bounce.call_args_list
 
 @mock.patch("commands.config_update.ssm_ops.put_ssm_param")

@@ -161,11 +161,23 @@ cli.add_command(vpc_remove)
 
 @click.command(help="Updates specified Arkime Cluster's Capture/Viewer configuration")
 @click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
+@click.option("--force-bounce-capture",
+    help="Forces a bounce of the Capture Nodes, regardless of whether there is new config.",
+    is_flag=True,
+    show_default=True,
+    default=False
+)
+@click.option("--force-bounce-viewer",
+    help="Forces a bounce of the Viewer Nodes, regardless of whether there is new config.",
+    is_flag=True,
+    show_default=True,
+    default=False
+)
 @click.pass_context
-def config_update(ctx, cluster_name):
+def config_update(ctx, cluster_name, force_bounce_capture, force_bounce_viewer):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_config_update(profile, region, cluster_name)
+    cmd_config_update(profile, region, cluster_name, force_bounce_capture, force_bounce_viewer)
 cli.add_command(config_update)
 
 def main():

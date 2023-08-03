@@ -15,7 +15,7 @@ from core.versioning import get_version_info
 
 logger = logging.getLogger(__name__)
 
-def cmd_config_update(profile: str, region: str, cluster_name: str):
+def cmd_config_update(profile: str, region: str, cluster_name: str, force_bounce_capture: bool, force_bounce_viewer: bool):
     logger.debug(f"Invoking config-update with profile '{profile}' and region '{region}'")
     
     # Update Capture/Viewer config in the cloud, if there's a new version locally.  Bounce the associated ECS Tasks
@@ -33,7 +33,7 @@ def cmd_config_update(profile: str, region: str, cluster_name: str):
         config_wrangling.get_capture_config_archive,
         aws_provider
     )
-    if should_bounce_capture_nodes:
+    if should_bounce_capture_nodes or force_bounce_capture:
         raw_capture_details = ssm_ops.get_ssm_param_value(
             constants.get_capture_details_ssm_param_name(cluster_name),
             aws_provider
@@ -55,7 +55,7 @@ def cmd_config_update(profile: str, region: str, cluster_name: str):
         config_wrangling.get_viewer_config_archive,
         aws_provider
     )
-    if should_bounce_viewer_nodes:
+    if should_bounce_viewer_nodes or force_bounce_viewer:
         raw_viewer_details = ssm_ops.get_ssm_param_value(
             constants.get_viewer_details_ssm_param_name(cluster_name),
             aws_provider

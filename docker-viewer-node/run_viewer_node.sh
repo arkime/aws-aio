@@ -26,7 +26,15 @@ source /bootstrap_config.sh
 source /initialize_arkime.sh
 
 # Start Arkime Viewer
-echo "Running Arkime Viewer process ..."
 cd /opt/arkime/viewer
 /opt/arkime/bin/node addUser.js $VIEWER_USER $VIEWER_USER $VIEWER_PASS --admin --packetSearch
-/opt/arkime/bin/node viewer.js -c /opt/arkime/etc/config.ini
+
+set +e # Don't exit the outer script if the viewer process dies
+while true; do
+    echo "Running Arkime Viewer process ..."
+
+    /opt/arkime/bin/node viewer.js -c /opt/arkime/etc/config.ini
+
+    echo "Arkime Viewer crashed with exit code $?. Restarting..."
+    sleep 1
+done
