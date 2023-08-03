@@ -1,4 +1,4 @@
-# Arkime Cloud Demo
+# Arkime AWS All-in-One
 
 The goals of this project are 1) provide a demonstration of how Arkime can be deployed in a cloud-native manner and 2) provide scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure.
 
@@ -17,12 +17,17 @@ When a VPC is added to a Cluster with the `vpc-add` command, we attempt to set u
 
 Resources of those types should have capture configured for them when they are brought online and taken offline.
 
-**Figure 1:** Current high level design of the Arkime Cloud Demo
+**Figure 1:** Current high level design of the Arkime AWS All-in-One Project
 
-![Alt text](./cloud_arkime_design.png?raw=true)
+![High Level Design](./cloud_arkime_design.png?raw=true)
 
 
-## How to run the demo
+**Figure 2:** Current detailed design of the Arkime AWS All-in-One Project
+
+![Detailed Design](./cloud_arkime_design_detailed.png?raw=true)
+
+
+## How to run the AWS All-in-One CLI
 
 ### Pre-requisites
 
