@@ -5,6 +5,8 @@ import core.capacity_planning as cap
 from core.usage_report import UsageReport
 from core.user_config import UserConfig
 
+INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
+
 def test_WHEN_UsageReport_get_report_THEN_as_expected():
     # Set up the test
     prev_plan = cap.ClusterPlan(
@@ -15,7 +17,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
         cap.S3Plan(None, None)
     )
     next_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
+        cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
         cap.CaptureVpcPlan(1),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
@@ -36,7 +38,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
         + "    Max Count: 2\n"
         + "    Desired Count: 1\n"
         + "    Min Count: 1\n"
-        + f"    Type: {cap.INSTANCE_TYPE_CAPTURE_NODE}\n"
+        + f"    Type: {INSTANCE_TYPE_CAPTURE_NODE}\n"
         + "OpenSearch Domain:\n"
         + "    Master Node Count: 3\n"
         + "    Master Node Type: \033[1mm6g.before.search -> m6g.large.search\033[0m\n"
@@ -60,7 +62,7 @@ def test_WHEN_UsageReport_get_confirmation_AND_yes_THEN_as_expected(mock_shell):
         cap.S3Plan(None, None)
     )
     next_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
+        cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
         cap.CaptureVpcPlan(1),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
@@ -90,7 +92,7 @@ def test_WHEN_UsageReport_get_confirmation_AND_no_THEN_as_expected(mock_shell):
         cap.S3Plan(None, None)
     )
     next_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
+        cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
         cap.CaptureVpcPlan(1),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),

@@ -10,6 +10,7 @@ AWS_SECS_PER_MONTH=60*60*AWS_HOURS_PER_MONTH
 US_EAST_1_PRICES: Dict[str, float] = {
     # https://aws.amazon.com/opensearch-service/pricing/
     "t3.small.search": 0.0360 * AWS_HOURS_PER_MONTH,
+    "t3.medium.search": 0.0730 * AWS_HOURS_PER_MONTH,
     "m5.large.search": 0.1420 * AWS_HOURS_PER_MONTH,
     "m6g.large.search": 0.1280  * AWS_HOURS_PER_MONTH,
     "c6g.2xlarge.search": 0.4520 * AWS_HOURS_PER_MONTH,
@@ -18,11 +19,15 @@ US_EAST_1_PRICES: Dict[str, float] = {
     "r6g.4xlarge.search": 1.3390 * AWS_HOURS_PER_MONTH,
     "r6g.12xlarge.search": 4.0160 * AWS_HOURS_PER_MONTH,
 
+    # https://aws.amazon.com/ec2/pricing/on-demand/
+    "t3.medium": 0.0416 * AWS_HOURS_PER_MONTH,
     "m5.xlarge": 0.1920 * AWS_HOURS_PER_MONTH,
 
-    "s3-STANDARD-50-GB": 0.023, # https://aws.amazon.com/s3/pricing/
+    # https://aws.amazon.com/s3/pricing/
+    "s3-STANDARD-50-GB": 0.023,
     "s3-STANDARD-450-GB": 0.022,
     "s3-STANDARD-REST-GB": 0.021,
+
     "ebs-GB": 0.10, # https://aws.amazon.com/ebs/pricing/
     "gwlb-GB": 0.004, # https://aws.amazon.com/elasticloadbalancing/pricing/?nc=sn&loc=3
     "gwlbe-GB": 0.0035, # https://aws.amazon.com/privatelink/pricing/
@@ -61,7 +66,7 @@ class PriceReport:
         s3 = math.ceil(self._plan.s3.pcapStorageDays * expectedTraffic * 0.25 * 60 * 60 * 24)
         report_text = (
             "OnDemand us-east-1 cost estimate, your cost may be different based on region, discounts or reserve instances:\n"
-            + "Fixed:\n"
+            + "Allocated:\n"
             + self._line("Capture", self._plan.captureNodes.instanceType, self._plan.captureNodes.desiredCount)
             + self._line("Viewer", "fargate", 2)
             + self._line("OS Master Node", self._plan.osDomain.masterNodes.instanceType, self._plan.osDomain.masterNodes.count)
@@ -70,7 +75,7 @@ class PriceReport:
             + "Variable:\n"
             + self._line("PCAP Storage first 50TB", "s3-STANDARD-50-GB", min(s3, 50000))
             + self._line("PCAP Storage next 450TB", "s3-STANDARD-450-GB", min(s3 - 50000, 450000))
-            + self._line("PCAP Storage", "s3-STANDARD-REST-GB", s3 - 500000)
+            + self._line("PCAP Storage remaining", "s3-STANDARD-REST-GB", s3 - 500000)
             + self._line("GWLB", "gwlb-GB", math.ceil(expectedTraffic * AWS_SECS_PER_MONTH))
             + self._line("GWLBE", "gwlbe-GB", math.ceil(expectedTraffic * AWS_SECS_PER_MONTH))
             + self._line("Traffic Mirror/ENI", "trafficmirror", 1)

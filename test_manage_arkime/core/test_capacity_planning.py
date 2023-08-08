@@ -2,33 +2,35 @@ import pytest
 
 import core.capacity_planning as cap
 
+INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
+
 
 def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
     # TEST 1: No expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(None)
-    expected_value = cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1)
+    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0]["instanceType"], 1, 2, 1)
 
     assert expected_value == actual_value
-    
+
     # TEST 2: Small expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(0.001)
-    expected_value = cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1)
+    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0]["instanceType"], 1, 2, 1)
 
     assert expected_value == actual_value
 
     # TEST 3: Mid-range expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(20)
-    expected_value = cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 10, 13, 1)
+    expected_value = cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 10, 13, 1)
 
     assert expected_value == actual_value
 
     # TEST 4: Max expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC)
-    expected_value = cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 50, 63, 1)
+    expected_value = cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 50, 63, 1)
 
     assert expected_value == actual_value
 
@@ -40,7 +42,7 @@ def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
 
 def test_WHEN_get_ecs_sys_resource_plan_called_THEN_as_expected():
     # TEST 1: Get an m5.xlarge instance
-    actual_value = cap.get_ecs_sys_resource_plan(cap.INSTANCE_TYPE_CAPTURE_NODE)
+    actual_value = cap.get_ecs_sys_resource_plan(INSTANCE_TYPE_CAPTURE_NODE)
     expected_value = cap.EcsSysResourcePlan(3584, 15360)
 
     assert expected_value == actual_value
@@ -122,7 +124,7 @@ def test_WHEN_get_data_node_plan_called_THEN_as_expected():
 def test_WHEN_get_master_node_plan_called_THEN_as_expected():
     # TEST: Non-graviton
     actual_value = cap._get_master_node_plan(5, 2, cap.T3_SMALL_SEARCH.type)
-    expected_value = cap.MasterNodesPlan(3, "m5.large.search")
+    expected_value = cap.MasterNodesPlan(3, "t3.small.search")
     assert expected_value == actual_value
 
     # TEST: Small data
@@ -155,13 +157,13 @@ def test_WHEN_get_master_node_plan_called_THEN_as_expected():
     expected_value = cap.MasterNodesPlan(3, "r6g.2xlarge.search")
     assert expected_value == actual_value
 
-    # TEST: Large data w/ lots of data nodes
+    # TEST: Large data w/ lots of data nodes (trigger nodes)
     actual_value = cap._get_master_node_plan(1250000, 130, "blah")
     expected_value = cap.MasterNodesPlan(3, "r6g.4xlarge.search")
     assert expected_value == actual_value
 
-    # TEST: Enormous data w/ lots of data nodes
-    actual_value = cap._get_master_node_plan(3010000, 120, "blah")
+    # TEST: Enormous data w/ lots of data nodes (trigger data)
+    actual_value = cap._get_master_node_plan(4010000, 120, "blah")
     expected_value = cap.MasterNodesPlan(3, "r6g.4xlarge.search")
     assert expected_value == actual_value
 
@@ -173,4 +175,4 @@ def test_WHEN_get_os_domain_plan_called_THEN_as_expected():
     )
     assert expected_value == actual_value
 
-    
+
