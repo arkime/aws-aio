@@ -5,10 +5,12 @@ import core.capacity_planning as cap
 from core.price_report import PriceReport
 from core.user_config import UserConfig
 
+INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
+
 def test_WHEN_PriceReport_get_report_THEN_as_expected():
     # Set up the test
     plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan(cap.INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
+        cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
         cap.CaptureVpcPlan(1),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
@@ -22,7 +24,7 @@ def test_WHEN_PriceReport_get_report_THEN_as_expected():
     # Check the results
     expected_report = (
       "OnDemand us-east-1 cost estimate, your cost may be different based on region, discounts or reserve instances:\n"
-      + "Fixed:\n"
+      + "Allocated:\n"
       + "   Capture                         1 * $ 140.1600/mo = $    140.16/mo\n"
       + "   Viewer                          2 * $  29.5504/mo = $     59.10/mo\n"
       + "   OS Master Node                  3 * $  93.4400/mo = $    280.32/mo\n"

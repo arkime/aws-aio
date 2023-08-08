@@ -3,8 +3,8 @@ import shlex
 from typing import Dict, List
 
 import core.constants as constants
-from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan, 
-                                    MasterNodesPlan, OSDomainPlan, INSTANCE_TYPE_CAPTURE_NODE, DEFAULT_NUM_AZS, S3Plan,
+from core.capacity_planning import (CaptureNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
+                                    MasterNodesPlan, OSDomainPlan, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS)
 from core.user_config import UserConfig
 
@@ -26,7 +26,7 @@ def generate_cluster_destroy_context(name: str) -> Dict[str, str]:
     # or it fails/rolls back they are irrelevant.
     fake_arn = "N/A"
     fake_cluster_plan = ClusterPlan(
-        CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
         CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),

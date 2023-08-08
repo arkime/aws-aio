@@ -76,7 +76,7 @@ def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider
             "userConfig",
             aws_provider
         )
-        return UserConfig(**stored_config_json)
+        return UserConfig.from_dict(stored_config_json)
 
     # Existing config doesn't exist; return a blank config
     except ssm_ops.ParamDoesNotExist:

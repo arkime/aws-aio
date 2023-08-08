@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 import math
 import logging
+import sys
 from typing import Dict, Type, TypeVar
 
 
 logger = logging.getLogger(__name__)
 
-INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge" # Arbitrarily chosen
-TRAFFIC_PER_M5_XL = 2 # in Gbps, guestimate, should be updated with experimental data
 MAX_TRAFFIC = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
 MINIMUM_NODES = 1 # We'll always have at least one capture node
 MINIMUM_TRAFFIC = 0.01 # Gbps; arbitrarily chosen, but will yield a minimal cluster
@@ -17,6 +16,41 @@ DEFAULT_SPI_DAYS = 30 # How many days of SPI metadata to keep in the OS Domain
 DEFAULT_REPLICAS = 1 # How replicas of metadata to keep in the OS Domain
 DEFAULT_HISTORY_DAYS = 365 # How many days of Arkime Viewer user history to keep in the OS Domain
 DEFAULT_NUM_AZS = 2 # How many AWS Availability zones to utilize
+
+@dataclass
+class CaptureInstance:
+    instanceType: str
+    maxTraffic: float
+    trafficPer: float
+    ecsCPU: int
+    ecsMemory: int
+
+# These are the possible instances types we assign for capture nodes based on maxTraffic
+CAPTURE_INSTANCES = [
+    CaptureInstance("t3.medium", 0.5, 0.25, 1536, 3072),
+    CaptureInstance("m5.xlarge", MAX_TRAFFIC, 2.0, 3584, 15360)
+]
+
+
+@dataclass
+class MasterInstance:
+    instanceType: str
+    isArm: bool
+    maxShards: int
+    maxNodes: int
+# These are the possible instances types we assign for master nodes based on isArm, maxShards, maxNodes
+# Can't mix graviton and non-graviton instance types so we have Arm and non Arm instance types.
+MASTER_INSTANCES = [
+### Non-ARM
+    MasterInstance("t3.small.search", False, sys.maxsize, 3),
+    MasterInstance("t3.medium.search", False, sys.maxsize, 6),
+    MasterInstance("m5.large.search", False, sys.maxsize, sys.maxsize),
+### ARM
+    MasterInstance("m6g.large.search", True, 10000, 10),
+    MasterInstance("c6g.2xlarge.search", True, 30000, 30),
+    MasterInstance("r6g.2xlarge.search", True, 75000, 125),
+    MasterInstance("r6g.4xlarge.search", True, sys.maxsize, sys.maxsize)
+]
 
 class TooMuchTraffic(Exception):
     def __init__(self, expected_traffic: int):
@@ -51,15 +85,18 @@ def get_capture_node_capacity_plan(expected_traffic: float) -> CaptureNodesPlan:
     expected_traffic: The expected traffic volume for the Arkime cluster, in Gigabits Per Second (Gbps)
     """
 
-    if not expected_traffic or expected_traffic < TRAFFIC_PER_M5_XL:
-        desired_instances = MINIMUM_NODES
-    elif expected_traffic > MAX_TRAFFIC:
+    if not expected_traffic or expected_traffic < MINIMUM_TRAFFIC:
+        expected_traffic = MINIMUM_TRAFFIC
+
+    if expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
-    else:
-        desired_instances = math.ceil(expected_traffic/TRAFFIC_PER_M5_XL)
+
+    chosen_instance = next(instance for instance in CAPTURE_INSTANCES if expected_traffic <= instance.maxTraffic)
+
+    desired_instances = math.ceil(expected_traffic/chosen_instance.trafficPer)
 
     return CaptureNodesPlan(
-        INSTANCE_TYPE_CAPTURE_NODE,
+        chosen_instance.instanceType,
         desired_instances,
         math.ceil(desired_instances * CAPACITY_BUFFER_FACTOR),
         MINIMUM_NODES
@@ -90,18 +127,11 @@ def get_ecs_sys_resource_plan(instance_type: str) -> EcsSysResourcePlan:
     instance_type: The instance type to plan for
     """
 
-    if instance_type == INSTANCE_TYPE_CAPTURE_NODE:
-        # We want the full capacity of our m5.xlarge because we're using HOST network type and therefore won't
-        # place multiple containers on a single host.  However, we can't ask for ALL of its resources (ostensibly,
-        # 4 vCPU and 16 GiB) because then ECS placement will fail.  We therefore ask for a slightly reduced
-        # amount.  This is the minimum amount we're requesting ECS to reserve, so it can't reserve more than
-        # exist.
-        return EcsSysResourcePlan(
-            3584, # 3.5 vCPUs
-            15360 # 15 GiB
-        )
-    else:
+    chosen_instance = next((instance for instance in CAPTURE_INSTANCES if instance_type == instance.instanceType), None)
+    if chosen_instance == None:
         raise UnknownInstanceType(instance_type)
+    else:
+        return EcsSysResourcePlan(chosen_instance.ecsCPU, chosen_instance.ecsMemory)
 
 
 """
@@ -142,7 +172,7 @@ class DataNodesPlan:
             "instanceType": self.instanceType,
             "volumeSize": self.volumeSize
         }
-    
+
 @dataclass
 class MasterNodesPlan:
     count: int
@@ -173,13 +203,13 @@ class OSDomainPlan:
             "dataNodes": self.dataNodes.to_dict(),
             "masterNodes": self.masterNodes.to_dict()
         }
-    
+
     @classmethod
     def from_dict(cls: Type[T_OSDomainPlan], input: Dict[str, any]) -> T_OSDomainPlan:
         data_nodes = DataNodesPlan(**input["dataNodes"])
         master_nodes = MasterNodesPlan(**input["masterNodes"])
         return cls(data_nodes, master_nodes)
-    
+
 def _get_storage_per_replica(expected_traffic: float, spi_days: int) -> float:
     """
     Predict the required OpenSearch domain storage for each replica, in GiB
@@ -206,7 +236,7 @@ def _get_data_node_plan(total_storage: float, num_azs: int) -> DataNodesPlan:
     than 80 of the largest instance type can provide, they'll bump the limit out of band and just keep getting more of
     that largest instance type. There's also an apparent incentive to have more, smaller nodes than fewer, larger
     nodes [2].
-    
+
     We ensure there are at least two data nodes of whichever type is selected for the
     capacity plan.
 
@@ -243,7 +273,7 @@ def _get_data_node_plan(total_storage: float, num_azs: int) -> DataNodesPlan:
 
 def _get_master_node_plan(storage_per_replica: float, data_node_count: int, data_node_type: str) -> MasterNodesPlan:
     """
-    We follow the sizing recommendation in the docs [1].  One complicating 
+    We follow the sizing recommendation in the docs [1].  One complicating
 
     [1] https://docs.aws.amazon.com/opensearch-service/latest/developerguide/managedomains-dedicatedmasternodes.html
 
@@ -252,28 +282,25 @@ def _get_master_node_plan(storage_per_replica: float, data_node_count: int, data
 
     # Arkime is a write-heavy usecase so recommended data/shard is 30-50 GiB, per the docs.
     # See: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/sizing-domains.html#bp-sharding
-    storage_per_shard = 40 # GiB
+    # Although https://docs.aws.amazon.com/opensearch-service/latest/developerguide/petabyte-scale.html
+    # says 100GiB is ok.
+    storage_per_shard = 50 # GiB
     num_shards = math.ceil(storage_per_replica / storage_per_shard)
+    isArm = not data_node_type.startswith("t3")
 
-    if data_node_type == T3_SMALL_SEARCH.type:
-        # You can't mix graviton and non-graviton instance types across the data/master node roles.  Additionally,
-        # there are no "toy"-class graviton data node instance types.  Therefore, we need this (hacky) check to
-        # make sure we're using a compatible type.
-        node_type = "m5.large.search"
-    elif num_shards <= 10000 and data_node_count <= 10:
-        node_type = "m6g.large.search"
-    elif num_shards <= 30000 and data_node_count <= 30:
-        node_type = "c6g.2xlarge.search"
-    elif num_shards <= 75000 and data_node_count <= 125:
-        node_type = "r6g.2xlarge.search"
-    else:
-        node_type = "r6g.4xlarge.search"
+    chosen_instance = next(
+        instance for instance in MASTER_INSTANCES if (
+            isArm == instance.isArm
+            and num_shards <= instance.maxShards
+            and data_node_count <= instance.maxNodes
+        )
+    )
 
     return MasterNodesPlan(
         count = MASTER_NODE_COUNT,
-        instanceType = node_type
+        instanceType = chosen_instance.instanceType
     )
-    
+
 def get_os_domain_plan(expected_traffic: float, spi_days: int, replicas: int, num_azs: int) -> OSDomainPlan:
     """
     Get the OpenSearch Domain capacity required to satisify the expected traffic
@@ -298,12 +325,12 @@ class CaptureVpcPlan:
 
     def __equal__(self, other) -> bool:
         return self.numAzs == other.numAzs
-    
+
     def to_dict(self) -> Dict[str, any]:
         return {
             "numAzs": self.numAzs
         }
-    
+
 DEFAULT_S3_STORAGE_CLASS = "STANDARD"
 DEFAULT_S3_STORAGE_DAYS = 30
 
@@ -314,13 +341,13 @@ class S3Plan:
 
     def __equal__(self, other) -> bool:
         return self.pcapStorageClass == other.pcapStorageClass and self.pcapStorageDays == other.pcapStorageDays
-    
+
     def to_dict(self) -> Dict[str, any]:
         return {
             "pcapStorageClass": self.pcapStorageClass,
             "pcapStorageDays": self.pcapStorageDays
         }
-    
+
 T_ClusterPlan = TypeVar('T_ClusterPlan', bound='ClusterPlan')
 
 @dataclass
@@ -332,7 +359,7 @@ class ClusterPlan:
     s3: S3Plan
 
     def __equal__(self, other) -> bool:
-        return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources 
+        return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources
                 and self.osDomain == other.osDomain and self.captureVpc == other.vpc and self.s3 == other.s3)
 
     def to_dict(self) -> Dict[str, any]:
@@ -343,7 +370,7 @@ class ClusterPlan:
             "osDomain": self.osDomain.to_dict(),
             "s3": self.s3.to_dict(),
         }
-    
+
     @classmethod
     def from_dict(cls: Type[T_ClusterPlan], input: Dict[str, any]) -> T_ClusterPlan:
         capture_nodes = CaptureNodesPlan(**input["captureNodes"])
@@ -353,4 +380,4 @@ class ClusterPlan:
         s3 = S3Plan(**input["s3"])
 
         return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3)
-    
+
