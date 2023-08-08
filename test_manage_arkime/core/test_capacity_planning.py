@@ -9,14 +9,14 @@ def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
     # TEST 1: No expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(None)
-    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0]["instanceType"], 1, 2, 1)
+    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0].instanceType, 1, 2, 1)
 
     assert expected_value == actual_value
 
     # TEST 2: Small expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(0.001)
-    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0]["instanceType"], 1, 2, 1)
+    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0].instanceType, 1, 2, 1)
 
     assert expected_value == actual_value
 

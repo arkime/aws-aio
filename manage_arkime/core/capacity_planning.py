@@ -17,71 +17,39 @@ DEFAULT_REPLICAS = 1 # How replicas of metadata to keep in the OS Domain
 DEFAULT_HISTORY_DAYS = 365 # How many days of Arkime Viewer user history to keep in the OS Domain
 DEFAULT_NUM_AZS = 2 # How many AWS Availability zones to utilize
 
+@dataclass
+class CaptureInstance:
+    instanceType: str
+    maxTraffic: float
+    trafficPer: float
+    ecsCPU: int
+    ecsMemory: int
+
 # These are the possible instances types we assign for capture nodes based on maxTraffic
 CAPTURE_INSTANCES = [
-    {
-        "instanceType": "t3.medium",
-        "maxTraffic": 0.5,
-        "trafficPer": 0.25,
-        "ecsCPU": 1536, # 1.5 vCPUs
-        "ecsMemory": 3072 # 3 GiB
-    },
-    {
-        "instanceType": "m5.xlarge",
-        "maxTraffic": MAX_TRAFFIC,
-        "trafficPer": 2.0,
-        "ecsCPU": 3584, # 3.5 vCPUs
-        "ecsMemory": 15360 # 15 GiB
-    }
+    CaptureInstance("t3.medium", 0.5, 0.25, 1536, 3072),
+    CaptureInstance("m5.xlarge", MAX_TRAFFIC, 2.0, 3584, 15360)
 ]
 
+
+@dataclass
+class MasterInstance:
+    instanceType: str
+    isArm: bool
+    maxShards: int
+    maxNodes: int
 # These are the possible instances types we assign for master nodes based on isArm, maxShards, maxNodes
 # Can't mix graviton and non-graviton instance types so we have Arm and non Arm instance types.
 MASTER_INSTANCES = [
 ### Non-ARM
-    {
-        "instanceType": "t3.small.search",
-        "isArm": False,
-        "maxShards": sys.maxsize,
-        "maxNodes": 3
-    },
-    {
-        "instanceType": "t3.medium.search",
-        "isArm": False,
-        "maxShards": sys.maxsize,
-        "maxNodes": 6
-    },
-    {
-        "instanceType": "m5.large",
-        "isArm": False,
-        "maxShards": sys.maxsize,
-        "maxNodes": sys.maxsize
-    },
+    MasterInstance("t3.small.search", False, sys.maxsize, 3),
+    MasterInstance("t3.medium.search", False, sys.maxsize, 6),
+    MasterInstance("m5.large", False, sys.maxsize, sys.maxsize),
 ### ARM
-    {
-        "instanceType": "m6g.large.search",
-        "isArm": True,
-        "maxShards": 10000,
-        "maxNodes": 10
-    },
-    {
-        "instanceType": "c6g.2xlarge.search",
-        "isArm": True,
-        "maxShards": 30000,
-        "maxNodes": 30
-    },
-    {
-        "instanceType": "r6g.2xlarge.search",
-        "isArm": True,
-        "maxShards": 75000,
-        "maxNodes": 125
-    },
-    {
-        "instanceType": "r6g.4xlarge.search",
-        "isArm": True,
-        "maxShards": sys.maxsize,
-        "maxNodes": sys.maxsize
-    },
+    MasterInstance("m6g.large.search", True, 10000, 10),
+    MasterInstance("c6g.2xlarge.search", True, 30000, 30),
+    MasterInstance("r6g.2xlarge.search", True, 75000, 125),
+    MasterInstance("r6g.4xlarge.search", True, sys.maxsize, sys.maxsize)
 ]
 
 class TooMuchTraffic(Exception):
@@ -123,12 +91,12 @@ def get_capture_node_capacity_plan(expected_traffic: float) -> CaptureNodesPlan:
     if expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
 
-    chosen_instance = next(instance for instance in CAPTURE_INSTANCES if expected_traffic <= instance["maxTraffic"])
+    chosen_instance = next(instance for instance in CAPTURE_INSTANCES if expected_traffic <= instance.maxTraffic)
 
-    desired_instances = math.ceil(expected_traffic/chosen_instance["trafficPer"])
+    desired_instances = math.ceil(expected_traffic/chosen_instance.trafficPer)
 
     return CaptureNodesPlan(
-        chosen_instance["instanceType"],
+        chosen_instance.instanceType,
         desired_instances,
         math.ceil(desired_instances * CAPACITY_BUFFER_FACTOR),
         MINIMUM_NODES
@@ -159,11 +127,11 @@ def get_ecs_sys_resource_plan(instance_type: str) -> EcsSysResourcePlan:
     instance_type: The instance type to plan for
     """
 
-    chosen_instance = next((instance for instance in CAPTURE_INSTANCES if instance_type == instance["instanceType"]), None)
+    chosen_instance = next((instance for instance in CAPTURE_INSTANCES if instance_type == instance.instanceType), None)
     if chosen_instance == None:
         raise UnknownInstanceType(instance_type)
     else:
-        return EcsSysResourcePlan(chosen_instance["ecsCPU"], chosen_instance["ecsMemory"])
+        return EcsSysResourcePlan(chosen_instance.ecsCPU, chosen_instance.ecsMemory)
 
 
 """
@@ -322,15 +290,15 @@ def _get_master_node_plan(storage_per_replica: float, data_node_count: int, data
 
     chosen_instance = next(
         instance for instance in MASTER_INSTANCES if (
-            isArm == instance["isArm"]
-            and num_shards <= instance["maxShards"]
-            and data_node_count <= instance["maxNodes"]
+            isArm == instance.isArm
+            and num_shards <= instance.maxShards
+            and data_node_count <= instance.maxNodes
         )
     )
 
     return MasterNodesPlan(
         count = MASTER_NODE_COUNT,
-        instanceType = chosen_instance["instanceType"]
+        instanceType = chosen_instance.instanceType
     )
 
 def get_os_domain_plan(expected_traffic: float, spi_days: int, replicas: int, num_azs: int) -> OSDomainPlan:
