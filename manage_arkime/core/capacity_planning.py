@@ -44,7 +44,7 @@ MASTER_INSTANCES = [
 ### Non-ARM
     MasterInstance("t3.small.search", False, sys.maxsize, 3),
     MasterInstance("t3.medium.search", False, sys.maxsize, 6),
-    MasterInstance("m5.large", False, sys.maxsize, sys.maxsize),
+    MasterInstance("m5.large.search", False, sys.maxsize, sys.maxsize),
 ### ARM
     MasterInstance("m6g.large.search", True, 10000, 10),
     MasterInstance("c6g.2xlarge.search", True, 30000, 30),
