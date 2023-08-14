@@ -5,6 +5,7 @@ import os
 import shutil
 from typing import Dict, Type, TypeVar
 
+from aws_interactions.aws_environment import AwsEnvironment
 from core.constants import get_cluster_config_parent_dir, is_valid_cluster_name, InvalidClusterName
 from core.local_file import LocalFile, ZipDirectory
 from core.versioning import VersionInfo
@@ -117,35 +118,36 @@ def _get_default_viewer_config_dir_path() -> str:
     current_file_path = os.path.abspath(os.path.dirname(__file__))
     return os.path.join(current_file_path, "default_config", "viewer")
 
-def get_cluster_dir_name(cluster_name: str) -> str:
+def get_cluster_dir_name(cluster_name: str, aws_env: AwsEnvironment) -> str:
     # We should validate earlier, but practice defense in depth
     if not is_valid_cluster_name(cluster_name):
         raise InvalidClusterName(cluster_name)
     
-    return f"config-{cluster_name}"
+    # We want to avoid collisions between Clusters across accounts/regions
+    return f"config-{cluster_name}-{aws_env.aws_account}-{aws_env.aws_region}"
 
-def get_cluster_dir_path(cluster_name: str, parent_dir: str):
-    cluster_dir_name = get_cluster_dir_name(cluster_name)
+def get_cluster_dir_path(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
+    cluster_dir_name = get_cluster_dir_name(cluster_name, aws_env)
     return os.path.join(parent_dir, cluster_dir_name)
 
-def get_capture_dir_path(cluster_name: str, parent_dir: str):
-    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+def get_capture_dir_path(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, aws_env, parent_dir)
     return os.path.join(cluster_dir_path, "capture")
 
-def get_capture_archive_path(cluster_name: str, parent_dir: str):
-    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+def get_capture_archive_path(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, aws_env, parent_dir)
     return os.path.join(cluster_dir_path, "capture.zip")
 
-def get_viewer_dir_path(cluster_name: str, parent_dir: str):
-    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+def get_viewer_dir_path(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, aws_env, parent_dir)
     return os.path.join(cluster_dir_path, "viewer")
 
-def get_viewer_archive_path(cluster_name: str, parent_dir: str):
-    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+def get_viewer_archive_path(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
+    cluster_dir_path = get_cluster_dir_path(cluster_name, aws_env, parent_dir)
     return os.path.join(cluster_dir_path, "viewer.zip")
 
-def _create_config_dir(cluster_name: str, parent_dir: str) -> str:
-    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+def _create_config_dir(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str) -> str:
+    cluster_dir_path = get_cluster_dir_path(cluster_name, aws_env, parent_dir)
 
     logger.debug(f"Checking if config dir for cluster {cluster_name} already exists at: {cluster_dir_path}")
     if os.path.exists(cluster_dir_path):
@@ -157,9 +159,9 @@ def _create_config_dir(cluster_name: str, parent_dir: str) -> str:
 
     return cluster_dir_path
 
-def _copy_default_config_to_cluster_dir(cluster_name: str, parent_dir: str):
+def _copy_default_config_to_cluster_dir(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
     # If there is anything in the directory, abort
-    cluster_dir_path = get_cluster_dir_path(cluster_name, parent_dir)
+    cluster_dir_path = get_cluster_dir_path(cluster_name, aws_env, parent_dir)
     directory_not_empty = len(os.listdir(cluster_dir_path)) > 0
 
     logger.debug(f"Confirming config dir for cluster {cluster_name} is empty...")
@@ -170,28 +172,28 @@ def _copy_default_config_to_cluster_dir(cluster_name: str, parent_dir: str):
     logger.debug(f"Config dir for cluster {cluster_name} is empty; copying default config to: {cluster_dir_path}")
     shutil.copytree(
         _get_default_capture_config_dir_path(),
-        get_capture_dir_path(cluster_name, parent_dir)
+        get_capture_dir_path(cluster_name, aws_env, parent_dir)
     )
     shutil.copytree(
         _get_default_viewer_config_dir_path(),
-        get_viewer_dir_path(cluster_name, parent_dir)
+        get_viewer_dir_path(cluster_name, aws_env, parent_dir)
     )
 
-def set_up_arkime_config_dir(cluster_name: str, parent_dir: str):
+def set_up_arkime_config_dir(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
     logger.info(f"Ensuring Arkime Config dir exists for cluster: {cluster_name}")
-    cluster_config_dir_path = _create_config_dir(cluster_name, parent_dir)
+    cluster_config_dir_path = _create_config_dir(cluster_name, aws_env, parent_dir)
     logger.info(f"Arkime Config dir exists at: {cluster_config_dir_path}")
 
     try:
         logger.info(f"Copying default Arkime Config to dir: {cluster_config_dir_path}")
-        _copy_default_config_to_cluster_dir(cluster_name, parent_dir)
+        _copy_default_config_to_cluster_dir(cluster_name, aws_env, parent_dir)
     except ConfigDirNotEmpty as ex:
         logger.info("Cluster config directory not empty; skipping copy")
 
-def get_capture_config_archive(cluster_name: str) -> LocalFile:
+def get_capture_config_archive(cluster_name: str, aws_env: AwsEnvironment) -> LocalFile:
     cluster_config_parent_dir_path = get_cluster_config_parent_dir()
-    capture_config_dir_path = get_capture_dir_path(cluster_name, cluster_config_parent_dir_path)
-    capture_config_archive_path = get_capture_archive_path(cluster_name, cluster_config_parent_dir_path)
+    capture_config_dir_path = get_capture_dir_path(cluster_name, aws_env, cluster_config_parent_dir_path)
+    capture_config_archive_path = get_capture_archive_path(cluster_name, aws_env, cluster_config_parent_dir_path)
 
     logger.info(f"Turning Capture configuration at {capture_config_dir_path} into archive at {capture_config_archive_path}")
     capture_config_archive = ZipDirectory(capture_config_dir_path, capture_config_archive_path)
@@ -199,10 +201,10 @@ def get_capture_config_archive(cluster_name: str) -> LocalFile:
 
     return capture_config_archive
 
-def get_viewer_config_archive(cluster_name: str) -> LocalFile:
+def get_viewer_config_archive(cluster_name: str, aws_env: AwsEnvironment) -> LocalFile:
     cluster_config_parent_dir_path = get_cluster_config_parent_dir()
-    viewer_config_dir_path = get_viewer_dir_path(cluster_name, cluster_config_parent_dir_path)
-    viewer_config_archive_path = get_viewer_archive_path(cluster_name, cluster_config_parent_dir_path)
+    viewer_config_dir_path = get_viewer_dir_path(cluster_name, aws_env, cluster_config_parent_dir_path)
+    viewer_config_archive_path = get_viewer_archive_path(cluster_name, aws_env, cluster_config_parent_dir_path)
 
     logger.info(f"Turning Viewer configuration at {viewer_config_dir_path} into archive at {viewer_config_archive_path}")
     viewer_config_archive = ZipDirectory(viewer_config_dir_path, viewer_config_archive_path)

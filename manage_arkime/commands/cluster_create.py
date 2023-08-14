@@ -200,16 +200,17 @@ def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_k
     )
 
 def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
-    # Create a copy of the the default Arkime config (if necessary)
-    cluster_config_parent_dir_path = constants.get_cluster_config_parent_dir()
-    config_wrangling.set_up_arkime_config_dir(cluster_name, cluster_config_parent_dir_path)
-
-    # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
+    # Get constants
     aws_env = aws_provider.get_aws_env()
     bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
     capture_s3_key = constants.get_capture_config_s3_key("1")
     viewer_s3_key = constants.get_viewer_config_s3_key("1")
 
+    # Create a copy of the the default Arkime config (if necessary)
+    cluster_config_parent_dir_path = constants.get_cluster_config_parent_dir()
+    config_wrangling.set_up_arkime_config_dir(cluster_name, aws_env, cluster_config_parent_dir_path)
+
+    # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
     try:
         s3.ensure_bucket_exists(bucket_name, aws_provider)
     except s3.CouldntEnsureBucketExists:

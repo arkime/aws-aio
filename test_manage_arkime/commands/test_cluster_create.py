@@ -595,7 +595,7 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 
     # Check our results
     expected_set_up_config_dir_calls = [
-        mock.call("cluster-name", constants.get_cluster_config_parent_dir())
+        mock.call("cluster-name", test_env, constants.get_cluster_config_parent_dir())
     ]
     assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
 
@@ -686,7 +686,7 @@ def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(moc
 
     # Check our results
     expected_set_up_config_dir_calls = [
-        mock.call("cluster-name", constants.get_cluster_config_parent_dir())
+        mock.call("cluster-name", test_env, constants.get_cluster_config_parent_dir())
     ]
     assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
 
