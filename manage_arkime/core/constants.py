@@ -147,10 +147,9 @@ def is_valid_cluster_name(cluster_name: str) -> bool:
     # There are no special characters and it's not an empty string
     return bool(no_special_chars.match(cluster_name)) and len(cluster_name) > 0
 
-def get_cluster_config_parent_dir() -> str:
+def get_repo_root_dir() -> str:
     """
-    Returns the path to the location on disk to the directory which will contain the configuration specific to each
-    cluster
+    Returns the path to the location on disk of the repo's root directory
     """
     this_files_path = os.path.abspath(__file__)
     three_levels_up = os.path.dirname(os.path.dirname(os.path.dirname(this_files_path))) # should be repo root

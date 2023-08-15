@@ -6,7 +6,7 @@ import shutil
 from typing import Dict, Type, TypeVar
 
 from aws_interactions.aws_environment import AwsEnvironment
-from core.constants import get_cluster_config_parent_dir, is_valid_cluster_name, InvalidClusterName
+from core.constants import get_repo_root_dir, is_valid_cluster_name, InvalidClusterName
 from core.local_file import LocalFile, ZipDirectory
 from core.versioning import VersionInfo
 
@@ -191,7 +191,7 @@ def set_up_arkime_config_dir(cluster_name: str, aws_env: AwsEnvironment, parent_
         logger.info("Cluster config directory not empty; skipping copy")
 
 def get_capture_config_archive(cluster_name: str, aws_env: AwsEnvironment) -> LocalFile:
-    cluster_config_parent_dir_path = get_cluster_config_parent_dir()
+    cluster_config_parent_dir_path = get_repo_root_dir()
     capture_config_dir_path = get_capture_dir_path(cluster_name, aws_env, cluster_config_parent_dir_path)
     capture_config_archive_path = get_capture_archive_path(cluster_name, aws_env, cluster_config_parent_dir_path)
 
@@ -202,7 +202,7 @@ def get_capture_config_archive(cluster_name: str, aws_env: AwsEnvironment) -> Lo
     return capture_config_archive
 
 def get_viewer_config_archive(cluster_name: str, aws_env: AwsEnvironment) -> LocalFile:
-    cluster_config_parent_dir_path = get_cluster_config_parent_dir()
+    cluster_config_parent_dir_path = get_repo_root_dir()
     viewer_config_dir_path = get_viewer_dir_path(cluster_name, aws_env, cluster_config_parent_dir_path)
     viewer_config_archive_path = get_viewer_archive_path(cluster_name, aws_env, cluster_config_parent_dir_path)
 

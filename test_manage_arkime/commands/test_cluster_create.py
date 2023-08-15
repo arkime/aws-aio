@@ -59,7 +59,7 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
 
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False)
 
     # Check our results
     expected_calls = [
@@ -151,7 +151,7 @@ def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cd
     mock_confirm.return_value = False
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False)
 
     # Check our results
     expected_calls = []
@@ -165,6 +165,128 @@ def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cd
 
     expected_set_up_arkime_conf_calls = []
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
+
+@mock.patch("commands.cluster_create.cfn.set_up_cloudformation_template_dir")
+@mock.patch("commands.cluster_create.constants.get_repo_root_dir")
+@mock.patch("commands.cluster_create.shutil.rmtree")
+@mock.patch("commands.cluster_create.cfn.get_cdk_out_dir_path")
+@mock.patch("commands.cluster_create.AwsClientProvider")
+@mock.patch("commands.cluster_create._set_up_arkime_config")
+@mock.patch("commands.cluster_create._configure_ism")
+@mock.patch("commands.cluster_create._get_previous_user_config")
+@mock.patch("commands.cluster_create._get_previous_capacity_plan")
+@mock.patch("commands.cluster_create._confirm_usage")
+@mock.patch("commands.cluster_create._get_next_user_config")
+@mock.patch("commands.cluster_create._get_next_capacity_plan")
+@mock.patch("commands.cluster_create._set_up_viewer_cert")
+@mock.patch("commands.cluster_create.CdkClient")
+def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans,
+                                                                mock_get_config, mock_confirm, mock_get_prev_plan,
+                                                                mock_get_prev_config, mock_configure, mock_set_up_arkime_conf,
+                                                                mock_aws_provider_cls, mock_get_cdk_dir, mock_rmtree,
+                                                                mock_get_root_dir, mock_set_up_cfn):
+    # Set up our mock
+    mock_set_up.return_value = "arn"
+
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
+
+    user_config = UserConfig(1, 30, 365, 2, 30)
+    mock_get_config.return_value = user_config
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        CaptureVpcPlan(DEFAULT_NUM_AZS),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+    )
+    mock_get_plans.return_value = cluster_plan
+
+    mock_confirm.return_value = True
+
+    mock_get_cdk_dir.return_value = "/path/cdk.out"
+    mock_get_root_dir.return_value = "/path"
+
+    # Run our test
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True)
+
+    # Check our results
+    expected_calls = [
+        mock.call(
+            [
+                constants.get_capture_bucket_stack_name("my-cluster"),
+                constants.get_capture_nodes_stack_name("my-cluster"),
+                constants.get_capture_vpc_stack_name("my-cluster"),
+                constants.get_opensearch_domain_stack_name("my-cluster"),
+                constants.get_viewer_nodes_stack_name("my-cluster"),
+            ],
+            context={
+                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_create,
+                constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+                    "nameCluster": "my-cluster",
+                    "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
+                    "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
+                    "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name("my-cluster"),
+                    "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name("my-cluster"),
+                    "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
+                    "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
+                    "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, "my-cluster"),
+                    "nameClusterSsmParam": constants.get_cluster_ssm_param_name("my-cluster"),
+                    "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
+                    "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
+                    "nameViewerCertArn": "arn",
+                    "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name("my-cluster"),
+                    "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name("my-cluster"),
+                    "nameViewerNodesStack": constants.get_viewer_nodes_stack_name("my-cluster"),
+                    "planCluster": json.dumps(cluster_plan.to_dict()),
+                    "userConfig": json.dumps(user_config.to_dict()),
+                }))
+            }
+        )
+    ]
+    assert expected_calls == mock_client.synthesize.call_args_list
+
+    expected_deploy_calls = []
+    assert expected_deploy_calls == mock_client.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_env)
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
+
+    expected_set_up_calls = [
+        mock.call("my-cluster", mock.ANY)
+    ]
+    assert expected_set_up_calls == mock_set_up.call_args_list
+
+    expected_configure_calls = []
+    assert expected_configure_calls == mock_configure.call_args_list
+
+    expected_set_up_arkime_conf_calls = [
+        mock.call("my-cluster", mock.ANY)
+    ]
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
+
+    expected_set_up_arkime_conf_calls = [
+        mock.call("my-cluster", mock.ANY)
+    ]
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
+
+    expected_rmtree_calls = [
+        mock.call("/path/cdk.out")
+    ]
+    assert expected_rmtree_calls == mock_rmtree.call_args_list
+
+    expected_set_up_cfn_calls = [
+        mock.call("my-cluster", aws_env, "/path")
+    ]
+    assert expected_set_up_cfn_calls == mock_set_up_cfn.call_args_list
 
 @mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_ssm_ops):
@@ -595,7 +717,7 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 
     # Check our results
     expected_set_up_config_dir_calls = [
-        mock.call("cluster-name", test_env, constants.get_cluster_config_parent_dir())
+        mock.call("cluster-name", test_env, constants.get_repo_root_dir())
     ]
     assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
 
@@ -686,7 +808,7 @@ def test_WHEN_set_up_arkime_config_called_AND_config_exists_THEN_as_expected(moc
 
     # Check our results
     expected_set_up_config_dir_calls = [
-        mock.call("cluster-name", test_env, constants.get_cluster_config_parent_dir())
+        mock.call("cluster-name", test_env, constants.get_repo_root_dir())
     ]
     assert expected_set_up_config_dir_calls == mock_set_up_config_dir.call_args_list
 

@@ -114,7 +114,7 @@ def test_WHEN_set_up_arkime_config_dir_called_THEN_as_expected(mock_create, mock
     ]
     assert expected_copy_calls == mock_copy.call_args_list
 
-@mock.patch("arkime_interactions.config_wrangling.get_cluster_config_parent_dir")
+@mock.patch("arkime_interactions.config_wrangling.get_repo_root_dir")
 @mock.patch("arkime_interactions.config_wrangling.ZipDirectory")
 def test_WHEN_get_capture_config_archive_called_THEN_as_expected(mock_zip_class, mock_get_parent_dir):
     # Set up our mock
@@ -139,7 +139,7 @@ def test_WHEN_get_capture_config_archive_called_THEN_as_expected(mock_zip_class,
     ]
     assert expected_zip_init_calls == mock_zip_class.call_args_list
 
-@mock.patch("arkime_interactions.config_wrangling.get_cluster_config_parent_dir")
+@mock.patch("arkime_interactions.config_wrangling.get_repo_root_dir")
 @mock.patch("arkime_interactions.config_wrangling.ZipDirectory")
 def test_WHEN_get_viewer_config_archive_called_THEN_as_expected(mock_zip_class, mock_get_parent_dir):
     # Set up our mock

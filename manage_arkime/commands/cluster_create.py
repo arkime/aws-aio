@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 import sys
 from typing import Callable
 
@@ -10,10 +11,10 @@ import aws_interactions.events_interactions as events
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
-from aws_interactions.aws_environment import AwsEnvironment
 import cdk_interactions.cdk_context as context
+import cdk_interactions.cfn_wrangling as cfn
 import core.constants as constants
-from core.local_file import LocalFile, TarGzDirectory, S3File
+from core.local_file import LocalFile, S3File
 from core.usage_report import UsageReport
 from core.price_report import PriceReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
@@ -25,7 +26,7 @@ from core.user_config import UserConfig
 logger = logging.getLogger(__name__)
 
 def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                       pcap_days: int, preconfirm_usage: bool):
+                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool):
     logger.debug(f"Invoking cluster-create with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
@@ -48,7 +49,7 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
     # Set up the Arkime Config so it's available in-AWS
     _set_up_arkime_config(name, aws_provider)
 
-    # Deploy the CFN Resources
+    # Define the CFN Resources and CDK Context
     stacks_to_deploy = [
         constants.get_capture_bucket_stack_name(name),
         constants.get_capture_nodes_stack_name(name),
@@ -63,10 +64,23 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
         next_user_config,
         constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, name)
     )
-    cdk_client.deploy(stacks_to_deploy, context=create_context)
+    if just_print_cfn:
+        # Remove the CDK output directory to ensure we don't copy over stale templates
+        cdk_out_dir_path = cfn.get_cdk_out_dir_path()
+        shutil.rmtree(cdk_out_dir_path)
 
-    # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
-    _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
+        # Generate the CloudFormation templates (without deploying them)
+        cdk_client.synthesize(stacks_to_deploy, context=create_context)
+
+        # Copy them over
+        parent_dir = constants.get_repo_root_dir()
+        cfn.set_up_cloudformation_template_dir(name, aws_env, parent_dir)
+    else:
+        # Deploy the CFN resources
+        cdk_client.deploy(stacks_to_deploy, context=create_context)
+
+        # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
+        _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
 
 def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider) -> UserConfig:
     # Pull the existing config, if possible
@@ -207,7 +221,7 @@ def _set_up_arkime_config(cluster_name: str, aws_provider: AwsClientProvider):
     viewer_s3_key = constants.get_viewer_config_s3_key("1")
 
     # Create a copy of the the default Arkime config (if necessary)
-    cluster_config_parent_dir_path = constants.get_cluster_config_parent_dir()
+    cluster_config_parent_dir_path = constants.get_repo_root_dir()
     config_wrangling.set_up_arkime_config_dir(cluster_name, aws_env, cluster_config_parent_dir_path)
 
     # Check whether the S3 bucket exists and whether we have access; error and abort if we don't have access
