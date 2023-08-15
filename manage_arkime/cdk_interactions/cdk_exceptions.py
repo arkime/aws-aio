@@ -90,3 +90,7 @@ def raise_deploy_exceptions(exit_code: int, stdout: List[str]):
 class CdkDestroyFailedUnknown(Exception):
     def __init__(self):
         super().__init__("The CDK Destroy operation failed for unknown reasons, please check the logs and stdout.")
+
+class CdkSynthesizeFailedUnknown(Exception):
+    def __init__(self):
+        super().__init__("The CDK Synthesize operation failed for unknown reasons, please check the logs and stdout.")

@@ -141,11 +141,11 @@ You can log into your Viewer Dashboard using credentials from the `get-login-det
 
 We deploy default configuration for the Arkime Capture and Viewer processes that work "out of the box".  However, you can customize the configuration for those processes - and add custom behavior to your Capture and Viewer Nodes.
 
-As part of running `cluster-create`, the CLI will create a new, cluster-specific directory at the root of this repo on-disk that contains the configuration/scripts that will be deployed into your containers (currently at: `./config-YourClusterName`).  This directory contains two sub directories which contain all the scripts/configuration that are copied onto the Capture (`./config-YourClusterName/capture/`) and Viewer (`./config-YourClusterName/viewer/`) Nodes as part of their startup process.  By default, these directories will just contain the aforementioned "default configuration", but you're free to edit the files there or even add new ones.  Any files in the `./config-YourClusterName/capture/` will end copied to your Capture Nodes; any files in the `./config-YourClusterName/viewer/` will end copied to your Viewer Nodes.
+As part of running `cluster-create`, the CLI will create a new, cluster-specific directory at the root of this repo on-disk that contains the configuration/scripts that will be deployed into your containers (currently at: `./config-YourClusterName-AccountNum-AwsRegion`).  This directory contains two sub directories which contain all the scripts/configuration that are copied onto the Capture (`./config-YourClusterName-AccountNum-AwsRegion/capture/`) and Viewer (`./config-YourClusterName-AccountNum-AwsRegion/viewer/`) Nodes as part of their startup process.  By default, these directories will just contain the aforementioned "default configuration", but you're free to edit the files there or even add new ones.  Any files in the `./config-YourClusterName-AccountNum-AwsRegion/capture/` will end copied to your Capture Nodes; any files in the `./config-YourClusterName/viewer/` will end copied to your Viewer Nodes.
 
 ```
-chelma@3c22fba4e266 aws-aio % tree config-YourClusterName
-config-YourClusterName
+chelma@3c22fba4e266 aws-aio % tree config-YourClusterName-111111111111-us-east-2
+config-YourClusterName-111111111111-us-east-2
 ├── capture
 │   ├── config.ini
 │   ├── default.rules

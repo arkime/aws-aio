@@ -1,21 +1,24 @@
 import logging
+import shutil
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
+import cdk_interactions.cfn_wrangling as cfn
 import core.constants as constants
 import cdk_interactions.cdk_context as context
 from core.vni_provider import SsmVniProvider, VniAlreadyUsed, VniOutsideRange, VniPoolExhausted
 
 logger = logging.getLogger(__name__)
 
-def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_vni: int):
+def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_vni: int, just_print_cfn: bool):
     logger.debug(f"Invoking vpc-add with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
-    cdk_client = CdkClient(aws_provider.get_aws_env())
+    aws_env = aws_provider.get_aws_env()
+    cdk_client = CdkClient(aws_env)
     vni_provider = SsmVniProvider(cluster_name, aws_provider)
 
     # If the user didn't supply a VNI, try to find one
@@ -67,37 +70,50 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
     event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
 
-    # Deploy the resources we need in the user's VPC and Subnets
-    logger.info("Deploying shared mirroring components via CDK...")
+    # Define the CFN Resources and CDK Context
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
     vpc_add_context = context.generate_vpc_add_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn,
                                                        next_vni, vpc_details.cidr_blocks)
 
-    cdk_client.deploy(stacks_to_deploy, context=vpc_add_context)
+    if just_print_cfn:
+        # Remove the CDK output directory to ensure we don't copy over stale templates
+        cdk_out_dir_path = cfn.get_cdk_out_dir_path()
+        shutil.rmtree(cdk_out_dir_path)
 
-    # Create the per-ENI Traffic Mirroring Sessions.
-    #
-    # Why create these using Boto instead of the CDK?  We expect the ENIs to change frequently and want a more nimble
-    # way to update our configuration for them than using CloudFormation.  Additionally, CloudFormation has limits that
-    # would be annoying to deal with (limits on the resources/stack most especially).  These limits mean we'd need to
-    # split our Traffic Sessions across multiple stacks while maintaining consistent and safe ordering to prevent a Cfn
-    # Stack Update from deleting Sessions in one stack only to move them to another Stack, and dealing with race
-    # conditions on CloudFormation trying to have the same Session exist in two stacks momentarily.  Not a good
-    # experience.
-    vpc_param_name = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
-    traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
-    
-    for subnet_id in subnet_ids:
-        _mirror_enis_in_subnet(event_bus_arn, cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)
+        # Generate the CloudFormation templates (without deploying them)
+        cdk_client.synthesize(stacks_to_deploy, context=vpc_add_context)
 
-    # Register the VNI as used.  The VNI's usage is tied to the ENI-specific configuration, so we perform this
-    # after that is set up.
-    if user_vni:
-        vni_provider.register_user_vni(next_vni, vpc_id)
+        # Copy them over
+        parent_dir = constants.get_repo_root_dir()
+        cfn.set_up_cloudformation_template_dir(cluster_name, aws_env, parent_dir)
     else:
-        vni_provider.use_next_vni(next_vni)
+        # Deploy the resources we need in the user's VPC and Subnets
+        logger.info("Deploying shared mirroring components via CDK...")
+        cdk_client.deploy(stacks_to_deploy, context=vpc_add_context)
+
+        # Create the per-ENI Traffic Mirroring Sessions.
+        #
+        # Why create these using Boto instead of the CDK?  We expect the ENIs to change frequently and want a more nimble
+        # way to update our configuration for them than using CloudFormation.  Additionally, CloudFormation has limits that
+        # would be annoying to deal with (limits on the resources/stack most especially).  These limits mean we'd need to
+        # split our Traffic Sessions across multiple stacks while maintaining consistent and safe ordering to prevent a Cfn
+        # Stack Update from deleting Sessions in one stack only to move them to another Stack, and dealing with race
+        # conditions on CloudFormation trying to have the same Session exist in two stacks momentarily.  Not a good
+        # experience.
+        vpc_param_name = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
+        traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
+        
+        for subnet_id in subnet_ids:
+            _mirror_enis_in_subnet(event_bus_arn, cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)
+
+        # Register the VNI as used.  The VNI's usage is tied to the ENI-specific configuration, so we perform this
+        # after that is set up.
+        if user_vni:
+            vni_provider.register_user_vni(next_vni, vpc_id)
+        else:
+            vni_provider.use_next_vni(next_vni)
 
 def _mirror_enis_in_subnet(event_bus_arn: str, cluster_name: str, vpc_id: str, subnet_id: str, traffic_filter_id: str, vni: int, aws_provider: AwsClientProvider):
     enis = ec2i.get_enis_of_subnet(subnet_id, aws_provider)

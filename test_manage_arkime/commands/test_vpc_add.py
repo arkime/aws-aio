@@ -66,7 +66,7 @@ def test_WHEN_cmd_vpc_add_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
     mock_aws_provider_cls.return_value = mock_aws_provider
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", None)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", None, False)
 
     # Check our results
     expected_cdk_calls = [
@@ -107,6 +107,95 @@ def test_WHEN_cmd_vpc_add_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
     expected_vni_calls = [mock.call(42)]
     assert expected_vni_calls == mock_vni_provider.use_next_vni.call_args_list
 
+@mock.patch("commands.cluster_create.cfn.set_up_cloudformation_template_dir")
+@mock.patch("commands.cluster_create.constants.get_repo_root_dir")
+@mock.patch("commands.cluster_create.shutil.rmtree")
+@mock.patch("commands.cluster_create.cfn.get_cdk_out_dir_path")
+@mock.patch("commands.vpc_add.AwsClientProvider")
+@mock.patch("commands.vpc_add.SsmVniProvider")
+@mock.patch("commands.vpc_add._mirror_enis_in_subnet")
+@mock.patch("commands.vpc_add.ssm_ops")
+@mock.patch("commands.vpc_add.ec2i")
+@mock.patch("commands.vpc_add.CdkClient")
+def test_WHEN_cmd_vpc_add_called_AND_just_print_cfn_THEN_expected(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror,
+                                                                        mock_vni_provider_cls, mock_aws_provider_cls,
+                                                                        mock_get_cdk_dir, mock_rmtree, mock_get_root_dir,
+                                                                        mock_set_up_cfn):
+    # Set up our mock
+    mock_vni_provider = mock.Mock()
+    mock_vni_provider.get_next_vni.return_value = 42
+    mock_vni_provider_cls.return_value = mock_vni_provider
+
+    subnet_ids = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
+
+    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", "filter-1"]
+
+    mock_cdk = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_cdk
+
+    aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_aws_env.return_value = aws_env
+    mock_aws_provider_cls.return_value = mock_aws_provider
+
+    mock_get_cdk_dir.return_value = "/path/cdk.out"
+    mock_get_root_dir.return_value = "/path"
+
+    # Run our test
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", None, True)
+
+    # Check our results
+    expected_cdk_calls = [
+        mock.call(
+            [
+                constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1")
+            ],
+            context={
+                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_vpc_add,
+                constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+                    "arnEventBus": "bus-1",
+                    "nameCluster": "cluster-1",
+                    "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
+                    "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
+                    "idVni": str(42),
+                    "idVpc": "vpc-1",
+                    "idVpceService": "service-1",
+                    "listSubnetIds": subnet_ids,
+                    "listSubnetSsmParams": [constants.get_subnet_ssm_param_name("cluster-1", "vpc-1", subnet_id) for subnet_id in subnet_ids],
+                    "vpcCidrs": ["192.168.0.0/24", "192.168.128.0/24"]
+                }))
+            }
+        )
+    ]
+    assert expected_cdk_calls == mock_cdk.synthesize.call_args_list
+
+    expected_cdk_calls = []
+    assert expected_cdk_calls == mock_cdk.deploy.call_args_list
+
+    expected_cdk_client_create_calls = [
+        mock.call(aws_env)
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
+
+    expected_mirror_calls = []
+    assert expected_mirror_calls == mock_mirror.call_args_list
+
+    expected_vni_calls = []
+    assert expected_vni_calls == mock_vni_provider.use_next_vni.call_args_list
+
+    expected_rmtree_calls = [
+        mock.call("/path/cdk.out")
+    ]
+    assert expected_rmtree_calls == mock_rmtree.call_args_list
+
+    expected_set_up_cfn_calls = [
+        mock.call("cluster-1", aws_env, "/path")
+    ]
+    assert expected_set_up_cfn_calls == mock_set_up_cfn.call_args_list
+
 @mock.patch("commands.vpc_add.AwsClientProvider", mock.Mock())
 @mock.patch("commands.vpc_add.SsmVniProvider")
 @mock.patch("commands.vpc_add._mirror_enis_in_subnet")
@@ -121,7 +210,7 @@ def test_WHEN_cmd_vpc_add_called_AND_no_available_vnis_THEN_aborts(mock_cdk_clie
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", None)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", None, False)
 
     # Check our results
     expected_cdk_calls = []
@@ -162,7 +251,7 @@ def test_WHEN_cmd_vpc_add_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
     mock_aws_provider_cls.return_value = mock_aws_provider
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234, False)
 
     # Check our results
     expected_cdk_calls = [
@@ -217,7 +306,7 @@ def test_WHEN_cmd_vpc_add_called_AND_is_unavailable_user_vni_THEN_aborts(mock_cd
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234, False)
 
     # Check our results
     expected_cdk_calls = []
@@ -243,7 +332,7 @@ def test_WHEN_cmd_vpc_add_called_AND_is_outrange_user_vni_THEN_aborts(mock_cdk_c
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234, False)
 
     # Check our results
     expected_cdk_calls = []
@@ -269,7 +358,7 @@ def test_WHEN_cmd_vpc_add_called_AND_is_used_user_vni_THEN_aborts(mock_cdk_clien
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234, False)
 
     # Check our results
     expected_cdk_calls = []
@@ -299,7 +388,7 @@ def test_WHEN_cmd_vpc_add_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_c
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234, False)
 
     # Check our results
     expected_cdk_calls = []
@@ -333,7 +422,7 @@ def test_WHEN_cmd_vpc_add_called_AND_vpc_doesnt_exist_THEN_skips(mock_cdk_client
     mock_cdk_client_cls.return_value = mock_cdk
 
     # Run our test
-    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234)
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", 1234, False)
 
     # Check our results
     expected_cdk_calls = []

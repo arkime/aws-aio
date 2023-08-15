@@ -94,11 +94,18 @@ cli.add_command(demo_traffic_destroy)
     show_default=True,
     default=False
 )
+@click.option(
+    "--just-print-cfn", 
+    help="Skips a full deployment and just creates a copy of the CloudFormation templates to be deployed in a local directory",
+    is_flag=True,
+    show_default=True,
+    default=False
+)
 @click.pass_context
-def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage):
+def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage, just_print_cfn):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage)
+    cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage, just_print_cfn)
 cli.add_command(cluster_create)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")
@@ -142,11 +149,18 @@ cli.add_command(clusters_list)
 @click.option("--force-vni", help=("POWER USER OPTION.  Forcefully assign the VPC to use a specific VNI.  This can"
               + " result in multiple VPCs using the same VNI, and VNIs to potentially be re-used long after they are"
               + " relinquished."), default=None, type=int)
+@click.option(
+    "--just-print-cfn", 
+    help="Skips a full deployment and just creates a copy of the CloudFormation templates to be deployed in a local directory",
+    is_flag=True,
+    show_default=True,
+    default=False
+)
 @click.pass_context
-def vpc_add(ctx, cluster_name, vpc_id, force_vni):
+def vpc_add(ctx, cluster_name, vpc_id, force_vni, just_print_cfn):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_vpc_add(profile, region, cluster_name, vpc_id, force_vni)
+    cmd_vpc_add(profile, region, cluster_name, vpc_id, force_vni, just_print_cfn)
 cli.add_command(vpc_add)
 
 @click.command(help="Removes traffic monitoring from the specified VPC being performed by the specified Arkime Cluster")

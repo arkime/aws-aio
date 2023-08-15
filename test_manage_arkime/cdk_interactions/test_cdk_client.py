@@ -307,3 +307,48 @@ def test_WHEN_destroy_called_AND_fails_THEN_raises(mock_shell):
         )
     ]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('cdk_interactions.cdk_client.shell')
+def test_WHEN_synthesize_called_AND_happy_path_THEN_as_expected(mock_shell):
+    # Set up our mock
+    mock_call_shell = mock_shell.call_shell_command
+    mock_call_shell.return_value = [0, ["success"]]
+
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "yes"
+
+    test_env = AwsEnvironment(aws_account="XXXXXXXXXXXX", aws_region="my-region-1", aws_profile="default")
+    cmd_prefix = cdk.get_command_prefix(aws_profile="default", aws_region="my-region-1", context={"key": "value"})
+
+    # Run our test
+    client = cdk.CdkClient(test_env)
+    client.synthesize(["MyStack"], context={"key": "value"})
+
+    # Check our results
+    expected_calls = [mock.call(command=f"{cmd_prefix} synthesize --quiet MyStack")]
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
+
+@mock.patch('cdk_interactions.cdk_client.shell')
+def test_WHEN_synthesize_called_AND_fails_THEN_raises(mock_shell):
+    # Set up our mock
+    mock_call_shell = mock_shell.call_shell_command
+    mock_call_shell.return_value = (1, ["synthesize failed for reasons"])
+
+    mock_input = mock_shell.louder_input
+    mock_input.return_value = "yes"
+
+    test_env = AwsEnvironment(aws_account="XXXXXXXXXXXX", aws_region="my-region-1", aws_profile="default")
+    cmd_prefix = cdk.get_command_prefix(aws_profile="default", aws_region="my-region-1")
+
+    # Run our test
+    client = cdk.CdkClient(test_env)
+    with pytest.raises(exceptions.CdkSynthesizeFailedUnknown):
+        client.synthesize(["MyStack1", "MyStack2"])
+
+    # Check our results
+    expected_calls = [
+        mock.call(
+            command=f"{cmd_prefix} synthesize --quiet MyStack1 MyStack2"
+        )
+    ]
+    assert expected_calls == mock_shell.call_shell_command.call_args_list
