@@ -68,7 +68,7 @@ class PriceReport:
             "OnDemand us-east-1 cost estimate, your cost may be different based on region, discounts or reserve instances:\n"
             + "Allocated:\n"
             + self._line("Capture", self._plan.captureNodes.instanceType, self._plan.captureNodes.desiredCount)
-            + self._line("Viewer", "fargate", 2)
+            + self._line("Viewer", "fargate", self._plan.viewerNodes.minCount)
             + self._line("OS Master Node", self._plan.osDomain.masterNodes.instanceType, self._plan.osDomain.masterNodes.count)
             + self._line("OS Data Node", self._plan.osDomain.dataNodes.instanceType, self._plan.osDomain.dataNodes.count)
             + self._line("OS Storage", "ebs-GB", self._plan.osDomain.dataNodes.count*self._plan.osDomain.dataNodes.volumeSize)

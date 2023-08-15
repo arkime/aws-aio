@@ -12,7 +12,7 @@ import aws_interactions.ssm_operations as ssm_ops
 from commands.cluster_create import (cmd_cluster_create, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config)
 import core.constants as constants
-from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
+from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
                                     DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS)
 import core.local_file as local_file
@@ -51,7 +51,8 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
         CaptureVpcPlan(DEFAULT_NUM_AZS),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
     )
     mock_get_plans.return_value = cluster_plan
 
@@ -144,7 +145,8 @@ def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cd
         CaptureVpcPlan(DEFAULT_NUM_AZS),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
     )
     mock_get_plans.return_value = cluster_plan
 
@@ -467,7 +469,8 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
         CaptureVpcPlan(2),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "r6g.large.search", 1024), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, 30)
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 30),
+        ViewerNodesPlan(4, 2),
     )
     assert expected_value == actual_value
 
@@ -494,7 +497,8 @@ def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expecte
         CaptureVpcPlan(None),
         EcsSysResourcePlan(None, None),
         OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
-        S3Plan(None, None)
+        S3Plan(None, None),
+        ViewerNodesPlan(None, None),
     )
     assert expected_value == actual_value
 

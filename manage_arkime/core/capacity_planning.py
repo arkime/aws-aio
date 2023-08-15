@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 import math
 import logging
 import sys
@@ -102,6 +102,37 @@ def get_capture_node_capacity_plan(expected_traffic: float) -> CaptureNodesPlan:
         MINIMUM_NODES
     )
 
+@dataclass
+class ViewerNodesPlan:
+    maxCount: int
+    minCount: int
+
+    def __equal__(self, other) -> bool:
+        return (self.desiredCount == other.desired_count
+                and self.maxCount == other.max_count and self.minCount == other.min_count)
+
+    def to_dict(self) -> Dict[str, any]:
+        return {
+            "maxCount": self.maxCount,
+            "minCount": self.minCount,
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        valid_keys = {f.name for f in fields(cls)}
+        valid_kwargs = {key: value for key, value in d.items() if key in valid_keys}
+        return cls(**valid_kwargs)
+
+def get_viewer_node_capacity_plan(expected_traffic: float) -> ViewerNodesPlan:
+    """
+    Creates a capacity plan for the indicated traffic load.
+    expected_traffic: The expected traffic volume for the Arkime cluster, in Gigabits Per Second (Gbps)
+    """
+
+    if not expected_traffic or expected_traffic <= MINIMUM_TRAFFIC:
+        return ViewerNodesPlan(2, 1)
+
+    return ViewerNodesPlan(4, 2)
 
 class UnknownInstanceType(Exception):
     def __init__(self, instance_type: str):
@@ -357,6 +388,7 @@ class ClusterPlan:
     ecsResources: EcsSysResourcePlan
     osDomain: OSDomainPlan
     s3: S3Plan
+    viewerNodes: ViewerNodesPlan
 
     def __equal__(self, other) -> bool:
         return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources
@@ -369,6 +401,7 @@ class ClusterPlan:
             "ecsResources": self.ecsResources.to_dict(),
             "osDomain": self.osDomain.to_dict(),
             "s3": self.s3.to_dict(),
+            "viewerNodes": self.viewerNodes.to_dict(),
         }
 
     @classmethod
@@ -379,5 +412,10 @@ class ClusterPlan:
         os_domain = OSDomainPlan.from_dict(input["osDomain"])
         s3 = S3Plan(**input["s3"])
 
-        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3)
+        if "viewerNodes" in input:
+            viewer_nodes = ViewerNodesPlan.from_dict(input["viewerNodes"])
+        else:
+            viewer_nodes = ViewerNodesPlan(4, 2)
+
+        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3, viewer_nodes)
 

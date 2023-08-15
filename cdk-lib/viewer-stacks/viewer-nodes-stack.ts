@@ -12,6 +12,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path'
 import { Construct } from 'constructs';
 import * as ssmwrangling from '../core/ssm-wrangling';
+import * as plan from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly arnViewerCert: string;
@@ -23,6 +24,7 @@ export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly osPassword: secretsmanager.Secret;
     readonly ssmParamNameViewerConfig: string;
     readonly ssmParamNameViewerDetails: string;
+    readonly planCluster: plan.ClusterPlan;
 }
 
 export class ViewerNodesStack extends cdk.Stack {
@@ -87,9 +89,12 @@ export class ViewerNodesStack extends cdk.Stack {
             taskDefinition,
             minHealthyPercent: 0, // TODO: Speeds up test deployments but need to change to something safer
             enableExecuteCommand: true
-        });        
+        });
 
-        const scaling = service.autoScaleTaskCount({ maxCapacity: 4, minCapacity: 2 });
+        const scaling = service.autoScaleTaskCount({
+            minCapacity: props.planCluster.viewerNodes.minCount,
+            maxCapacity: props.planCluster.viewerNodes.maxCount
+        });
         scaling.scaleOnCpuUtilization('CpuScaling', {
             targetUtilizationPercent: 60,
         });
@@ -97,7 +102,7 @@ export class ViewerNodesStack extends cdk.Stack {
             targetUtilizationPercent: 60,
         });
 
-        const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', { 
+        const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', {
             vpc: props.viewerVpc,
             internetFacing: true,
             loadBalancerName: `${props.clusterName}-Viewer`.toLowerCase() // Receives a random suffix, which minimizes DNS collisions

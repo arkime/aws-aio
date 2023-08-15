@@ -6,7 +6,7 @@ from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.cluster_destroy import cmd_cluster_destroy, _destroy_viewer_cert, _delete_arkime_config_from_datastore
 import core.constants as constants
-from core.capacity_planning import (CaptureNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
+from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     ClusterPlan, CaptureVpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS)
 from core.user_config import UserConfig
 
@@ -38,7 +38,8 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
         CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
+        ViewerNodesPlan(4, 2),
     )
 
     # Run our test
@@ -127,7 +128,8 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
         CaptureVpcPlan(2),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1)
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
+        ViewerNodesPlan(4, 2),
     )
 
     # Run our test

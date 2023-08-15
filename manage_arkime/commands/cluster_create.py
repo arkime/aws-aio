@@ -17,9 +17,10 @@ import core.constants as constants
 from core.local_file import LocalFile, S3File
 from core.usage_report import UsageReport
 from core.price_report import PriceReport
-from core.capacity_planning import (get_capture_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan, ClusterPlan,
-                                    CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
-                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, CaptureNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
+from core.capacity_planning import (get_capture_node_capacity_plan, get_viewer_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan,
+                                    ClusterPlan, CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
+                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS,
+                                    CaptureNodesPlan, ViewerNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
 from core.versioning import get_version_info
 from core.user_config import UserConfig
 
@@ -146,7 +147,8 @@ def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvid
             CaptureVpcPlan(None),
             EcsSysResourcePlan(None, None),
             OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
-            S3Plan(None, None)
+            S3Plan(None, None),
+            ViewerNodesPlan(None, None),
         )
 
 def _get_next_capacity_plan(user_config: UserConfig) -> ClusterPlan:
@@ -155,8 +157,9 @@ def _get_next_capacity_plan(user_config: UserConfig) -> ClusterPlan:
     os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, capture_vpc_plan.numAzs)
     ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instanceType)
     s3_plan = S3Plan(DEFAULT_S3_STORAGE_CLASS, user_config.pcapDays)
+    viewer_plan = get_viewer_node_capacity_plan(user_config.expectedTraffic)
 
-    return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan, s3_plan)
+    return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan, s3_plan, viewer_plan)
 
 def _confirm_usage(prev_capacity_plan: ClusterPlan, next_capacity_plan: ClusterPlan, prev_user_config: UserConfig,
                    next_user_config: UserConfig, preconfirm_usage: bool) -> bool:
