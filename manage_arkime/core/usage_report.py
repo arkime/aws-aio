@@ -30,6 +30,9 @@ class UsageReport:
             + self._line("Desired Count", self.prev_plan.captureNodes.desiredCount, self.next_plan.captureNodes.desiredCount)
             + self._line("Min Count", self.prev_plan.captureNodes.minCount, self.next_plan.captureNodes.minCount)
             + self._line("Type", self.prev_plan.captureNodes.instanceType, self.next_plan.captureNodes.instanceType)
+            + "Viewer Nodes:\n"
+            + self._line("Max Count", self.prev_plan.viewerNodes.maxCount, self.next_plan.viewerNodes.maxCount)
+            + self._line("Min Count", self.prev_plan.viewerNodes.minCount, self.next_plan.viewerNodes.minCount)
             + "OpenSearch Domain:\n"
             + self._line("Master Node Count", self.prev_plan.osDomain.masterNodes.count, self.next_plan.osDomain.masterNodes.count)
             + self._line("Master Node Type", self.prev_plan.osDomain.masterNodes.instanceType, self.next_plan.osDomain.masterNodes.instanceType)

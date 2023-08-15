@@ -16,8 +16,8 @@ const app = new cdk.App();
 
 const params: (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.DestroyDemoTrafficParams | prms.MirrorMgmtParams) = context.getCommandParams(app);
 
-const env: Environment = { 
-    account: params.awsAccount, 
+const env: Environment = {
+    account: params.awsAccount,
     region: params.awsRegion
 }
 
@@ -72,6 +72,7 @@ switch(params.type) {
             osPassword: osDomainStack.osPassword,
             ssmParamNameViewerConfig: params.nameViewerConfigSsmParam,
             ssmParamNameViewerDetails: params.nameViewerDetailsSsmParam,
+            planCluster: params.planCluster,
         });
         viewerNodesStack.addDependency(captureBucketStack)
         viewerNodesStack.addDependency(captureVpcStack)

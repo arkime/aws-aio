@@ -57,6 +57,14 @@ export interface S3Plan {
 }
 
 /**
+ * Structure to hold the capacity plan for a given set of viewer nodes
+ */
+export interface ViewerNodesPlan {
+    maxCount: number;
+    minCount: number;
+}
+
+/**
  * Structure to hold the overall capacity plan for an Arkime Cluster
  */
 export interface ClusterPlan {
@@ -65,6 +73,7 @@ export interface ClusterPlan {
     ecsResources: EcsSysResourcePlan;
     osDomain: OSDomainPlan;
     s3: S3Plan;
+    viewerNodes: ViewerNodesPlan;
 }
 
 /**
