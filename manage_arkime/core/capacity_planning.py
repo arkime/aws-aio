@@ -42,7 +42,7 @@ class MasterInstance:
 # Can't mix graviton and non-graviton instance types so we have Arm and non Arm instance types.
 MASTER_INSTANCES = [
 ### Non-ARM
-    MasterInstance("t3.small.search", False, sys.maxsize, 3),
+    MasterInstance("t3.small.search", False, sys.maxsize, 2),
     MasterInstance("t3.medium.search", False, sys.maxsize, 6),
     MasterInstance("m5.large.search", False, sys.maxsize, sys.maxsize),
 ### ARM
@@ -50,6 +50,21 @@ MASTER_INSTANCES = [
     MasterInstance("c6g.2xlarge.search", True, 30000, 30),
     MasterInstance("r6g.2xlarge.search", True, 75000, 125),
     MasterInstance("r6g.4xlarge.search", True, sys.maxsize, sys.maxsize)
+]
+
+# https://docs.aws.amazon.com/opensearch-service/latest/developerguide/sizing-domains.html
+@dataclass
+class DataInstance:
+    type: str
+    volSize: int # in GiB
+    maxNodes: int
+
+DATA_INSTANCES = [
+    DataInstance("t3.small.search", 100, 2),
+    DataInstance("t3.medium.search", 200, 6),
+    DataInstance("r6g.large.search", 1024, 80),
+    DataInstance("r6g.4xlarge.search", 6*1024, 80),
+    DataInstance("r6g.12xlarge.search", 12*1024, sys.maxsize)
 ]
 
 class TooMuchTraffic(Exception):
@@ -178,16 +193,6 @@ It is based on awick@'s experience, and encompasses the following sub-factors:
 MAGIC_FACTOR = 0.03
 
 @dataclass
-class DataNode:
-    type: str
-    vol_size: int # in GiB
-
-T3_SMALL_SEARCH = DataNode("t3.small.search", 100)
-R6G_LARGE_SEARCH = DataNode("r6g.large.search", 1024)
-R6G_4XLARGE_SEARCH = DataNode("r6g.4xlarge.search", 6*1024)
-R6G_12XLARGE_SEARCH = DataNode("r6g.12xlarge.search", 12*1024)
-
-@dataclass
 class DataNodesPlan:
     count: int
     instanceType: str
@@ -279,25 +284,20 @@ def _get_data_node_plan(total_storage: float, num_azs: int) -> DataNodesPlan:
     total_storage: full storage requirement for all data, including replicas, in GiB
     """
 
-    if total_storage <= 10 * T3_SMALL_SEARCH.vol_size:
-        node = T3_SMALL_SEARCH
-    elif total_storage <= 80 * R6G_LARGE_SEARCH.vol_size:
-        node = R6G_LARGE_SEARCH
-    elif total_storage <= 80 * R6G_4XLARGE_SEARCH.vol_size:
-        node = R6G_4XLARGE_SEARCH
-    elif total_storage <= 80 * R6G_12XLARGE_SEARCH.vol_size:
-        node = R6G_12XLARGE_SEARCH
-    else:
-        node = R6G_12XLARGE_SEARCH # overflow with our largest instance type
+    node = next (
+        instance for instance in DATA_INSTANCES if (
+            total_storage <= instance.maxNodes * instance.volSize
+        )
+    )
 
-    num_of_nodes = max(math.ceil(total_storage / node.vol_size), 2)
+    num_of_nodes = max(math.ceil(total_storage / node.volSize), 2)
     if num_azs == 2:
         num_of_nodes = math.ceil(num_of_nodes / 2) * 2 # The next largest even integer
 
     plan = DataNodesPlan(
         count = num_of_nodes,
         instanceType = node.type,
-        volumeSize = node.vol_size
+        volumeSize = node.volSize
     )
 
     return plan

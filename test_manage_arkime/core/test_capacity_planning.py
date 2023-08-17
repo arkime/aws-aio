@@ -5,6 +5,12 @@ import core.capacity_planning as cap
 INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
 
 
+T3_SMALL_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "t3.small.search" == instance.type))
+T3_MEDIUM_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "t3.medium.search" == instance.type))
+R6G_LARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.large.search" == instance.type))
+R6G_4XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.4xlarge.search" == instance.type))
+R6G_12XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.12xlarge.search" == instance.type))
+
 def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
     # TEST 1: No expected traffic number
 
@@ -73,57 +79,57 @@ def test_WHEN_get_total_storage_called_THEN_as_expected():
 def test_WHEN_get_data_node_plan_called_THEN_as_expected():
     # TEST 1: Toy setup
     actual_value = cap._get_data_node_plan(10, 3)
-    expected_value = cap.DataNodesPlan(2, cap.T3_SMALL_SEARCH.type, cap.T3_SMALL_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(2, T3_SMALL_SEARCH.type, T3_SMALL_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 2: Tiny setup
     actual_value = cap._get_data_node_plan(650, 3)
-    expected_value = cap.DataNodesPlan(7, cap.T3_SMALL_SEARCH.type, cap.T3_SMALL_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(4, T3_MEDIUM_SEARCH.type, T3_MEDIUM_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 2b: Tiny setup, 2 AZs
     actual_value = cap._get_data_node_plan(650, 2)
-    expected_value = cap.DataNodesPlan(8, cap.T3_SMALL_SEARCH.type, cap.T3_SMALL_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(4, T3_MEDIUM_SEARCH.type, T3_MEDIUM_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 3: Small setup (1)
     actual_value = cap._get_data_node_plan(1100, 3)
-    expected_value = cap.DataNodesPlan(2, cap.R6G_LARGE_SEARCH.type, cap.R6G_LARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(6, T3_MEDIUM_SEARCH.type, T3_MEDIUM_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 4: Small setup (2)
     actual_value = cap._get_data_node_plan(65000, 3)
-    expected_value = cap.DataNodesPlan(64, cap.R6G_LARGE_SEARCH.type, cap.R6G_LARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(64, R6G_LARGE_SEARCH.type, R6G_LARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 5: Medium setup (1)
     actual_value = cap._get_data_node_plan(90000, 3)
-    expected_value = cap.DataNodesPlan(15, cap.R6G_4XLARGE_SEARCH.type, cap.R6G_4XLARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(15, R6G_4XLARGE_SEARCH.type, R6G_4XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 5b: Medium setup (1), 2 AZs
     actual_value = cap._get_data_node_plan(90000, 2)
-    expected_value = cap.DataNodesPlan(16, cap.R6G_4XLARGE_SEARCH.type, cap.R6G_4XLARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(16, R6G_4XLARGE_SEARCH.type, R6G_4XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 6: Medium setup (2)
     actual_value = cap._get_data_node_plan(450000, 3)
-    expected_value = cap.DataNodesPlan(74, cap.R6G_4XLARGE_SEARCH.type, cap.R6G_4XLARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(74, R6G_4XLARGE_SEARCH.type, R6G_4XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 7: Large setup (1)
     actual_value = cap._get_data_node_plan(500000, 3)
-    expected_value = cap.DataNodesPlan(41, cap.R6G_12XLARGE_SEARCH.type, cap.R6G_12XLARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(41, R6G_12XLARGE_SEARCH.type, R6G_12XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 8: Enormous setup
     actual_value = cap._get_data_node_plan(1200000, 3)
-    expected_value = cap.DataNodesPlan(98, cap.R6G_12XLARGE_SEARCH.type, cap.R6G_12XLARGE_SEARCH.vol_size)
+    expected_value = cap.DataNodesPlan(98, R6G_12XLARGE_SEARCH.type, R6G_12XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
 def test_WHEN_get_master_node_plan_called_THEN_as_expected():
     # TEST: Non-graviton
-    actual_value = cap._get_master_node_plan(5, 2, cap.T3_SMALL_SEARCH.type)
+    actual_value = cap._get_master_node_plan(5, 2, T3_SMALL_SEARCH.type)
     expected_value = cap.MasterNodesPlan(3, "t3.small.search")
     assert expected_value == actual_value
 
@@ -170,7 +176,7 @@ def test_WHEN_get_master_node_plan_called_THEN_as_expected():
 def test_WHEN_get_os_domain_plan_called_THEN_as_expected():
     actual_value = cap.get_os_domain_plan(20, 30, 1, 2)
     expected_value = cap.OSDomainPlan(
-        cap.DataNodesPlan(64, cap.R6G_4XLARGE_SEARCH.type, cap.R6G_4XLARGE_SEARCH.vol_size),
+        cap.DataNodesPlan(64, R6G_4XLARGE_SEARCH.type, R6G_4XLARGE_SEARCH.volSize),
         cap.MasterNodesPlan(3, "r6g.2xlarge.search")
     )
     assert expected_value == actual_value

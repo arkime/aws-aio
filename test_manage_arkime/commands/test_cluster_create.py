@@ -206,7 +206,8 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
         CaptureVpcPlan(DEFAULT_NUM_AZS),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS)
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
     )
     mock_get_plans.return_value = cluster_plan
 
