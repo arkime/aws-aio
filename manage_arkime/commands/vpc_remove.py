@@ -21,7 +21,6 @@ def cmd_vpc_remove(profile: str, region: str, cluster_name: str, vpc_id: str):
     # Confirm the Cluster exists before proceeding
     try:
         vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
-        event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
     except ssm_ops.ParamDoesNotExist:
         logger.error(f"The cluster {cluster_name} does not exist; try using the clusters-list command to see the clusters you have created.")
         logger.warning("Aborting...")
@@ -29,6 +28,7 @@ def cmd_vpc_remove(profile: str, region: str, cluster_name: str, vpc_id: str):
 
     # Pull all our deployed configuration from SSM and tear down the ENI-specific resources
     vpc_ssm_param = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
+    event_bus_arn = ssm_ops.get_ssm_param_json_value(vpc_ssm_param, "busArn", aws_provider)
     subnet_search_path = f"{vpc_ssm_param}/subnets"
     subnet_configs = [json.loads(config["Value"]) for config in ssm_ops.get_ssm_params_by_path(subnet_search_path, aws_provider)]
     subnet_ids = [config['subnetId'] for config in subnet_configs]
@@ -52,6 +52,6 @@ def cmd_vpc_remove(profile: str, region: str, cluster_name: str, vpc_id: str):
     stacks_to_destroy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    vpc_add_context = context.generate_vpc_remove_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn)
+    vpc_remove_context = context.generate_vpc_remove_context(cluster_name, vpc_id, subnet_ids, vpce_service_id)
 
-    cdk_client.destroy(stacks_to_destroy, context=vpc_add_context)
+    cdk_client.destroy(stacks_to_destroy, context=vpc_remove_context)

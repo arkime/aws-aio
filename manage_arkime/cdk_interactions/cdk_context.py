@@ -66,26 +66,25 @@ def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: Clu
         constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps(cmd_params))
     }
 
-def generate_vpc_add_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str, vni: int,
+def generate_vpc_add_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, vni: int,
                              cidrs: List[str]) -> Dict[str, str]:
-    add_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, bus_arn, vni, cidrs)
+    add_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, vni, cidrs)
     add_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_vpc_add
     return add_context
 
-def generate_vpc_remove_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str) -> Dict[str, str]:
+def generate_vpc_remove_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str) -> Dict[str, str]:
     # Hardcode these values because it saves us some implementation headaches and it doesn't matter what they are. Since
     # we're tearing down the Cfn stack in which it would be used, the operation either succeeds and the it's
     # irrelevant or it fails/rolls back and it's irrelevant.
     vni = constants.VNI_DEFAULT
     cidrs = ["0.0.0.0/0"]
-    remove_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, bus_arn, vni, cidrs)
+    remove_context = _generate_mirroring_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, vni, cidrs)
     remove_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_vpc_remove
     return remove_context
 
-def _generate_mirroring_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, bus_arn: str, vni: int,
+def _generate_mirroring_context(cluster_name: str, vpc_id: str, subnet_ids: str, vpce_service_id: str, vni: int,
                                 cidrs: List[str]) -> Dict[str, str]:
     cmd_params = {
-        "arnEventBus": bus_arn,
         "nameCluster": cluster_name,
         "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id),
         "nameVpcSsmParam": constants.get_vpc_ssm_param_name(cluster_name, vpc_id),

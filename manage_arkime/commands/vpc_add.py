@@ -68,14 +68,13 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
 
     # Get the VPCE Service ID we set up with our Capture VPC
     vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
-    event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
 
     # Define the CFN Resources and CDK Context
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    vpc_add_context = context.generate_vpc_add_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn,
-                                                       next_vni, vpc_details.cidr_blocks)
+    vpc_add_context = context.generate_vpc_add_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, next_vni,
+                                                       vpc_details.cidr_blocks)
 
     if just_print_cfn:
         # Remove the CDK output directory to ensure we don't copy over stale templates
@@ -104,6 +103,7 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
         # experience.
         vpc_param_name = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
         traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
+        event_bus_arn = ssm_ops.get_ssm_param_json_value(vpc_param_name, "busArn", aws_provider)
         
         for subnet_id in subnet_ids:
             _mirror_enis_in_subnet(event_bus_arn, cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)

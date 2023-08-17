@@ -55,7 +55,7 @@ def test_WHEN_cmd_vpc_add_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
     mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
 
     mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
-    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", "filter-1"]
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -77,7 +77,6 @@ def test_WHEN_cmd_vpc_add_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_vpc_add,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "arnEventBus": "bus-1",
                     "nameCluster": "cluster-1",
                     "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
                     "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
@@ -131,7 +130,7 @@ def test_WHEN_cmd_vpc_add_called_AND_just_print_cfn_THEN_expected(mock_cdk_clien
     mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
 
     mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
-    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", "filter-1"]
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -156,7 +155,6 @@ def test_WHEN_cmd_vpc_add_called_AND_just_print_cfn_THEN_expected(mock_cdk_clien
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_vpc_add,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "arnEventBus": "bus-1",
                     "nameCluster": "cluster-1",
                     "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
                     "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
@@ -240,7 +238,7 @@ def test_WHEN_cmd_vpc_add_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
     mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
 
     mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
-    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "bus-1", "filter-1"]
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -262,7 +260,6 @@ def test_WHEN_cmd_vpc_add_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
             context={
                 constants.CDK_CONTEXT_CMD_VAR: constants.CMD_vpc_add,
                 constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "arnEventBus": "bus-1",
                     "nameCluster": "cluster-1",
                     "nameVpcMirrorStack": constants.get_vpc_mirror_setup_stack_name("cluster-1", "vpc-1"),
                     "nameVpcSsmParam": constants.get_vpc_ssm_param_name("cluster-1", "vpc-1"),
