@@ -67,6 +67,11 @@ class AwsClientProvider:
         client = session.client("events")
         return client
 
+    def get_iam(self):
+        session = self._get_session()
+        client = session.client("iam")
+        return client
+
     def get_opensearch(self):
         session = self._get_session()
         client = session.client("opensearch")

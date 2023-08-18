@@ -74,6 +74,9 @@ def get_config_bucket_ssm_param_name(cluster_name: str):
 def get_cluster_ssm_param_name(cluster_name: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}"
 
+def get_cluster_vpc_cross_account_ssm_param_name(cluster_name: str, vpc_id: str) -> str:
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}/cross-account"
+
 def get_opensearch_domain_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-OSDomain"
 

@@ -19,3 +19,6 @@ cdk.out
 manage_arkime.log
 config-*
 cfn-*
+
+# Misc stuff
+.DS_Store

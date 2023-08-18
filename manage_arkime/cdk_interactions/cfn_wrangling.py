@@ -59,4 +59,4 @@ def set_up_cloudformation_template_dir(cluster_name: str, aws_env: AwsEnvironmen
     cdk_out_dir_path = get_cdk_out_dir_path()
     _copy_templates_to_cfn_dir(cluster_name, cfn_dir_path, cdk_out_dir_path)
 
-    logger.info(f"CloudFormation template dir exists at: {cfn_dir_path}")
+    logger.info(f"CloudFormation template dir exists at: \n{cfn_dir_path}")
