@@ -52,6 +52,8 @@ def cmd_cluster_register_vpc(profile: str, region: str, cluster_name: str, vpc_a
         overwrite=True
     )
 
+    logger.info(f"Cross-account association details: \n{json.dumps(association.to_dict(), indent=4)}")
+
 def _get_iam_role_name(cluster_name: str, vpc_id: str):
     # There's a maximum length of 64 characters we have to work around.  VPC IDs are quite unique, so we'll lean
     # on that to make our life easier.  We take as many of the characters from the cluster name as we can fit.
