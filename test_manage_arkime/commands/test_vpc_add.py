@@ -36,7 +36,6 @@ def test_WHEN_mirror_enis_in_subnet_called_THEN_sets_up_mirroring(mock_ec2i, moc
     ]
     assert expected_put_events_calls == mock_events.put_events.call_args_list
 
-
 @mock.patch("commands.vpc_add.AwsClientProvider")
 @mock.patch("commands.vpc_add.SsmVniProvider")
 @mock.patch("commands.vpc_add._mirror_enis_in_subnet")
@@ -54,7 +53,11 @@ def test_WHEN_cmd_vpc_add_called_AND_no_user_vni_THEN_sets_up_mirroring(mock_cdk
     mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
     mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
 
-    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+        ""  # Cluster existence check
+    ]
     mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
 
     mock_cdk = mock.Mock()
@@ -129,7 +132,11 @@ def test_WHEN_cmd_vpc_add_called_AND_just_print_cfn_THEN_expected(mock_cdk_clien
     mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
     mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
 
-    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+        ""  # Cluster existence check
+    ]
     mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
 
     mock_cdk = mock.Mock()
@@ -195,14 +202,21 @@ def test_WHEN_cmd_vpc_add_called_AND_just_print_cfn_THEN_expected(mock_cdk_clien
     assert expected_set_up_cfn_calls == mock_set_up_cfn.call_args_list
 
 @mock.patch("commands.vpc_add.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_add.ssm_ops")
 @mock.patch("commands.vpc_add.SsmVniProvider")
 @mock.patch("commands.vpc_add._mirror_enis_in_subnet")
 @mock.patch("commands.vpc_add.CdkClient")
-def test_WHEN_cmd_vpc_add_called_AND_no_available_vnis_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls):
+def test_WHEN_cmd_vpc_add_called_AND_no_available_vnis_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls,
+                                                                   mock_ssm):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider.get_next_vni.side_effect = vnis.VniPoolExhausted()
     mock_vni_provider_cls.return_value = mock_vni_provider
+
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+    ]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -237,7 +251,11 @@ def test_WHEN_cmd_vpc_add_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
     mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
     mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
 
-    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+        ""  # Cluster existence check
+    ]
     mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
 
     mock_cdk = mock.Mock()
@@ -290,15 +308,22 @@ def test_WHEN_cmd_vpc_add_called_AND_is_available_user_vni_THEN_sets_up_mirrorin
     assert expected_vni_calls == mock_vni_provider.register_user_vni.call_args_list
 
 @mock.patch("commands.vpc_add.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_add.ssm_ops")
 @mock.patch("commands.vpc_add.SsmVniProvider")
 @mock.patch("commands.vpc_add._mirror_enis_in_subnet")
 @mock.patch("commands.vpc_add.CdkClient")
-def test_WHEN_cmd_vpc_add_called_AND_is_unavailable_user_vni_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls):
+def test_WHEN_cmd_vpc_add_called_AND_is_unavailable_user_vni_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls,
+                                                                         mock_ssm):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider.is_vni_available.return_value = False
     mock_vni_provider_cls.return_value = mock_vni_provider
 
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+    ]
+
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
 
@@ -316,15 +341,22 @@ def test_WHEN_cmd_vpc_add_called_AND_is_unavailable_user_vni_THEN_aborts(mock_cd
     assert expected_vni_calls == mock_vni_provider.register_user_vni.call_args_list
 
 @mock.patch("commands.vpc_add.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_add.ssm_ops")
 @mock.patch("commands.vpc_add.SsmVniProvider")
 @mock.patch("commands.vpc_add._mirror_enis_in_subnet")
 @mock.patch("commands.vpc_add.CdkClient")
-def test_WHEN_cmd_vpc_add_called_AND_is_outrange_user_vni_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls):
+def test_WHEN_cmd_vpc_add_called_AND_is_outrange_user_vni_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls,
+                                                                      mock_ssm):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider.is_vni_available.side_effect = vnis.VniOutsideRange(1234)
     mock_vni_provider_cls.return_value = mock_vni_provider
 
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+    ]
+
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
 
@@ -342,14 +374,21 @@ def test_WHEN_cmd_vpc_add_called_AND_is_outrange_user_vni_THEN_aborts(mock_cdk_c
     assert expected_vni_calls == mock_vni_provider.register_user_vni.call_args_list
 
 @mock.patch("commands.vpc_add.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_add.ssm_ops")
 @mock.patch("commands.vpc_add.SsmVniProvider")
 @mock.patch("commands.vpc_add._mirror_enis_in_subnet")
 @mock.patch("commands.vpc_add.CdkClient")
-def test_WHEN_cmd_vpc_add_called_AND_is_used_user_vni_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls):
+def test_WHEN_cmd_vpc_add_called_AND_is_used_user_vni_THEN_aborts(mock_cdk_client_cls, mock_mirror, mock_vni_provider_cls,
+                                                                  mock_ssm):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider.is_vni_available.side_effect = vnis.VniAlreadyUsed(1234)
     mock_vni_provider_cls.return_value = mock_vni_provider
+
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+    ]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -379,7 +418,10 @@ def test_WHEN_cmd_vpc_add_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_c
     mock_vni_provider_cls.return_value = mock_vni_provider
 
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist
-    mock_ssm.get_ssm_param_value.side_effect = ParamDoesNotExist("")
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+        ParamDoesNotExist("")  # Cluster existence check
+    ]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -413,7 +455,11 @@ def test_WHEN_cmd_vpc_add_called_AND_vpc_doesnt_exist_THEN_skips(mock_cdk_client
     mock_ec2i.VpcDoesNotExist = ec2i.VpcDoesNotExist
     mock_ec2i.get_subnets_of_vpc.side_effect = ec2i.VpcDoesNotExist("vpc-1")
 
-    mock_ssm.get_ssm_param_value.return_value = "" # Doesn't matter what this is besides an exception
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        ParamDoesNotExist(""), # Cross-account link check
+        ""  # Cluster existence check
+    ]
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
@@ -431,3 +477,91 @@ def test_WHEN_cmd_vpc_add_called_AND_vpc_doesnt_exist_THEN_skips(mock_cdk_client
     expected_vni_calls = []
     assert expected_vni_calls == mock_vni_provider.register_user_vni.call_args_list
     assert expected_vni_calls == mock_vni_provider.use_next_vni.call_args_list
+
+@mock.patch("commands.vpc_add.AwsClientProvider")
+@mock.patch("commands.vpc_add.SsmVniProvider")
+@mock.patch("commands.vpc_add._mirror_enis_in_subnet")
+@mock.patch("commands.vpc_add.ssm_ops")
+@mock.patch("commands.vpc_add.ec2i")
+@mock.patch("commands.vpc_add.CdkClient")
+def test_WHEN_cmd_vpc_add_called_AND_cross_account_THEN_correct_client_used(mock_cdk_client_cls, mock_ec2i, mock_ssm, mock_mirror,
+                                                                           mock_vni_provider_cls, mock_aws_provider_cls):
+    # Set up our mock
+    mock_vni_provider = mock.Mock()
+    mock_vni_provider.get_next_vni.return_value = 42
+    mock_vni_provider_cls.return_value = mock_vni_provider
+
+    subnet_ids = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_subnets_of_vpc.return_value = ["subnet-1", "subnet-2"]
+    mock_ec2i.get_vpc_details.return_value = ec2i.VpcDetails("vpc-1", "1234", ["192.168.0.0/24", "192.168.128.0/24"], "default")
+
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = [
+        json.dumps({ # Cross-account link check
+            "clusterAccount": "XXXXXXXXXXXX",
+            "clusterName": "my_cluster",
+            "roleArn": "role_arn",
+            "vpcAccount": "YYYYYYYYYYYY",
+            "vpcId": "vpc",
+            "vpceServiceId": "vpce_id",
+        }),
+        ""  # Cluster existence check
+    ]
+    mock_ssm.get_ssm_param_json_value.side_effect = ["service-1", "filter-1", "bus-1"]
+
+    mock_cdk = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_cdk
+
+    vpc_aws_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
+    mock_vpc_aws_provider = mock.Mock()
+    mock_vpc_aws_provider.get_aws_env.return_value = vpc_aws_env
+    mock_cluster_aws_provider = mock.Mock()
+    mock_aws_provider_cls.side_effect = [mock_vpc_aws_provider, mock_cluster_aws_provider]
+
+    # Run our test
+    cmd_vpc_add("profile", "region", "cluster-1", "vpc-1", None, False)
+
+    # Check our results
+    expected_cdk_client_create_calls = [
+        mock.call(vpc_aws_env)
+    ]
+    assert expected_cdk_client_create_calls == mock_cdk_client_cls.call_args_list
+
+    expected_vni_provider_create_calls = [
+        mock.call("cluster-1", mock_cluster_aws_provider)
+    ]
+    assert expected_vni_provider_create_calls == mock_vni_provider_cls.call_args_list
+
+    expected_ssm_get_param_val_calls = [
+        mock.call(mock.ANY, mock_vpc_aws_provider), # Cross-account link check
+        mock.call(mock.ANY, mock_cluster_aws_provider), # Cluster existence check
+    ]
+    assert expected_ssm_get_param_val_calls == mock_ssm.get_ssm_param_value.call_args_list
+
+    expected_ssm_get_param_json_calls = [
+        mock.call(mock.ANY, mock.ANY, mock_cluster_aws_provider), # Get VPCE ID from Cluster Param
+        mock.call(mock.ANY, mock.ANY, mock_vpc_aws_provider), # Get Filter ID from VPC Param
+        mock.call(mock.ANY, mock.ANY, mock_vpc_aws_provider), # Get Event Bus from VPC Param
+    ]
+    assert expected_ssm_get_param_json_calls == mock_ssm.get_ssm_param_json_value.call_args_list
+
+    expected_get_subnets_calls = [
+        mock.call(mock.ANY, mock_vpc_aws_provider),
+    ]
+    assert expected_get_subnets_calls == mock_ec2i.get_subnets_of_vpc.call_args_list
+
+    expected_vpc_details_calls = [
+        mock.call(mock.ANY, mock_vpc_aws_provider),
+    ]
+    assert expected_vpc_details_calls == mock_ec2i.get_vpc_details.call_args_list
+
+    expected_mirror_calls = [
+        mock.call(mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock_vpc_aws_provider),
+        mock.call(mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock_vpc_aws_provider),
+    ]
+    assert expected_mirror_calls == mock_mirror.call_args_list
+    
+    
+
+
+

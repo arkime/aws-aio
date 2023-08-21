@@ -53,6 +53,11 @@ def cmd_cluster_register_vpc(profile: str, region: str, cluster_name: str, vpc_a
     )
 
     logger.info(f"Cross-account association details: \n{json.dumps(association.to_dict(), indent=4)}")
+    logger.info("CLI Command to register the Cluster with the VPC in the VPC Account: \n"
+                + f"./manage_arkime.py vpc-register-cluster --cluster-account-id {association.clusterAccount}"
+                + f" --cluster-name {association.clusterName} --cross-account-role {association.roleArn} --vpc-id {vpc_id}"
+                + f" --vpce-service-id {association.vpceServiceId}"
+    )
 
 def _get_iam_role_name(cluster_name: str, vpc_id: str):
     # There's a maximum length of 64 characters we have to work around.  VPC IDs are quite unique, so we'll lean
