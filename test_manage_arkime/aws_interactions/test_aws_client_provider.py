@@ -1,7 +1,92 @@
+import pytest
 import unittest.mock as mock
 
-from aws_interactions.aws_client_provider import AwsClientProvider
+from aws_interactions.aws_client_provider import AwsClientProvider, AssumeRoleNotSupported
 from aws_interactions.aws_environment import AwsEnvironment
+
+class FailedTest(Exception):
+    def __init__(self):
+        super().__init__("This should not have been raised")
+
+@mock.patch("aws_interactions.aws_client_provider.boto3.Session")
+def test_WHEN_get_session_called_AND_aws_compute_not_assume_THEN_as_expected(mock_session_cls):
+    # Set up our mock
+    mock_client = mock.Mock()
+    mock_session = mock.Mock()
+    mock_session.client.return_value = mock_client
+
+    mock_session_cls.side_effect = [mock_session, FailedTest()]
+
+    # Run our test
+    aws_provider = AwsClientProvider(aws_compute=True)
+    test_client = aws_provider.get_acm()
+
+    # Check our results
+    assert test_client == mock_client
+
+@mock.patch("aws_interactions.aws_client_provider.boto3.Session")
+def test_WHEN_get_session_called_AND_not_aws_compute_not_assume_THEN_as_expected(mock_session_cls):
+    # Set up our mock
+    mock_client = mock.Mock()
+    mock_session = mock.Mock()
+    mock_session.client.return_value = mock_client
+
+    mock_session_cls.side_effect = [mock_session, FailedTest()]
+
+    # Run our test
+    aws_provider = AwsClientProvider(aws_region="region", aws_profile="profile")
+    test_client = aws_provider.get_acm()
+
+    # Check our results
+    assert test_client == mock_client
+
+    expected_session_calls = [
+        mock.call(profile_name="profile", region_name="region")
+    ]
+    assert expected_session_calls == mock_session_cls.call_args_list
+
+@mock.patch("aws_interactions.aws_client_provider.boto3.Session")
+def test_WHEN_get_session_called_AND_not_aws_compute_assume_THEN_as_expected(mock_session_cls):
+    # Set up our mock
+    mock_initial_client = mock.Mock()
+    mock_initial_client.assume_role.return_value = {
+        "Credentials": {
+            "AccessKeyId": "access",
+            "SecretAccessKey": "secret",
+            "SessionToken": "token",
+        }        
+    }
+    mock_initial_session = mock.Mock()
+    mock_initial_session.client.return_value = mock_initial_client
+
+    mock_assumed_client = mock.Mock()
+    mock_assumed_session = mock.Mock()
+    mock_assumed_session.client.return_value = mock_assumed_client
+
+    mock_session_cls.side_effect = [mock_initial_session, mock_assumed_session, FailedTest()]
+
+    # Run our test
+    aws_provider = AwsClientProvider(aws_region="region", aws_profile="profile", assume_role_arn="role:arn")
+    test_client = aws_provider.get_acm()
+
+    # Check our results
+    assert test_client == mock_assumed_client
+
+    expected_sts_calls = [
+        mock.call(RoleArn="role:arn", RoleSessionName="ArkimeAwsAioCLI")
+    ]
+    assert expected_sts_calls == mock_initial_client.assume_role.call_args_list
+
+    expected_session_calls = [
+        mock.call(profile_name="profile", region_name="region"),
+        mock.call(
+            aws_access_key_id = "access",
+            aws_secret_access_key = "secret",
+            aws_session_token = "token",
+            region_name = "region"
+        ),
+    ]
+    assert expected_session_calls == mock_session_cls.call_args_list
 
 def test_WHEN_get_aws_env_called_AND_no_args_THEN_gens_correctly():
     # Set up our mock

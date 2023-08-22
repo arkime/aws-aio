@@ -6,11 +6,15 @@ import click
 from commands.vpc_add import cmd_vpc_add
 from commands.config_update import cmd_config_update
 from commands.cluster_create import cmd_cluster_create
+from commands.cluster_deregister_vpc import cmd_cluster_deregister_vpc
 from commands.cluster_destroy import cmd_cluster_destroy
+from commands.cluster_register_vpc import cmd_cluster_register_vpc
 from commands.demo_traffic_deploy import cmd_demo_traffic_deploy
 from commands.demo_traffic_destroy import cmd_demo_traffic_destroy
 from commands.get_login_details import cmd_get_login_details
 from commands.clusters_list import cmd_clusters_list
+from commands.vpc_deregister_cluster import cmd_vpc_deregister_cluster
+from commands.vpc_register_cluster import cmd_vpc_register_cluster
 from commands.vpc_remove import cmd_vpc_remove
 import core.constants as constants
 from core.capacity_planning import MAX_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS
@@ -145,7 +149,8 @@ cli.add_command(clusters_list)
                     + "  By default, each VPC is assigned a Virtual Network Interface ID (VNI) unused by any other VPC"
                     + f" in the Cluster to uniquely identify it.  The starting default value is {constants.VNI_MIN}."))
 @click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
-@click.option("--vpc-id", help="The VPC ID to begin monitoring.  Must be in the same account/region as the Cluster.", required=True)
+@click.option("--vpc-id", help="The VPC ID to begin monitoring.  Must be in the same region as the Cluster."
+              " If in a different AWS Account than the Cluster, must be registered (see README).", required=True)
 @click.option("--force-vni", help=("POWER USER OPTION.  Forcefully assign the VPC to use a specific VNI.  This can"
               + " result in multiple VPCs using the same VNI, and VNIs to potentially be re-used long after they are"
               + " relinquished."), default=None, type=int)
@@ -194,11 +199,64 @@ def config_update(ctx, cluster_name, force_bounce_capture, force_bounce_viewer):
     cmd_config_update(profile, region, cluster_name, force_bounce_capture, force_bounce_viewer)
 cli.add_command(config_update)
 
+@click.command(help="Registers a VPC in another AWS Account so it can be captured by the Cluster.  Not needed for VPCs"
+               " in the same AWS Account as the Cluster.  Call w/ creds for the Cluster's AWS Account.")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
+@click.option("--vpc-account-id", help="The AWS Account ID of the VPC you want to monitor", required=True)
+@click.option("--vpc-id", help="The VPC ID you want to monitor.  This VPC should be in a different account than the"
+              " Cluster is in.", required=True)
+@click.pass_context
+def cluster_register_vpc(ctx, cluster_name, vpc_account_id, vpc_id):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_cluster_register_vpc(profile, region, cluster_name, vpc_account_id, vpc_id)
+cli.add_command(cluster_register_vpc)
+
+@click.command(help="Removes registration of the Arkime Cluster with a VPC in another AWS Account.  Not needed for VPCs"
+               " in the same AWS Account as the Cluster.  Call w/ creds for the Cluster's AWS Account.")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
+@click.option("--vpc-id", help="The VPC ID you want to monitor.  This VPC should be in a different account than the"
+              " Cluster is in.", required=True)
+@click.pass_context
+def cluster_deregister_vpc(ctx, cluster_name, vpc_id):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_cluster_deregister_vpc(profile, region, cluster_name, vpc_id)
+cli.add_command(cluster_deregister_vpc)
+
+@click.command(help="Registers an Arkime Cluster with a VPC in another AWS Account so its traffic can be captured."
+               "  Not needed for VPCs in the same AWS Account as the Cluster.  Call w/ creds for the VPC's AWS Account.")
+@click.option("--cluster-account-id", help="The AWS Account ID of the Cluster what will do monitoring", required=True)
+@click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
+@click.option("--cross-account-role", help="The IAM Role Name used to perform cross-account actions", required=True)
+@click.option("--vpc-account-id", help="The AWS Account ID of the VPC you want to monitor", required=True)
+@click.option("--vpc-id", help="The VPC ID you want to monitor.  This VPC should be in a different account than the"
+              " Cluster is in.", required=True)
+@click.option("--vpce-service-id", help="The VPC Endpoint Service ID of the Arkime Cluster", required=True)
+@click.pass_context
+def vpc_register_cluster(ctx, cluster_account_id, cluster_name, cross_account_role, vpc_account_id, vpc_id, vpce_service_id):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_vpc_register_cluster(profile, region, cluster_account_id, cluster_name, cross_account_role, vpc_account_id, vpc_id, vpce_service_id)
+cli.add_command(vpc_register_cluster)
+
+
+@click.command(help="Removes registration of the Arkime Cluster with a VPC in another AWS Account."
+               "  Not needed for VPCs in the same AWS Account as the Cluster.  Call w/ creds for the VPC's AWS Account.")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
+@click.option("--vpc-id", help="The VPC ID you want to monitor.  This VPC should be in a different account than the"
+              " Cluster is in.", required=True)
+@click.pass_context
+def vpc_deregister_cluster(ctx, cluster_name, vpc_id):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_vpc_deregister_cluster(profile, region, cluster_name, vpc_id)
+cli.add_command(vpc_deregister_cluster)
+
 def main():
     logging_wrangler = LoggingWrangler()
     logger.info(f"Debug-level logs save to file: {logging_wrangler.log_file}")
     cli()
-
 
 if __name__ == "__main__":
     with set_boto_log_level("WARNING"): # Prevent overwhelming boto spam in our debug log

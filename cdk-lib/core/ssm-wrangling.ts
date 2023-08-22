@@ -36,6 +36,7 @@ export interface ViewerSsmValue {
 }
 
 export interface VpcSsmValue {
+    readonly busArn: string;
     readonly mirrorFilterId: string;
     readonly mirrorVni: string;
     readonly vpcId: string;

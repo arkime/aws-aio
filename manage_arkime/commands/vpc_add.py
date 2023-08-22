@@ -1,3 +1,4 @@
+import json
 import logging
 import shutil
 
@@ -5,10 +6,11 @@ from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
+import cdk_interactions.cdk_context as context
 from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cfn_wrangling as cfn
 import core.constants as constants
-import cdk_interactions.cdk_context as context
+from core.cross_account_wrangling import CrossAccountAssociation
 from core.vni_provider import SsmVniProvider, VniAlreadyUsed, VniOutsideRange, VniPoolExhausted
 
 logger = logging.getLogger(__name__)
@@ -16,10 +18,26 @@ logger = logging.getLogger(__name__)
 def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_vni: int, just_print_cfn: bool):
     logger.debug(f"Invoking vpc-add with profile '{profile}' and region '{region}'")
 
+    # Use the current AWS Account to figure out if we need to do any cross-account actions
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
-    aws_env = aws_provider.get_aws_env()
-    cdk_client = CdkClient(aws_env)
-    vni_provider = SsmVniProvider(cluster_name, aws_provider)
+    try:
+        raw_association = ssm_ops.get_ssm_param_value(
+            constants.get_cluster_vpc_cross_account_ssm_param_name(cluster_name, vpc_id),
+            aws_provider
+        )
+        association = CrossAccountAssociation(**json.loads(raw_association))
+    except ssm_ops.ParamDoesNotExist:
+        association = None
+
+    if association:
+        cluster_acct_provider = AwsClientProvider(aws_profile=profile, aws_region=region, assume_role_arn=association.roleArn)
+        vpc_acct_provider = aws_provider
+    if not association:
+        cluster_acct_provider = vpc_acct_provider = aws_provider
+
+    vpc_aws_env = vpc_acct_provider.get_aws_env()
+    cdk_client = CdkClient(vpc_aws_env)
+    vni_provider = SsmVniProvider(cluster_name, cluster_acct_provider)
 
     # If the user didn't supply a VNI, try to find one
     if not user_vni:
@@ -51,7 +69,7 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
 
     # Confirm the Cluster exists before proceeding
     try:
-        ssm_ops.get_ssm_param_value(constants.get_cluster_ssm_param_name(cluster_name), aws_provider)
+        ssm_ops.get_ssm_param_value(constants.get_cluster_ssm_param_name(cluster_name), cluster_acct_provider)
     except ssm_ops.ParamDoesNotExist:
         logger.error(f"The cluster {cluster_name} does not exist; try using the clusters-list command to see the clusters you have created.")
         logger.warning("Aborting...")
@@ -59,23 +77,22 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
 
     # Get information about the VPC
     try:
-        subnet_ids = ec2i.get_subnets_of_vpc(vpc_id, aws_provider)
-        vpc_details = ec2i.get_vpc_details(vpc_id, aws_provider)
+        subnet_ids = ec2i.get_subnets_of_vpc(vpc_id, vpc_acct_provider)
+        vpc_details = ec2i.get_vpc_details(vpc_id, vpc_acct_provider)
     except ec2i.VpcDoesNotExist as ex:
         logger.error(f"The VPC {vpc_id} does not exist in the account/region")
         logger.warning("Aborting...")
         return
 
     # Get the VPCE Service ID we set up with our Capture VPC
-    vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", aws_provider)
-    event_bus_arn = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "busArn", aws_provider)
+    vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", cluster_acct_provider)
 
     # Define the CFN Resources and CDK Context
     stacks_to_deploy = [
         constants.get_vpc_mirror_setup_stack_name(cluster_name, vpc_id)
     ]
-    vpc_add_context = context.generate_vpc_add_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, event_bus_arn,
-                                                       next_vni, vpc_details.cidr_blocks)
+    vpc_add_context = context.generate_vpc_add_context(cluster_name, vpc_id, subnet_ids, vpce_service_id, next_vni,
+                                                       vpc_details.cidr_blocks)
 
     if just_print_cfn:
         # Remove the CDK output directory to ensure we don't copy over stale templates
@@ -87,7 +104,7 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
 
         # Copy them over
         parent_dir = constants.get_repo_root_dir()
-        cfn.set_up_cloudformation_template_dir(cluster_name, aws_env, parent_dir)
+        cfn.set_up_cloudformation_template_dir(cluster_name, vpc_aws_env, parent_dir)
     else:
         # Deploy the resources we need in the user's VPC and Subnets
         logger.info("Deploying shared mirroring components via CDK...")
@@ -103,10 +120,11 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
         # conditions on CloudFormation trying to have the same Session exist in two stacks momentarily.  Not a good
         # experience.
         vpc_param_name = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
-        traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", aws_provider)
+        traffic_filter_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorFilterId", vpc_acct_provider)
+        event_bus_arn = ssm_ops.get_ssm_param_json_value(vpc_param_name, "busArn", vpc_acct_provider)
         
         for subnet_id in subnet_ids:
-            _mirror_enis_in_subnet(event_bus_arn, cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, aws_provider)
+            _mirror_enis_in_subnet(event_bus_arn, cluster_name, vpc_id, subnet_id, traffic_filter_id, next_vni, vpc_acct_provider)
 
         # Register the VNI as used.  The VNI's usage is tied to the ENI-specific configuration, so we perform this
         # after that is set up.

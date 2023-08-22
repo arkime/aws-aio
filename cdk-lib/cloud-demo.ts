@@ -83,7 +83,6 @@ switch(params.type) {
     case 'MirrorMgmtParams':
         new VpcMirrorStack(app, params.nameVpcMirrorStack, {
             clusterName: params.nameCluster,
-            eventBusArn: params.arnEventBus,
             subnetIds: params.listSubnetIds,
             subnetSsmParamNames: params.listSubnetSsmParams,
             vpcId: params.idVpc,

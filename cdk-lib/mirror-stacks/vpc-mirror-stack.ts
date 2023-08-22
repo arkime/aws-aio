@@ -16,7 +16,6 @@ import * as constants from '../core/constants'
 
 export interface VpcMirrorStackProps extends StackProps {
     readonly clusterName: string;
-    readonly eventBusArn: string;
     readonly subnetIds: string[];
     readonly subnetSsmParamNames: string[];
     readonly vpcId: string;
@@ -122,21 +121,12 @@ export class VpcMirrorStack extends Stack {
             description: 'Accept all inbound traffic'
         });
 
-        // This SSM parameter will enable us share the details of our VPC-specific Capture setup
-        const vpcParamValue: VpcSsmValue = {mirrorFilterId: filter.ref, mirrorVni: props.mirrorVni, vpcId: props.vpcId}
-        const vpcParam = new ssm.StringParameter(this, `VpcParam-${props.vpcId}`, {
-            allowedPattern: '.*',
-            description: 'The VPC\'s details',
-            parameterName: props.vpcSsmParamName,
-            stringValue: JSON.stringify(vpcParamValue),
-            tier: ssm.ParameterTier.STANDARD,
-        });
-        vpcParam.node.addDependency(filter);
-
         /**
          * Configure the resources to listen for raw AWS Service events in the User VPC Account/Region and convert
          * those events into something more actionable for our system
          */
+
+        const vpcBus = new events.EventBus(this, 'VpcBus', {})
 
         // Create the Lambda that listen for AWS Service events on the default bus and transform them into events we
         // can action
@@ -155,7 +145,7 @@ export class VpcMirrorStack extends Stack {
             handler: 'lambda_handlers.aws_event_listener_handler',
             timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded,
             environment: {
-                EVENT_BUS_ARN: props.eventBusArn,
+                EVENT_BUS_ARN: vpcBus.eventBusArn,
                 CLUSTER_NAME: props.clusterName,
                 VPC_ID: props.vpcId,
                 TRAFFIC_FILTER_ID: filter.ref,
@@ -169,7 +159,7 @@ export class VpcMirrorStack extends Stack {
                     'events:PutEvents'
                 ],
                 resources: [
-                    `${props.eventBusArn}`
+                    `${vpcBus.eventBusArn}`
                 ]
             })
         );
@@ -236,11 +226,8 @@ export class VpcMirrorStack extends Stack {
         /**
          * Configure the resources required for event-based mirroring configuration
          */
-        // Get a handle to the cluster event bus
-        const clusterBus = events.EventBus.fromEventBusArn(this, 'ClusterBus', props.eventBusArn);
-
         // Archive Arkime events related to this User VPC to enable replay, with a focus on shorter-term debugging
-        clusterBus.archive('Archive', {
+        vpcBus.archive('Archive', {
             archiveName: `${props.clusterName}-Arkime-${props.vpcId}`,
             description: `Archive of Arkime events for VPC ${props.vpcId}`,
             eventPattern: {
@@ -312,7 +299,7 @@ export class VpcMirrorStack extends Stack {
 
         // Create a rule to funnel appropriate events to our setup lambda
         const createRule = new events.Rule(this, 'RuleCreateEniMirror', {
-            eventBus: clusterBus,
+            eventBus: vpcBus,
             eventPattern: {
                 source: [constants.EVENT_SOURCE],
                 detailType: [constants.EVENT_DETAIL_TYPE_CREATE_ENI_MIRROR],
@@ -322,7 +309,7 @@ export class VpcMirrorStack extends Stack {
             },
             targets: [new targets.LambdaFunction(createLambda)]
         });
-        createRule.node.addDependency(clusterBus);
+        createRule.node.addDependency(vpcBus);
 
         // Create the Lambda that will tear down the traffic mirroring for ENIs in our VPC
         const destroyLambda = new lambda.Function(this, 'DestroyEniMirrorLambda', {
@@ -379,7 +366,7 @@ export class VpcMirrorStack extends Stack {
 
         // Create a rule to funnel appropriate events to our teardwon lambda
         const destroyRule = new events.Rule(this, 'RuleDestroyEniMirror', {
-            eventBus: clusterBus,
+            eventBus: vpcBus,
             eventPattern: {
                 source: [constants.EVENT_SOURCE],
                 detailType: [constants.EVENT_DETAIL_TYPE_DESTROY_ENI_MIRROR],
@@ -389,6 +376,22 @@ export class VpcMirrorStack extends Stack {
             },
             targets: [new targets.LambdaFunction(destroyLambda)]
         });
-        destroyRule.node.addDependency(clusterBus);
+        destroyRule.node.addDependency(vpcBus);
+
+        // This SSM parameter will enable us share the details of our VPC-specific Capture setup
+        const vpcParamValue: VpcSsmValue = {
+            busArn: vpcBus.eventBusArn,
+            mirrorFilterId: filter.ref,
+            mirrorVni: props.mirrorVni,
+            vpcId: props.vpcId,
+        }
+        const vpcParam = new ssm.StringParameter(this, `VpcParam-${props.vpcId}`, {
+            allowedPattern: '.*',
+            description: 'The VPC\'s details',
+            parameterName: props.vpcSsmParamName,
+            stringValue: JSON.stringify(vpcParamValue),
+            tier: ssm.ParameterTier.STANDARD,
+        });
+        vpcParam.node.addDependency(filter);
     }
 }
