@@ -501,6 +501,7 @@ def test_WHEN_cmd_vpc_add_called_AND_cross_account_THEN_correct_client_used(mock
             "clusterAccount": "XXXXXXXXXXXX",
             "clusterName": "my_cluster",
             "roleArn": "role_arn",
+            "roleName": "role_name",
             "vpcAccount": "YYYYYYYYYYYY",
             "vpcId": "vpc",
             "vpceServiceId": "vpce_id",

@@ -16,12 +16,12 @@ def test_WHEN_cmd_vpc_register_cluster_called_THEN_as_expected(mock_provider_cls
     mock_provider_cls.return_value = mock_provider
 
     # Run our test
-    vrc.cmd_vpc_register_cluster("profile", "region", "XXXXXXXXXXXX", "my_cluster", "role_arn", "YYYYYYYYYYYY", "vpc", "vpce_id")
+    vrc.cmd_vpc_register_cluster("profile", "region", "XXXXXXXXXXXX", "my_cluster", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id")
 
     # Check our results
 
     expected_association = CrossAccountAssociation(
-        "XXXXXXXXXXXX", "my_cluster", "role_arn", "YYYYYYYYYYYY", "vpc", "vpce_id"
+        "XXXXXXXXXXXX", "my_cluster", "arn:aws:iam::XXXXXXXXXXXX:role/role_name", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id"
     )
     expected_put_ssm_calls = [
         mock.call(
@@ -44,7 +44,7 @@ def test_WHEN_cmd_vpc_register_cluster_called_AND_wrong_account_THEN_as_expected
     mock_provider_cls.return_value = mock_provider
 
     # Run our test
-    vrc.cmd_vpc_register_cluster("profile", "region", "XXXXXXXXXXXX", "my_cluster", "role_arn", "YYYYYYYYYYYY", "vpc", "vpce_id")
+    vrc.cmd_vpc_register_cluster("profile", "region", "XXXXXXXXXXXX", "my_cluster", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id")
 
     # Check our results
     expected_put_ssm_calls = []

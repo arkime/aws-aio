@@ -6,6 +6,7 @@ import click
 from commands.vpc_add import cmd_vpc_add
 from commands.config_update import cmd_config_update
 from commands.cluster_create import cmd_cluster_create
+from commands.cluster_deregister_vpc import cmd_cluster_deregister_vpc
 from commands.cluster_destroy import cmd_cluster_destroy
 from commands.cluster_register_vpc import cmd_cluster_register_vpc
 from commands.demo_traffic_deploy import cmd_demo_traffic_deploy
@@ -211,11 +212,23 @@ def cluster_register_vpc(ctx, cluster_name, vpc_account_id, vpc_id):
     cmd_cluster_register_vpc(profile, region, cluster_name, vpc_account_id, vpc_id)
 cli.add_command(cluster_register_vpc)
 
+@click.command(help="Removes registration of the Arkime Cluster with a VPC in another AWS Account.  Not needed for VPCs"
+               " in the same AWS Account as the Cluster.  Call w/ creds for the Cluster's AWS Account.")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
+@click.option("--vpc-id", help="The VPC ID you want to monitor.  This VPC should be in a different account than the"
+              " Cluster is in.", required=True)
+@click.pass_context
+def cluster_deregister_vpc(ctx, cluster_name, vpc_id):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_cluster_deregister_vpc(profile, region, cluster_name, vpc_id)
+cli.add_command(cluster_deregister_vpc)
+
 @click.command(help="Registers an Arkime Cluster with a VPC in another AWS Account so its traffic can be captured."
                "  Not needed for VPCs in the same AWS Account as the Cluster.  Call w/ creds for the VPC's AWS Account.")
 @click.option("--cluster-account-id", help="The AWS Account ID of the Cluster what will do monitoring", required=True)
 @click.option("--cluster-name", help="The name of the Arkime Cluster to monitor with", required=True)
-@click.option("--cross-account-role", help="The IAM Role ARN used to perform cross-account actions", required=True)
+@click.option("--cross-account-role", help="The IAM Role Name used to perform cross-account actions", required=True)
 @click.option("--vpc-account-id", help="The AWS Account ID of the VPC you want to monitor", required=True)
 @click.option("--vpc-id", help="The VPC ID you want to monitor.  This VPC should be in a different account than the"
               " Cluster is in.", required=True)

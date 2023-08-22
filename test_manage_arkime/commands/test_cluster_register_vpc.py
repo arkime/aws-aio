@@ -1,8 +1,5 @@
 import json
-import pytest
 import unittest.mock as mock
-
-from botocore.exceptions import ClientError
 
 from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.ssm_operations import ParamDoesNotExist
@@ -19,40 +16,11 @@ def test_WHEN_get_iam_role_name_called_THEN_as_expected():
     result = crv._get_iam_role_name("ThisIsAVeryLongClusterNameThatHopefulyWontHappenForReal", "vpc-12345678901234567")
     assert "arkime_ThisIsAVeryLongClusterNameThatHopef_vpc-12345678901234567" == result
 
-def test_WHEN_get_iam_role_name_called_THEN_as_expected():
-    # Set up our mock
-    mock_iam_client = mock.Mock()
-    mock_iam_client.get_role.side_effect = [
-        None,
-        ClientError(error_response={"Error": {"Code": "NoSuchEntity"}}, operation_name=""),
-        RuntimeError("Boom!")
-    ]
-
-    mock_provider = mock.Mock()
-    mock_provider.get_iam.return_value = mock_iam_client
-
-    # TEST: Role exists, so returns true
-    result = crv._does_iam_role_exist("TheRole", mock_provider)
-    assert True == result
-
-    # TEST: Role doesn't exist, so returns false
-    result = crv._does_iam_role_exist("TheRole", mock_provider)
-    assert False == result
-
-    # TEST: Unexpected error, so raises
-    with pytest.raises(RuntimeError):
-        crv._does_iam_role_exist("TheRole", mock_provider)
-
-@mock.patch("commands.cluster_register_vpc._does_iam_role_exist")
+@mock.patch("commands.cluster_register_vpc.does_iam_role_exist")
 @mock.patch("commands.cluster_register_vpc._get_iam_role_name")
 def test_WHEN_ensure_cross_account_role_exists_called_AND_doesnt_exist_THEN_as_expected(mock_get_name, mock_does_exist):
     # Set up our mock
     mock_iam_client = mock.Mock()
-    mock_iam_client.get_role.side_effect = [
-        None,
-        ClientError(error_response={"Error": {"Code": "NoSuchEntity"}}, operation_name=""),
-        RuntimeError("Boom!")
-    ]
 
     mock_provider = mock.Mock()
     mock_provider.get_iam.return_value = mock_iam_client
@@ -65,6 +33,8 @@ def test_WHEN_ensure_cross_account_role_exists_called_AND_doesnt_exist_THEN_as_e
     result = crv._ensure_cross_account_role_exists("my_cluster", "XXXXXXXXXXXX", "vpc", mock_provider, test_env)
 
     # Check our results
+    assert "role_name" == result
+
     expected_trust = {
         "Version": "2012-10-17",
         "Statement": [
@@ -113,16 +83,11 @@ def test_WHEN_ensure_cross_account_role_exists_called_AND_doesnt_exist_THEN_as_e
     ]
     assert expected_put_calls == mock_iam_client.put_role_policy.call_args_list
 
-@mock.patch("commands.cluster_register_vpc._does_iam_role_exist")
+@mock.patch("commands.cluster_register_vpc.does_iam_role_exist")
 @mock.patch("commands.cluster_register_vpc._get_iam_role_name")
 def test_WHEN_ensure_cross_account_role_exists_called_AND_does_exist_THEN_as_expected(mock_get_name, mock_does_exist):
     # Set up our mock
     mock_iam_client = mock.Mock()
-    mock_iam_client.get_role.side_effect = [
-        None,
-        ClientError(error_response={"Error": {"Code": "NoSuchEntity"}}, operation_name=""),
-        RuntimeError("Boom!")
-    ]
 
     mock_provider = mock.Mock()
     mock_provider.get_iam.return_value = mock_iam_client
@@ -135,8 +100,7 @@ def test_WHEN_ensure_cross_account_role_exists_called_AND_does_exist_THEN_as_exp
     result = crv._ensure_cross_account_role_exists("my_cluster", "XXXXXXXXXXXX", "vpc", mock_provider, test_env)
 
     # Check our results
-    expected_result = f"arn:aws:iam::XXXXXXXXXXXX:role/role_name"
-    assert expected_result == result
+    assert "role_name" == result
 
     expected_trust = {
         "Version": "2012-10-17",
@@ -199,7 +163,7 @@ def test_WHEN_cmd_cluster_register_vpc_called_THEN_as_expected(mock_provider_cls
     mock_provider_cls.return_value = mock_provider
 
     mock_get_ssm_json.return_value = "vpce_id"
-    mock_ensure.return_value = "role_arn"
+    mock_ensure.return_value = "role_name"
 
     # Run our test
     crv.cmd_cluster_register_vpc("profile", "region", "my_cluster", "YYYYYYYYYYYY", "vpc")
@@ -225,7 +189,7 @@ def test_WHEN_cmd_cluster_register_vpc_called_THEN_as_expected(mock_provider_cls
     assert expected_add_perms_calls == mock_add_perms.call_args_list
 
     expected_association = CrossAccountAssociation(
-        "XXXXXXXXXXXX", "my_cluster", "role_arn", "YYYYYYYYYYYY", "vpc", "vpce_id"
+        "XXXXXXXXXXXX", "my_cluster", "arn:aws:iam::XXXXXXXXXXXX:role/role_name", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id"
     )
     expected_put_ssm_calls = [
         mock.call(

@@ -24,8 +24,9 @@ def cmd_vpc_register_cluster(profile: str, region: str, cluster_account_id: str,
 
     # Create the association Param
     ssm_param = constants.get_cluster_vpc_cross_account_ssm_param_name(cluster_name, vpc_id)
+    role_arn = f"arn:aws:iam::{cluster_account_id}:role/{cross_account_role}"
     association = CrossAccountAssociation(
-        cluster_account_id, cluster_name, cross_account_role, aws_env.aws_account, vpc_id, vpce_service_id
+        cluster_account_id, cluster_name, role_arn, cross_account_role, aws_env.aws_account, vpc_id, vpce_service_id
     )
     logger.info(f"Updating config details in Param Store at: {ssm_param}")
     ssm_ops.put_ssm_param(

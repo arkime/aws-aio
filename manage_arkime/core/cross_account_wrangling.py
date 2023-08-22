@@ -6,6 +6,7 @@ class CrossAccountAssociation:
     clusterAccount: str
     clusterName: str
     roleArn: str
+    roleName: str
     vpcAccount: str
     vpcId: str
     vpceServiceId: str
@@ -14,6 +15,7 @@ class CrossAccountAssociation:
         return (self.clusterAccount == other.clusterAccount
                 and self.clusterName == other.clusterName
                 and self.roleArn == other.roleArn
+                and self.roleName == other.roleName
                 and self.vpcAccount == other.vpcAccount
                 and self.vpcId == other.vpcId
                 and self.vpceServiceId == other.vpceServiceId)
@@ -23,6 +25,7 @@ class CrossAccountAssociation:
             'clusterAccount': self.clusterAccount,
             'clusterName': self.clusterName,
             'roleArn': self.roleArn,
+            'roleName': self.roleName,
             'vpcAccount': self.vpcAccount,
             'vpcId': self.vpcId,
             'vpceServiceId': self.vpceServiceId

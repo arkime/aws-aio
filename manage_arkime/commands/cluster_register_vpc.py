@@ -2,11 +2,10 @@ import json
 import logging
 from typing import Dict, List
 
-from botocore.exceptions import ClientError
-
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.aws_environment import AwsEnvironment
+from aws_interactions.iam_interactions import does_iam_role_exist
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation
@@ -33,7 +32,8 @@ def cmd_cluster_register_vpc(profile: str, region: str, cluster_name: str, vpc_a
         return
 
     # Create the cross account IAM role
-    role_arn = _ensure_cross_account_role_exists(cluster_name, vpc_account_id, vpc_id, aws_provider, aws_env)
+    role_name = _ensure_cross_account_role_exists(cluster_name, vpc_account_id, vpc_id, aws_provider, aws_env)
+    role_arn = f"arn:aws:iam::{aws_env.aws_account}:role/{role_name}"
 
     # Add the GWLB permissions
     _add_vpce_permissions(vpce_service_id, vpc_account_id, aws_provider)
@@ -41,7 +41,7 @@ def cmd_cluster_register_vpc(profile: str, region: str, cluster_name: str, vpc_a
     # Create the association Param
     ssm_param = constants.get_cluster_vpc_cross_account_ssm_param_name(cluster_name, vpc_id)
     association = CrossAccountAssociation(
-        aws_env.aws_account, cluster_name, role_arn, vpc_account_id, vpc_id, vpce_service_id
+        aws_env.aws_account, cluster_name, role_arn, role_name, vpc_account_id, vpc_id, vpce_service_id
     )
     logger.info(f"Updating config details in Param Store at: {ssm_param}")
     ssm_ops.put_ssm_param(
@@ -55,7 +55,7 @@ def cmd_cluster_register_vpc(profile: str, region: str, cluster_name: str, vpc_a
     logger.info(f"Cross-account association details: \n{json.dumps(association.to_dict(), indent=4)}")
     logger.info("CLI Command to register the Cluster with the VPC in the VPC Account: \n"
                 + f"./manage_arkime.py vpc-register-cluster --cluster-account-id {association.clusterAccount}"
-                + f" --cluster-name {association.clusterName} --cross-account-role {association.roleArn}"
+                + f" --cluster-name {association.clusterName} --cross-account-role {association.roleName}"
                 + f" --vpc-account-id {association.vpcAccount} --vpc-id {association.vpcId} --vpce-service-id {association.vpceServiceId}"
     )
 
@@ -67,17 +67,6 @@ def _get_iam_role_name(cluster_name: str, vpc_id: str):
     max_chars_from_cluster_name = 64 - len(prefix) - len(suffix)
     beginning_of_cluster_name = cluster_name[:max_chars_from_cluster_name]
     return f"{prefix}{beginning_of_cluster_name}{suffix}" # Like: arkime_MyCluster_vpc-0f08710cdbc32d58a
-
-def _does_iam_role_exist(role_name: str, aws_provider: AwsClientProvider):
-    iam_client = aws_provider.get_iam()
-
-    try:
-        iam_client.get_role(RoleName=role_name)
-        return True
-    except ClientError as ex:
-        if ex.response['Error']['Code'] == 'NoSuchEntity':
-            return False
-        raise ex
 
 def _ensure_cross_account_role_exists(cluster_name: str, vpc_account_id: str, vpc_id: str,
                                       aws_provider: AwsClientProvider, aws_env: AwsEnvironment):
@@ -99,7 +88,7 @@ def _ensure_cross_account_role_exists(cluster_name: str, vpc_account_id: str, vp
         ]
     }
 
-    if _does_iam_role_exist(role_name, aws_provider):
+    if does_iam_role_exist(role_name, aws_provider):
         # Make sure the trust policy is as we expect
         iam_client.update_assume_role_policy(
             RoleName=role_name,
@@ -134,9 +123,8 @@ def _ensure_cross_account_role_exists(cluster_name: str, vpc_account_id: str, vp
         PolicyDocument=json.dumps(policy)
     )
 
-    role_arn = f"arn:aws:iam::{aws_env.aws_account}:role/{role_name}"
-    logger.info(f"Cross account role exists and is configured: {role_arn}")
-    return role_arn
+    logger.info(f"Cross account role exists and is configured: {role_name}")
+    return role_name
 
 def _add_vpce_permissions(vpce_service_id: str, vpc_account_id: str, aws_provider: AwsClientProvider):
     """

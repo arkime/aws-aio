@@ -9,7 +9,7 @@ from core.cross_account_wrangling import CrossAccountAssociation
 logger = logging.getLogger(__name__)
 
 def cmd_vpc_deregister_cluster(profile: str, region: str, cluster_name: str, vpc_id: str):
-    logger.debug(f"Invoking vpc-register-cluster with profile '{profile}' and region '{region}'")
+    logger.debug(f"Invoking vpc-deregister-cluster with profile '{profile}' and region '{region}'")
 
     logger.info("De-registering the Cluster with the VPC...")
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)    
