@@ -117,7 +117,7 @@ By default, you will be given the minimum-size Capture Cluster.  You can provisi
 ./manage_arkime.py cluster-create --name MyCluster --expected-traffic 1 --spi-days 30 --replicas 1
 ```
 
-### Setting up capture for a VPC
+### Setting up capture for a VPC in the Cluster account
 
 Once you have an Arkime Cluster, you can begin capturing traffic in a target VPC using the `vpc-add` command, like so:
 
@@ -125,7 +125,61 @@ Once you have an Arkime Cluster, you can begin capturing traffic in a target VPC
 ./manage_arkime.py vpc-add --cluster-name MyCluster --vpc-id vpc-123456789
 ```
 
-**NOTE:** There are some caveats you need to be aware of.  First, the VPC must be in the same AWS Account and Region as the Arkime Cluster.  Second, the capture setup is currently static, meaning if the network configuration of your VPC changes or your compute fleet changes (due to instance replacement, scaling events, etc), those changes will not be reflected in the capture.  We're working on a solution for this.
+### Setting up capture for a VPC in another account
+
+#### Setup
+
+You can capture/monitor traffic in a VPC living in a different account you control, with a few additional steps.  We need to "register" the cross-account link in both the Cluster and VPC accounts, and make sure we're using AWS Credentials associated with the account we're currently performing operations against.  State about the Cluster lives in the Cluster account; state about the VPC lives in the VPC account; cross-account IAM access roles are used to enable the CLI to orchestrate the setup/teardown of resources.  Cross-account roles are not required during runtime, just during management create/update/destroy operations with the CLI.
+
+The process is as follows.  You can use an existing cluster, but we'll show the full process for completeness.
+
+We start by making sure we have an Arkime Cluster provisioned, using AWS Credentials associated with the account the Cluster will live in (XXXXXXXXXXXX).  In this example, we'll assume that we have an AWS Credential profile `ClusterAccount` that contains these creds.
+```
+./manage_arkime.py --profile ClusterAccount cluster-create --name MyCluster
+```
+
+Next, we register the cross-account association in the Cluster account, using the Cluster account's AWS Credentials, to the VPC in the VPC account (YYYYYYYYYYYY).  This command will spit out the details you need to perform the cross-account association in the VPC account:
+```
+./manage_arkime.py --profile ClusterAccount cluster-register-vpc --cluster-name MyCluster3 --vpc-account-id YYYYYYYYYYYY --vpc-id vpc-08d5c92356da0ccb4
+.
+.
+.
+2023-08-22 12:41:58 - Cross-account association details:
+{
+    "clusterAccount": "XXXXXXXXXXXX",
+    "clusterName": "MyCluster3",
+    "roleName": "arkime_MyCluster3_vpc-08d5c92356da0ccb4",
+    "vpcAccount": "YYYYYYYYYYYY",
+    "vpcId": "vpc-08d5c92356da0ccb4",
+    "vpceServiceId": "vpce-svc-0bf7f421d6596c8cb"
+}
+2023-08-22 12:41:58 - CLI Command to register the Cluster with the VPC in the VPC Account:
+./manage_arkime.py vpc-register-cluster --cluster-account-id XXXXXXXXXXXX --cluster-name MyCluster3 --cross-account-role arkime_MyCluster3_vpc-08d5c92356da0ccb4 --vpc-account-id YYYYYYYYYYYY --vpc-id vpc-08d5c92356da0ccb4 --vpce-service-id vpce-svc-0bf7f421d6596c8cb
+```
+
+We then need to switch to our VPC account's credentials; we'll assume there're stored in the AWS Credential profile `VpcAccount`.  We can use the pre-canned command spit out by `cluster-register-vpc`, being sure to update it to specify the new profile.  This registers the association in the VPC account as well:
+```
+./manage_arkime.py --profile VpcAccount vpc-register-cluster --cluster-account-id XXXXXXXXXXXX --cluster-name MyCluster3 --cross-account-role arkime_MyCluster3_vpc-08d5c92356da0ccb4 --vpc-account-id YYYYYYYYYYYY --vpc-id vpc-08d5c92356da0ccb4 --vpce-service-id vpce-svc-0bf7f421d6596c8cb
+```
+
+After that, we can run `vpc-add` as normal, but being sure to use creds for the VPC account:
+```
+/manage_arkime.py --profile VpcAccount vpc-add --cluster-name MyCluster3 --vpc-id vpc-08d5c92356da0ccb4
+```
+
+Traffic should begin showing up from your cross-account VPC as usual, with no further effort.
+
+#### Teardown
+
+As with setup, we need to perform some additional steps to tear down a cross-account VPC capture.  Basically, we just perform the reverse of what we did while setting things up; just be careful to use the correct credentials (the CLI should remind you if you use the wrong ones).
+
+```
+./manage_arkime.py --profile VpcAccount vpc-remove --cluster-name MyCluster3 --vpc-id vpc-08d5c92356da0ccb4
+
+./manage_arkime.py --profile VpcAccount vpc-deregister-cluster --cluster-name MyCluster3 --vpc-id vpc-08d5c92356da0ccb4
+
+./manage_arkime.py --profile ClusterAccount cluster-deregister-vpc --cluster-name MyCluster3 --vpc-id vpc-08d5c92356da0ccb4
+```
 
 ### Viewing the captured sessions
 
