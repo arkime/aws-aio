@@ -20,7 +20,6 @@ def test_WHEN_cmd_cluster_deregister_vpc_called_THEN_as_expected(mock_provider_c
     mock_get_ssm.return_value = json.dumps({
         "clusterAccount": "XXXXXXXXXXXX",
         "clusterName": "my_cluster",
-        "roleArn": "role_arn",
         "roleName": "role_name",
         "vpcAccount": "YYYYYYYYYYYY",
         "vpcId": "vpc",
@@ -81,7 +80,6 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_AND_wrong_account_THEN_as_expect
     mock_get_ssm.return_value = json.dumps({
         "clusterAccount": "XXXXXXXXXXXX",
         "clusterName": "my_cluster",
-        "roleArn": "role_arn",
         "roleName": "role_name",
         "vpcAccount": "YYYYYYYYYYYY",
         "vpcId": "vpc",

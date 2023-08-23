@@ -1,11 +1,13 @@
 import json
 import logging
+import re
 from typing import Dict, List
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
+from core.cross_account_wrangling import CrossAccountAssociation
 
 logger = logging.getLogger(__name__)
 
@@ -14,19 +16,45 @@ def cmd_clusters_list(profile: str, region: str) -> List[Dict[str, str]]:
 
     logger.info("Retrieving cluster details...")
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
+    this_account_env = aws_provider.get_aws_env()
     cluster_names = ssm_ops.get_ssm_names_by_path(constants.SSM_CLUSTERS_PREFIX, aws_provider)
     cluster_details = []
     for cluster_name in cluster_names:
         cluster_ssm_param_name = constants.get_cluster_ssm_param_name(cluster_name)
-
-        # Get the details for the monitored VPCs
-        ssm_vpcs_path_prefix = f"{cluster_ssm_param_name}/vpcs"
-        vpc_ids = ssm_ops.get_ssm_names_by_path(ssm_vpcs_path_prefix, aws_provider)
         vpc_details = []
-        for vpc_id in vpc_ids:
-            vpc_ssm_param = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
-            vni = ssm_ops.get_ssm_param_json_value(vpc_ssm_param, "mirrorVni", aws_provider)
+
+        ssm_vpcs_path_prefix = f"{cluster_ssm_param_name}/vpcs"
+        ssm_paths = ssm_ops.get_ssm_params_by_path(ssm_vpcs_path_prefix, aws_provider, recursive=True)
+
+        # Get the details for same-account monitored VPCs
+        same_account_regex = re.compile(f"^{ssm_vpcs_path_prefix}/vpc\\-[a-zA-Z0-9]+$")
+        same_account_params = [path for path in ssm_paths if same_account_regex.match(path["Name"])]
+        for same_account_param in same_account_params:
+            vni = json.loads(same_account_param["Value"])["mirrorVni"]
+            vpc_id = json.loads(same_account_param["Value"])["vpcId"]
+
             vpc_details.append({
+                "vpc_account": this_account_env.aws_account,
+                "vpc_id": vpc_id,
+                "vni": vni,
+            })
+
+        # Get the details for cross-account monitored VPCs
+        cross_account_regex = re.compile(f"^{ssm_vpcs_path_prefix}/vpc\\-[a-zA-Z0-9]+/cross-account$")
+        cross_account_params = [path for path in ssm_paths if cross_account_regex.match(path["Name"])]
+        for cross_account_param in cross_account_params:
+            # Create an AWS Client using a cross-account role to read VPC details in the VPC Account
+            association = CrossAccountAssociation(**json.loads(cross_account_param["Value"]))
+            cross_account_role_arn = f"arn:aws:iam::{association.vpcAccount}:role/{association.roleName}"
+            cross_account_provider = AwsClientProvider(aws_profile=profile, aws_region=region, assume_role_arn=cross_account_role_arn)
+
+            # Get the VPC details from the Param entry using a cross-account call
+            vpc_param_name = constants.get_vpc_ssm_param_name(association.clusterName, association.vpcId)
+            vni = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorVni", cross_account_provider)
+            vpc_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "vpcId", cross_account_provider)
+            
+            vpc_details.append({
+                "vpc_account": association.vpcAccount,
                 "vpc_id": vpc_id,
                 "vni": vni,
             })

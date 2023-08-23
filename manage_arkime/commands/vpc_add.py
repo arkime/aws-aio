@@ -30,7 +30,8 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
         association = None
 
     if association:
-        cluster_acct_provider = AwsClientProvider(aws_profile=profile, aws_region=region, assume_role_arn=association.roleArn)
+        role_arn = f"arn:aws:iam::{association.clusterAccount}:role/{association.roleName}"
+        cluster_acct_provider = AwsClientProvider(aws_profile=profile, aws_region=region, assume_role_arn=role_arn)
         vpc_acct_provider = aws_provider
     if not association:
         cluster_acct_provider = vpc_acct_provider = aws_provider
