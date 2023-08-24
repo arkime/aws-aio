@@ -81,7 +81,7 @@ def get_opensearch_domain_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-OSDomain"
 
 def get_opensearch_domain_ssm_param_name(cluster_name: str) -> str:
-    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/os-domain-name"
+    return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/os-domain-details"
 
 def get_subnet_ssm_param_name(cluster_name: str, vpc_id: str, subnet_id: str) -> str:
     return f"{SSM_CLUSTERS_PREFIX}/{cluster_name}/vpcs/{vpc_id}/subnets/{subnet_id}"

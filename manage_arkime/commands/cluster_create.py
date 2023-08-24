@@ -80,6 +80,9 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
         # Deploy the CFN resources
         cdk_client.deploy(stacks_to_deploy, context=create_context)
 
+        # Tag the OpenSearch Domain
+        _tag_domain(name, aws_provider)
+
         # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
         _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
 
@@ -289,4 +292,19 @@ def _configure_ism(cluster_name: str, history_days: int, spi_days: int, replicas
         [events.ConfigureIsmEvent(history_days, spi_days, replicas)],
         event_bus_arn,
         aws_provider
+    )
+
+def _tag_domain(cluster_name: str, aws_provider: AwsClientProvider):
+    os_domain_Arn = ssm_ops.get_ssm_param_json_value(
+        constants.get_opensearch_domain_ssm_param_name(cluster_name),
+        "domainArn",
+        aws_provider
+    )
+    
+    opensearch_client = aws_provider.get_opensearch()
+    opensearch_client.add_tags(
+        ARN=os_domain_Arn,
+        TagList=[
+            {"Key": "arkime_cluster", "Value": cluster_name},
+        ]
     )

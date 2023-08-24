@@ -102,11 +102,12 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
 @mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
 @mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
 @mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy.get_ssm_param_value")
 @mock.patch("commands.cluster_destroy.CdkClient")
-def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_destroy_bucket,
-                                                                                   mock_destroy_domain, mock_ssm_names, mock_destroy_cert,
-                                                                                   mock_delete_arkime, mock_aws_provider_cls):
+def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cmds(mock_cdk_client_cls, mock_get_ssm, mock_get_ssm_json, 
+                                                                                   mock_destroy_bucket,mock_destroy_domain, mock_ssm_names,
+                                                                                   mock_destroy_cert, mock_delete_arkime, mock_aws_provider_cls):
     # Set up our mock
     mock_ssm_names.return_value = []
 
@@ -118,10 +119,8 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     mock_aws_provider.get_aws_env.return_value = aws_env
     mock_aws_provider_cls.return_value = mock_aws_provider
 
-    mock_get_ssm.side_effect = [
-        constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
-        constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
-    ]
+    mock_get_ssm_json.return_value = "arkime-domain"
+    mock_get_ssm.return_value = "capture-bucket"
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
@@ -138,16 +137,15 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     # Check our results
     expected_destroy_domain_calls = [
         mock.call(
-            domain_name=constants.get_opensearch_domain_ssm_param_name(TEST_CLUSTER),
+            domain_name="arkime-domain",
             aws_client_provider=mock.ANY
         )
     ]
     assert expected_destroy_domain_calls == mock_destroy_domain.call_args_list
 
-
     expected_destroy_bucket_calls = [
         mock.call(
-            bucket_name=constants.get_capture_bucket_ssm_param_name(TEST_CLUSTER),
+            bucket_name="capture-bucket",
             aws_provider=mock.ANY
         )
     ]

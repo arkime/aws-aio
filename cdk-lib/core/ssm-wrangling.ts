@@ -21,6 +21,12 @@ export interface ClusterSsmValue {
     readonly userConfig: context.UserConfig;
 }
 
+export interface OpenSearchDomainDetailsValue {
+    readonly domainArn: string;
+    readonly domainName: string;
+    readonly domainSecret: string;
+}
+
 export interface SubnetSsmValue {
     readonly mirrorTargetId: string;
     readonly subnetId: string;
