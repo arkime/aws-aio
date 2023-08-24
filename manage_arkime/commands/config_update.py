@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def cmd_config_update(profile: str, region: str, cluster_name: str, force_bounce_capture: bool, force_bounce_viewer: bool):
     logger.debug(f"Invoking config-update with profile '{profile}' and region '{region}'")
-    
+
     # Update Capture/Viewer config in the cloud, if there's a new version locally.  Bounce the associated ECS Tasks
     # if we updated the configuration so that they pick it up.
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
@@ -71,7 +71,8 @@ def cmd_config_update(profile: str, region: str, cluster_name: str, force_bounce
 def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_provider: Callable[[str], str], ssm_param: str,
                                 archive_provider: Callable[[str], LocalFile], aws_provider: AwsClientProvider) -> bool:
     # Create the local config archive and its metadata
-    archive = archive_provider(cluster_name)
+    aws_env = aws_provider.get_aws_env()
+    archive = archive_provider(cluster_name, aws_env)
     archive_md5 = get_version_info(archive).md5_version
 
     # See if we need to update the configuration
@@ -86,7 +87,7 @@ def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_prov
     if cloud_config_details and cloud_config_details.version.md5_version == archive_md5:
         logger.info(f"Local config is the same as what's currently deployed; skipping")
         return False
-    
+
     # Create the config details for the local archive.  The ConfigDetails contains a reference to the previous,
     # which means it's a recursive data structure.  For now, we limit ourselves to only tracking the current and
     # previous versions of the configuration to avoid running into storage limits.  We can explore maintaining a
@@ -101,7 +102,7 @@ def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_prov
         version=get_version_info(archive, config_version=next_config_version),
         previous=cloud_config_details
     )
-    
+
     # Upload the archive to S3.  Do this first so that if this operation succeeds, but the update of Parameter Store
     # fails afterwards, then another run of the CLI command should fix things.
     logger.info(f"Uploading config archive to S3 bucket: {bucket_name}")
@@ -175,7 +176,7 @@ def _bounce_ecs_service(ecs_cluster: str, ecs_service: str, ssm_param: str, aws_
                 reverted = True
             logger.info(f"Waiting {wait_time_sec} more seconds for ECS service to finish bouncing...")
             sleep(wait_time_sec)
-        
+
         if not reverted:
             logger.info(f"ECS Service {ecs_service} bounced successfully")
         else:
@@ -185,11 +186,11 @@ def _bounce_ecs_service(ecs_cluster: str, ecs_service: str, ssm_param: str, aws_
         exit(1)
     except KeyboardInterrupt:
         logger.info("Received a keyboard interrupt")
-        
+
         if not reverted:
             logger.info("Rolling back to previous configuration")
             _revert_arkime_config(ssm_param, aws_provider)
 
         logger.info("Exiting...")
         exit(0)
-        
+
