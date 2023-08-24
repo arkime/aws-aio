@@ -81,8 +81,8 @@ def test_WHEN_get_ssm_params_by_path_called_AND_exists_THEN_gets_them():
 
     # Check our results
     expected_get_calls = [
-        mock.call(Path="/the/path"),
-        mock.call(Path="/the/path", NextToken="1234"),
+        mock.call(Path="/the/path", Recursive=False),
+        mock.call(Path="/the/path", Recursive=False, NextToken="1234"),
     ]
     assert expected_get_calls == mock_ssm_client.get_parameters_by_path.call_args_list
 
@@ -100,11 +100,11 @@ def test_WHEN_get_ssm_params_by_path_called_AND_doesnt_exists_THEN_empty_result(
     mock_aws_provider.get_ssm.return_value = mock_ssm_client    
 
     # Run our test
-    actual_value = ssm.get_ssm_params_by_path("/the/path", mock_aws_provider)
+    actual_value = ssm.get_ssm_params_by_path("/the/path", mock_aws_provider, recursive=True)
 
     # Check our results
     expected_get_calls = [
-        mock.call(Path="/the/path")
+        mock.call(Path="/the/path", Recursive=True)
     ]
     assert expected_get_calls == mock_ssm_client.get_parameters_by_path.call_args_list
 

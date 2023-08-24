@@ -2,6 +2,7 @@ import json
 import logging
 
 from aws_interactions.aws_client_provider import AwsClientProvider
+import aws_interactions.iam_interactions as iami
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation
@@ -14,7 +15,7 @@ def cmd_vpc_deregister_cluster(profile: str, region: str, cluster_name: str, vpc
     logger.info("De-registering the Cluster with the VPC...")
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)    
 
-    # Create the association Param
+    # Get the cross-account link details
     ssm_param = constants.get_cluster_vpc_cross_account_ssm_param_name(cluster_name, vpc_id)
 
     try:
@@ -34,6 +35,11 @@ def cmd_vpc_deregister_cluster(profile: str, region: str, cluster_name: str, vpc
                      + " Aborting...")
         return
 
+    # Delete the cross-account IAM role
+    logger.info(f"Removing the cross-account access role: {association.roleName}")
+    iami.delete_iam_role(association.roleName, aws_provider)
+
+    # Remove the cross-account link entry
     logger.info(f"Removing association details from Param Store at: {ssm_param}")
     ssm_ops.delete_ssm_param(
         ssm_param,

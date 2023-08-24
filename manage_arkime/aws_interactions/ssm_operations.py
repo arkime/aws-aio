@@ -29,11 +29,11 @@ def _get_ssm_param(param_name: str, aws_client_provider: AwsClientProvider) -> D
             raise ParamDoesNotExist(param_name=param_name)
         raise
 
-def get_ssm_params_by_path(param_path: str, aws_client_provider: AwsClientProvider) -> List[Dict[str, str]]:
+def get_ssm_params_by_path(param_path: str, aws_client_provider: AwsClientProvider, recursive: bool = False) -> List[Dict[str, str]]:
     ssm_client = aws_client_provider.get_ssm()
 
     logger.debug(f"Pulling SSM Parameters for Path {param_path}...")
-    response: Dict = ssm_client.get_parameters_by_path(Path=param_path)
+    response: Dict = ssm_client.get_parameters_by_path(Path=param_path, Recursive=recursive)
 
     if not response: # Will be [] if no params or path doesn't exist
         return response
@@ -43,7 +43,7 @@ def get_ssm_params_by_path(param_path: str, aws_client_provider: AwsClientProvid
     next_token = response.get("NextToken")
 
     while next_token:
-        next_response: Dict = ssm_client.get_parameters_by_path(Path=param_path, NextToken=next_token)
+        next_response: Dict = ssm_client.get_parameters_by_path(Path=param_path, Recursive=recursive, NextToken=next_token)
         return_params.extend(next_response["Parameters"])
         next_token = next_response.get("NextToken")
 

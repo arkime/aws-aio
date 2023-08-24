@@ -6,10 +6,12 @@ import aws_interactions.ssm_operations as ssm_ops
 import commands.vpc_deregister_cluster as vdc
 import core.constants as constants
 
+
+@mock.patch("commands.vpc_deregister_cluster.iami.delete_iam_role")
 @mock.patch("commands.vpc_deregister_cluster.ssm_ops.delete_ssm_param")
 @mock.patch("commands.vpc_deregister_cluster.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.vpc_deregister_cluster.AwsClientProvider")
-def test_WHEN_cmd_vpc_deregister_cluster_called_THEN_as_expected(mock_provider_cls, mock_get_ssm, mock_delete_ssm):
+def test_WHEN_cmd_vpc_deregister_cluster_called_THEN_as_expected(mock_provider_cls, mock_get_ssm, mock_delete_ssm, mock_delete_role):
     # Set up our mock
     test_env = AwsEnvironment("YYYYYYYYYYYY", "region", "profile")
     mock_provider = mock.Mock()
@@ -19,7 +21,6 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_THEN_as_expected(mock_provider_c
     mock_get_ssm.return_value = json.dumps({
         "clusterAccount": "XXXXXXXXXXXX",
         "clusterName": "my_cluster",
-        "roleArn": "role_arn",
         "roleName": "role_name",
         "vpcAccount": "YYYYYYYYYYYY",
         "vpcId": "vpc",
@@ -30,6 +31,11 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_THEN_as_expected(mock_provider_c
     vdc.cmd_vpc_deregister_cluster("profile", "region", "my_cluster", "vpc")
 
     # Check our results
+    expected_delete_role_calls = [
+        mock.call("role_name", mock_provider)
+    ]
+    assert expected_delete_role_calls == mock_delete_role.call_args_list
+
     expected_delete_ssm_calls = [
         mock.call(
             constants.get_cluster_vpc_cross_account_ssm_param_name("my_cluster", "vpc"),
@@ -38,10 +44,12 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_THEN_as_expected(mock_provider_c
     ]
     assert expected_delete_ssm_calls == mock_delete_ssm.call_args_list
 
+@mock.patch("commands.vpc_deregister_cluster.iami.delete_iam_role")
 @mock.patch("commands.vpc_deregister_cluster.ssm_ops.delete_ssm_param")
 @mock.patch("commands.vpc_deregister_cluster.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.vpc_deregister_cluster.AwsClientProvider")
-def test_WHEN_cmd_vpc_deregister_cluster_called_AND_not_associated_THEN_as_expected(mock_provider_cls, mock_get_ssm, mock_delete_ssm):
+def test_WHEN_cmd_vpc_deregister_cluster_called_AND_not_associated_THEN_as_expected(mock_provider_cls, mock_get_ssm,
+                                                                                    mock_delete_ssm, mock_delete_role):
     # Set up our mock
     test_env = AwsEnvironment("YYYYYYYYYYYY", "region", "profile")
     mock_provider = mock.Mock()
@@ -54,13 +62,18 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_AND_not_associated_THEN_as_expec
     vdc.cmd_vpc_deregister_cluster("profile", "region", "my_cluster", "vpc")
 
     # Check our results
+    expected_delete_role_calls = []
+    assert expected_delete_role_calls == mock_delete_role.call_args_list
+
     expected_delete_ssm_calls = []
     assert expected_delete_ssm_calls == mock_delete_ssm.call_args_list
 
+@mock.patch("commands.vpc_deregister_cluster.iami.delete_iam_role")
 @mock.patch("commands.vpc_deregister_cluster.ssm_ops.delete_ssm_param")
 @mock.patch("commands.vpc_deregister_cluster.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.vpc_deregister_cluster.AwsClientProvider")
-def test_WHEN_cmd_vpc_deregister_cluster_called_AND_wrong_account_THEN_as_expected(mock_provider_cls, mock_get_ssm, mock_delete_ssm):
+def test_WHEN_cmd_vpc_deregister_cluster_called_AND_wrong_account_THEN_as_expected(mock_provider_cls, mock_get_ssm,
+                                                                                   mock_delete_ssm, mock_delete_role):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
     mock_provider = mock.Mock()
@@ -70,7 +83,6 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_AND_wrong_account_THEN_as_expect
     mock_get_ssm.return_value = json.dumps({
         "clusterAccount": "XXXXXXXXXXXX",
         "clusterName": "my_cluster",
-        "roleArn": "role_arn",
         "roleName": "role_name",
         "vpcAccount": "YYYYYYYYYYYY",
         "vpcId": "vpc",
@@ -81,6 +93,9 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_AND_wrong_account_THEN_as_expect
     vdc.cmd_vpc_deregister_cluster("profile", "region", "my_cluster", "vpc")
 
     # Check our results
+    expected_delete_role_calls = []
+    assert expected_delete_role_calls == mock_delete_role.call_args_list
+    
     expected_delete_ssm_calls = []
     assert expected_delete_ssm_calls == mock_delete_ssm.call_args_list
 

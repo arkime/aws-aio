@@ -133,7 +133,6 @@ def test_WHEN_cmd_vpc_remove_called_AND_cross_account_THEN_uses_correct_clients(
     mock_ssm.get_ssm_param_value.return_value = json.dumps({
             "clusterAccount": "XXXXXXXXXXXX",
             "clusterName": "my_cluster",
-            "roleArn": "role_arn",
             "roleName": "role_name",
             "vpcAccount": "YYYYYYYYYYYY",
             "vpcId": "vpc",
@@ -214,7 +213,6 @@ def test_WHEN_cmd_vpc_remove_called_AND_wrong_account_THEN_aborts(mock_cdk_clien
     mock_ssm.get_ssm_param_value.return_value = json.dumps({
             "clusterAccount": "XXXXXXXXXXXX",
             "clusterName": "my_cluster",
-            "roleArn": "role_arn",
             "roleName": "role_name",
             "vpcAccount": "YYYYYYYYYYYY",
             "vpcId": "vpc",

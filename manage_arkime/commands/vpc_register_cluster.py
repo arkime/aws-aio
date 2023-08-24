@@ -4,7 +4,7 @@ import logging
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
-from core.cross_account_wrangling import CrossAccountAssociation
+from core.cross_account_wrangling import CrossAccountAssociation, ensure_cross_account_role_exists
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +22,13 @@ def cmd_vpc_register_cluster(profile: str, region: str, cluster_account_id: str,
                      + " Aborting...")
         return
 
+    # Create the cross account IAM role for the Cluster account to access the VPC account
+    ensure_cross_account_role_exists(cluster_name, cluster_account_id, vpc_id, aws_provider, aws_env)
+
     # Create the association Param
     ssm_param = constants.get_cluster_vpc_cross_account_ssm_param_name(cluster_name, vpc_id)
-    role_arn = f"arn:aws:iam::{cluster_account_id}:role/{cross_account_role}"
     association = CrossAccountAssociation(
-        cluster_account_id, cluster_name, role_arn, cross_account_role, aws_env.aws_account, vpc_id, vpce_service_id
+        cluster_account_id, cluster_name, cross_account_role, aws_env.aws_account, vpc_id, vpce_service_id
     )
     logger.info(f"Updating config details in Param Store at: {ssm_param}")
     ssm_ops.put_ssm_param(

@@ -6,9 +6,10 @@ import commands.vpc_register_cluster as vrc
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation
 
+@mock.patch("commands.vpc_register_cluster.ensure_cross_account_role_exists")
 @mock.patch("commands.vpc_register_cluster.ssm_ops.put_ssm_param")
 @mock.patch("commands.vpc_register_cluster.AwsClientProvider")
-def test_WHEN_cmd_vpc_register_cluster_called_THEN_as_expected(mock_provider_cls, mock_put_ssm):
+def test_WHEN_cmd_vpc_register_cluster_called_THEN_as_expected(mock_provider_cls, mock_put_ssm, mock_ensure):
     # Set up our mock
     test_env = AwsEnvironment("YYYYYYYYYYYY", "region", "profile")
     mock_provider = mock.Mock()
@@ -19,9 +20,13 @@ def test_WHEN_cmd_vpc_register_cluster_called_THEN_as_expected(mock_provider_cls
     vrc.cmd_vpc_register_cluster("profile", "region", "XXXXXXXXXXXX", "my_cluster", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id")
 
     # Check our results
+    expected_ensure_calls = [
+        mock.call("my_cluster", "XXXXXXXXXXXX", "vpc", mock_provider, test_env)
+    ]
+    assert expected_ensure_calls == mock_ensure.call_args_list
 
     expected_association = CrossAccountAssociation(
-        "XXXXXXXXXXXX", "my_cluster", "arn:aws:iam::XXXXXXXXXXXX:role/role_name", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id"
+        "XXXXXXXXXXXX", "my_cluster", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id"
     )
     expected_put_ssm_calls = [
         mock.call(
@@ -34,9 +39,10 @@ def test_WHEN_cmd_vpc_register_cluster_called_THEN_as_expected(mock_provider_cls
     ]
     assert expected_put_ssm_calls == mock_put_ssm.call_args_list
 
+@mock.patch("commands.vpc_register_cluster.ensure_cross_account_role_exists")
 @mock.patch("commands.vpc_register_cluster.ssm_ops.put_ssm_param")
 @mock.patch("commands.vpc_register_cluster.AwsClientProvider")
-def test_WHEN_cmd_vpc_register_cluster_called_AND_wrong_account_THEN_as_expected(mock_provider_cls, mock_put_ssm):
+def test_WHEN_cmd_vpc_register_cluster_called_AND_wrong_account_THEN_as_expected(mock_provider_cls, mock_put_ssm, mock_ensure):
     # Set up our mock
     test_env = AwsEnvironment("ZZZZZZZZZZZZ", "region", "profile")
     mock_provider = mock.Mock()
@@ -47,6 +53,9 @@ def test_WHEN_cmd_vpc_register_cluster_called_AND_wrong_account_THEN_as_expected
     vrc.cmd_vpc_register_cluster("profile", "region", "XXXXXXXXXXXX", "my_cluster", "role_name", "YYYYYYYYYYYY", "vpc", "vpce_id")
 
     # Check our results
+    expected_ensure_calls = []
+    assert expected_ensure_calls == mock_ensure.call_args_list
+
     expected_put_ssm_calls = []
     assert expected_put_ssm_calls == mock_put_ssm.call_args_list
 
