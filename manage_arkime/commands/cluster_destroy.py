@@ -4,7 +4,7 @@ from aws_interactions.acm_interactions import destroy_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
 from aws_interactions.s3_interactions import destroy_bucket
-from aws_interactions.ssm_operations import get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
+from aws_interactions.ssm_operations import get_ssm_param_json_value, get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
 import core.constants as constants
 import cdk_interactions.cdk_context as context
@@ -27,7 +27,11 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
 
     if destroy_everything:
         logger.info("Destroying User Data...")
-        os_domain_name = get_ssm_param_value(param_name=constants.get_opensearch_domain_ssm_param_name(name), aws_client_provider=aws_provider)
+        os_domain_name = get_ssm_param_json_value(
+            param_name=constants.get_opensearch_domain_ssm_param_name(name),
+            key="domainName",
+            aws_client_provider=aws_provider
+        )
         destroy_os_domain_and_wait(domain_name=os_domain_name, aws_client_provider=aws_provider)
 
         bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)

@@ -1,13 +1,13 @@
 import { Construct } from 'constructs';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import {Domain, EngineVersion, TLSSecurityPolicy} from 'aws-cdk-lib/aws-opensearchservice';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 import * as plan from '../core/context-types';
+import {OpenSearchDomainDetailsValue} from '../core/ssm-wrangling';
 
 
 export interface OpenSearchDomainStackProps extends StackProps {
@@ -101,13 +101,18 @@ export class OpenSearchDomainStack extends Stack {
             }
         });
 
-        // This SSM parameter will be used to export the name of the domain to other consumers outside of
+        // This SSM parameter will be used to export the details of the domain to other consumers outside of
         // CloudFormation (such as our management CLI)
-        new ssm.StringParameter(this, 'DomainName', {
+        const domainParamValue: OpenSearchDomainDetailsValue = {
+            domainArn: this.domain.domainArn,
+            domainName: this.domain.domainName,
+            domainSecret: this.osPassword.secretName
+        }
+        new ssm.StringParameter(this, 'DomainDetails', {
             allowedPattern: '.*',
-            description: 'The name of the Capture OpenSearch Domain',
+            description: 'The details of the Capture OpenSearch Domain',
             parameterName: props.ssmParamName,
-            stringValue: this.domain.domainName,
+            stringValue: JSON.stringify(domainParamValue),
             tier: ssm.ParameterTier.STANDARD,
         });
     }
