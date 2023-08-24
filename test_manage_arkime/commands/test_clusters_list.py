@@ -3,11 +3,13 @@ import unittest.mock as mock
 from aws_interactions.aws_environment import AwsEnvironment
 from commands.clusters_list import cmd_clusters_list
 import core.constants as constants
+import core.cross_account_wrangling as caw
 
 
+@mock.patch("commands.clusters_list.get_cross_account_vpc_details")
 @mock.patch("commands.clusters_list.ssm_ops")
 @mock.patch("commands.clusters_list.AwsClientProvider")
-def test_WHEN_cmd_clusters_list_called_THEN_lists_them(mock_provider_cls, mock_ssm_ops):
+def test_WHEN_cmd_clusters_list_called_THEN_lists_them(mock_provider_cls, mock_ssm_ops, mock_get_cross):
     # Set up our mock
     test_env = AwsEnvironment("XXXXXXXXXXXX", "region", "profile")
     mock_provider = mock.Mock()
@@ -16,7 +18,6 @@ def test_WHEN_cmd_clusters_list_called_THEN_lists_them(mock_provider_cls, mock_s
 
     mock_ssm_ops.get_ssm_param_json_value.side_effect = [
         "os-domain-1",
-        "26", "vpc-08d5c92356da0ccb4",
         "os-domain-2"
     ]
 
@@ -44,6 +45,11 @@ def test_WHEN_cmd_clusters_list_called_THEN_lists_them(mock_provider_cls, mock_s
                 'Value': '{"eniId": "eni-02be669dc1f946dbc", "trafficSessionId": "tms-0c987245d763cdc12"}',
             },
         ]
+    ]
+
+    mock_get_cross.side_effect = [
+        [],
+        [caw.CrossAccountVpcDetail("bus_arn", "filter_id", "26", "YYYYYYYYYYYY", "vpc-08d5c92356da0ccb4")]
     ]
 
     mock_ssm_ops.get_ssm_param_value.side_effect = [

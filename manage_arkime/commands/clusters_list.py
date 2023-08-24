@@ -7,7 +7,7 @@ import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
-from core.cross_account_wrangling import CrossAccountAssociation
+from core.cross_account_wrangling import CrossAccountAssociation, get_cross_account_vpc_details
 
 logger = logging.getLogger(__name__)
 
@@ -40,23 +40,12 @@ def cmd_clusters_list(profile: str, region: str) -> List[Dict[str, str]]:
             })
 
         # Get the details for cross-account monitored VPCs
-        cross_account_regex = re.compile(f"^{ssm_vpcs_path_prefix}/vpc\\-[a-zA-Z0-9]+/cross-account$")
-        cross_account_params = [path for path in ssm_paths if cross_account_regex.match(path["Name"])]
-        for cross_account_param in cross_account_params:
-            # Create an AWS Client using a cross-account role to read VPC details in the VPC Account
-            association = CrossAccountAssociation(**json.loads(cross_account_param["Value"]))
-            cross_account_role_arn = f"arn:aws:iam::{association.vpcAccount}:role/{association.roleName}"
-            cross_account_provider = AwsClientProvider(aws_profile=profile, aws_region=region, assume_role_arn=cross_account_role_arn)
-
-            # Get the VPC details from the Param entry using a cross-account call
-            vpc_param_name = constants.get_vpc_ssm_param_name(association.clusterName, association.vpcId)
-            vni = ssm_ops.get_ssm_param_json_value(vpc_param_name, "mirrorVni", cross_account_provider)
-            vpc_id = ssm_ops.get_ssm_param_json_value(vpc_param_name, "vpcId", cross_account_provider)
-            
+        cross_account_vpc_details = get_cross_account_vpc_details(cluster_name, aws_provider)
+        for vpc_detail in cross_account_vpc_details:
             vpc_details.append({
-                "vpc_account": association.vpcAccount,
-                "vpc_id": vpc_id,
-                "vni": vni,
+                "vpc_account": vpc_detail.vpcAccount,
+                "vpc_id": vpc_detail.vpcId,
+                "vni": vpc_detail.mirrorVni,
             })
 
         # Get the OpenSearch Domain details

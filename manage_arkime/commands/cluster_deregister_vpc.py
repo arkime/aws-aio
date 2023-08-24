@@ -5,7 +5,7 @@ from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.iam_interactions as iami
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
-from core.cross_account_wrangling import CrossAccountAssociation
+from core.cross_account_wrangling import CrossAccountAssociation, remove_vpce_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +41,7 @@ def cmd_cluster_deregister_vpc(profile: str, region: str, cluster_name: str, vpc
 
     # Removing the GWLB permissions
     logger.info(f"Removing permissions for Account {association.vpcAccount} to create GWLBE Endpoints on: {association.vpceServiceId}")
-    logger.warning(f"TODO - not implemented yet")
-    # TODO: Remove the VPCE permissions if there are no other VPCs in the same traffic account using them
-    # Will implement when we make updates so that `clusters-list` works correctly, as the code is related
+    remove_vpce_permissions(cluster_name, vpc_id, aws_provider)
 
     # Remove the Param Store entry
     logger.info(f"Removing association details from Param Store at: {ssm_param_name}")
