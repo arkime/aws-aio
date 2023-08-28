@@ -14,9 +14,13 @@ OPENSEARCH_PASS=$(aws secretsmanager get-secret-value --secret-id $OPENSEARCH_SE
 BASE64_AUTH=$(echo -n "admin:$OPENSEARCH_PASS" | base64)
 sed -i'' "s/_OS_AUTH_/$BASE64_AUTH/g" /opt/arkime/etc/config.ini
 
-VIEWER_PASS=$(aws secretsmanager get-secret-value --secret-id $VIEWER_PASS_ARN --output text --query SecretString)
+VIEWER_PASS_OBJ=$(aws secretsmanager get-secret-value --secret-id $VIEWER_PASS_ARN --output text --query SecretString)
+ADMIN_PASSWORD=$(echo $VIEWER_PASS_OBJ | jq -r .adminPassword)
+AUTH_SECRET=$(echo $VIEWER_PASS_OBJ | jq -r .authSecret)
 
 sed -i'' "s/_VIEWER_PORT_/$VIEWER_PORT/g" /opt/arkime/etc/config.ini
+sed -i'' "s/_AUTH_SECRET_/$AUTH_SECRET/g" /opt/arkime/etc/config.ini
+sed -i'' "s/_VIEWER_DNS_/$VIEWER_DNS/g" /opt/arkime/etc/config.ini
 echo "Successfully configured /opt/arkime/etc/config.ini"
 
 echo "Testing connection/creds to OpenSearch domain $OPENSEARCH_ENDPOINT ..."
