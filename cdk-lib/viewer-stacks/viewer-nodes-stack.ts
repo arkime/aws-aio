@@ -34,8 +34,14 @@ export class ViewerNodesStack extends cdk.Stack {
         // Some configuration values
         const viewerPort = 8005; // Arkime default
         const viewerUser = "admin";
+
         const viewerPass = new secretsmanager.Secret(this, 'ViewerPassword', {
             generateSecretString: {
+                secretStringTemplate: JSON.stringify({
+                    authSecret: "",
+                    passwordSecret: "ignore"
+                }), // Changing value here causes cdk to generate new secrets
+                generateStringKey: 'adminPassword',
                 excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
             }
         });

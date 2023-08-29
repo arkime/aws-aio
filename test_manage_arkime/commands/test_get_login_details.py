@@ -10,7 +10,7 @@ import core.constants as constants
 def test_WHEN_cmd_get_login_details_called_THEN_retrieves_them(mock_ssm_ops, mock_provider_cls):
     # Set up our mock
     mock_secrets_client = mock.Mock()
-    mock_secrets_client.get_secret_value.return_value = {"SecretString": "password"}
+    mock_secrets_client.get_secret_value.return_value = {"SecretString": "{\"adminPassword\": \"password\"}"}
     mock_provider = mock.Mock()
     mock_provider.get_secretsmanager.return_value = mock_secrets_client
     mock_provider_cls.return_value = mock_provider

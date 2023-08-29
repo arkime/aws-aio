@@ -40,12 +40,12 @@ def cmd_get_login_details(profile: str, region: str, name: str) -> LoginDetails:
     username = viewer_details.user
     login_url = viewer_details.dns
     secrets_client = aws_provider.get_secretsmanager()
-    password = secrets_client.get_secret_value(SecretId=viewer_details.passwordArn)["SecretString"]
+    password = json.loads(secrets_client.get_secret_value(SecretId=viewer_details.passwordArn)["SecretString"])
 
     # Display the result without logging it
-    login_details = LoginDetails(password=password, username=username, url=login_url)
+    login_details = LoginDetails(password=password['adminPassword'], username=username, url=login_url)
     print(f"Log-in Details for Cluster '{name}'\n==============================\n{login_details}")
 
     return login_details
 
-    
+
