@@ -37,7 +37,10 @@ export class ViewerNodesStack extends cdk.Stack {
 
         const viewerPass = new secretsmanager.Secret(this, 'ViewerPassword', {
             generateSecretString: {
-                secretStringTemplate: JSON.stringify({ authSecret: "" }), // Changing value here causes cdk to generate new secrets
+                secretStringTemplate: JSON.stringify({
+                    authSecret: "",
+                    passwordSecret: "ignore"
+                }), // Changing value here causes cdk to generate new secrets
                 generateStringKey: 'adminPassword',
                 excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
             }
