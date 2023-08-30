@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 from typing import Dict, Type, TypeVar
+from core.user_config import UserConfig
 
 
 logger = logging.getLogger(__name__)
@@ -392,6 +393,7 @@ class Cidr:
         }
     
 DEFAULT_VPC_CIDR = Cidr("10.0.0.0/16") # What AWS VPC gives by default
+DEFAULT_CAPTURE_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the Capture VPC public subnets
 
 T_CaptureVpcPlan = TypeVar('T_CaptureVpcPlan', bound='CaptureVpcPlan')
 
@@ -399,30 +401,42 @@ T_CaptureVpcPlan = TypeVar('T_CaptureVpcPlan', bound='CaptureVpcPlan')
 class CaptureVpcPlan:    
     cidr: Cidr
     numAzs: int
+    publicSubnetMask: int
 
     def __eq__(self, other) -> bool:
-        return (self.cidr == other.cidr and self.numAzs == other.numAzs)
+        return (self.cidr == other.cidr and self.numAzs == other.numAzs
+                and self.publicSubnetMask == other.publicSubnetMask)
 
     def to_dict(self) -> Dict[str, any]:
         return {
             "cidr": self.cidr.to_dict(),
-            "numAzs": self.numAzs
+            "numAzs": self.numAzs,
+            "publicSubnetMask": self.publicSubnetMask,
         }
 
     @classmethod
     def from_dict(cls: Type[T_CaptureVpcPlan], input: Dict[str, any]) -> T_CaptureVpcPlan:
         cidr = Cidr(input['cidr']['block'])
         numAzs = input["numAzs"]
+        publicSubnetMask = input["publicSubnetMask"]
 
-        return cls(cidr, numAzs)
+        return cls(cidr, numAzs, publicSubnetMask)
+    
+    def get_usable_ips(self) -> int:
+        total_ips = 2 ** (32 - int(self.cidr.mask))
+        public_ips = 2 ** (32 - int(self.publicSubnetMask)) * self.numAzs
+        reserved_ips_per_subnet = 2 # The first (local gateway) and last (broadcast) IP are often reserved
+        reserved_private_ips = reserved_ips_per_subnet * self.numAzs
+
+        return total_ips - public_ips - reserved_private_ips
     
 def get_capture_vpc_plan(previous_plan: CaptureVpcPlan, capture_cidr_block: str) -> CaptureVpcPlan:
     if all(value is not None for value in vars(previous_plan).values()):
         return previous_plan
     if not capture_cidr_block:
-        return CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS)
+        return CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
     else:
-        return CaptureVpcPlan(Cidr(capture_cidr_block), DEFAULT_NUM_AZS)
+        return CaptureVpcPlan(Cidr(capture_cidr_block), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
 
 DEFAULT_S3_STORAGE_CLASS = "STANDARD"
 DEFAULT_S3_STORAGE_DAYS = 30
@@ -480,4 +494,15 @@ class ClusterPlan:
             viewer_nodes = ViewerNodesPlan(4, 2)
 
         return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3, viewer_nodes)
+    
+    def get_required_capture_ips(self) -> int:
+        required_capture_ips = self.captureNodes.maxCount + self.osDomain.dataNodes.count + self.osDomain.masterNodes.count
+        required_viewer_ips = self.viewerNodes.maxCount
 
+        return required_capture_ips + required_viewer_ips
+    
+    def will_capture_plan_fit(self) -> bool:
+        usable_ips = self.captureVpc.get_usable_ips()
+        required_ips = self.get_required_capture_ips()    
+
+        return usable_ips >= required_ips

@@ -24,7 +24,7 @@ export class CaptureVpcStack extends Stack {
             {
                 subnetType: ec2.SubnetType.PUBLIC,
                 name: 'Ingress',
-                cidrMask: 28 // minimum size allowed
+                cidrMask: props.planCluster.captureVpc.publicSubnetMask
             },
             {
                 subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,

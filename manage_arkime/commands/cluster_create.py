@@ -52,6 +52,13 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
         logger.info("Aborting per user response")
         return
 
+    if not next_capacity_plan.will_capture_plan_fit():
+        available_ips = next_capacity_plan.captureVpc.get_usable_ips()
+        required_ips = next_capacity_plan.get_required_capture_ips()
+        logger.error(f"Your specified Capture capacity plan does not fit in the VPC; there are {available_ips} usable IPs in your VPC"
+                     f" and your plan requires {required_ips} IPs.  Aborting...")
+        return
+
     # Set up the cert the Viewers use for HTTPS
     cert_arn = _set_up_viewer_cert(name, aws_provider)
 
@@ -155,7 +162,7 @@ def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvid
     except ssm_ops.ParamDoesNotExist:
         return ClusterPlan(
             CaptureNodesPlan(None, None, None, None),
-            CaptureVpcPlan(None, None),
+            CaptureVpcPlan(None, None, None),
             EcsSysResourcePlan(None, None),
             OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
             S3Plan(None, None),

@@ -56,6 +56,7 @@ export interface Cidr {
 export interface CaptureVpcPlan {
     cidr: Cidr;
     numAzs: number;
+    publicSubnetMask: number;
 }
 
 /**
