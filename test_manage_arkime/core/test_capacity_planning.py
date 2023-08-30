@@ -181,4 +181,41 @@ def test_WHEN_get_os_domain_plan_called_THEN_as_expected():
     )
     assert expected_value == actual_value
 
+def test_WHEN_cidr_created_THEN_as_expected():
+    # Test: Valid CIDR
+    cap.Cidr("1.2.3.4/19")
 
+    # Test: Wrong CIDR form example 1
+    with pytest.raises(cap.InvalidCidr):
+        cap.Cidr("1.2.3.4 19")
+
+    # Test: Wrong CIDR form example 2
+    with pytest.raises(cap.InvalidCidr):
+        cap.Cidr("1.2.3/19")
+
+    # Test: Invalid prefix
+    with pytest.raises(cap.InvalidCidr):
+        cap.Cidr("1.2.3.256/19")
+
+    # Test: Invalid mask
+    with pytest.raises(cap.InvalidCidr):
+        cap.Cidr("1.2.3.4/33")
+
+def test_WHEN_get_capture_vpc_plan_called_THEN_as_expected():
+    # TEST: There's an existing plan, return it
+    previous_plan = cap.CaptureVpcPlan(cap.Cidr("1.2.3.4/24"), 2)
+    actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16")
+
+    assert previous_plan == actual_value
+
+    # TEST: There's not an existing plan, use defaults
+    previous_plan = cap.CaptureVpcPlan(None, None)
+    actual_value = cap.get_capture_vpc_plan(previous_plan, None)
+
+    assert cap.CaptureVpcPlan(cap.DEFAULT_VPC_CIDR, cap.DEFAULT_NUM_AZS) == actual_value
+
+    # TEST: There's not an existing plan, use specified CIDR
+    previous_plan = cap.CaptureVpcPlan(None, None)
+    actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16")
+
+    assert cap.CaptureVpcPlan(cap.Cidr("5.5.5.5/16"), cap.DEFAULT_NUM_AZS) == actual_value

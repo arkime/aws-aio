@@ -42,9 +42,19 @@ export interface OSDomainPlan {
 }
 
 /**
+ * Structure to hold CIDR details
+ */
+export interface Cidr {
+    block: string;
+    prefix: string;
+    mask: string;
+}
+
+/**
  * Structure to hold the details of the cluster's Capture VPC
  */
 export interface CaptureVpcPlan {
+    cidr: Cidr;
     numAzs: number;
 }
 

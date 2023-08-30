@@ -18,17 +18,17 @@ export class CaptureVpcStack extends Stack {
     super(scope, id, props);
 
     this.vpc = new ec2.Vpc(this, 'VPC', {
+        ipAddresses: ec2.IpAddresses.cidr(props.planCluster.captureVpc.cidr.block),
         maxAzs: props.planCluster.captureVpc.numAzs,
         subnetConfiguration: [
             {
                 subnetType: ec2.SubnetType.PUBLIC,
                 name: 'Ingress',
-                cidrMask: 24
+                cidrMask: 28 // minimum size allowed
             },
             {
                 subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                name: 'CaptureNodes',
-                cidrMask: 24
+                name: 'CaptureNodes'
             }
         ]
     });

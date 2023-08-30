@@ -18,7 +18,7 @@ from core.local_file import LocalFile, S3File
 from core.usage_report import UsageReport
 from core.price_report import PriceReport
 from core.capacity_planning import (get_capture_node_capacity_plan, get_viewer_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan,
-                                    ClusterPlan, CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS,
+                                    ClusterPlan, CaptureVpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, get_capture_vpc_plan,
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS,
                                     CaptureNodesPlan, ViewerNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan)
 from core.versioning import get_version_info
@@ -27,7 +27,7 @@ from core.user_config import UserConfig
 logger = logging.getLogger(__name__)
 
 def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool):
+                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool, capture_cidr: str):
     logger.debug(f"Invoking cluster-create with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
@@ -38,7 +38,15 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
     previous_user_config = _get_previous_user_config(name, aws_provider)
     next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
     previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
-    next_capacity_plan = _get_next_capacity_plan(next_user_config)
+    next_capacity_plan = _get_next_capacity_plan(next_user_config, capture_cidr, previous_capacity_plan)
+
+    previous_capture_cidr = previous_capacity_plan.captureVpc.cidr
+    if capture_cidr and previous_capture_cidr and capture_cidr != previous_capture_cidr.block:
+        # We can't change the CIDR without tearing down the VPC, which effectively means tearing down the entire
+        # Cluster and re-creating it.  Instead of attempting to do that, we make the CIDR only set-able on creation.
+        logger.error("You can only set the Capture VPC CIDR when you initially create the Cluster, as changing it"
+                     " requires tearing down the entire Cluster.  Aborting...")
+        return
 
     if not _confirm_usage(previous_capacity_plan, next_capacity_plan, previous_user_config, next_user_config, preconfirm_usage):
         logger.info("Aborting per user response")
@@ -147,16 +155,16 @@ def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvid
     except ssm_ops.ParamDoesNotExist:
         return ClusterPlan(
             CaptureNodesPlan(None, None, None, None),
-            CaptureVpcPlan(None),
+            CaptureVpcPlan(None, None),
             EcsSysResourcePlan(None, None),
             OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
             S3Plan(None, None),
             ViewerNodesPlan(None, None),
         )
 
-def _get_next_capacity_plan(user_config: UserConfig) -> ClusterPlan:
+def _get_next_capacity_plan(user_config: UserConfig, next_capture_cidr: str, previous_capacity_plan: ClusterPlan) -> ClusterPlan:
     capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic)
-    capture_vpc_plan = CaptureVpcPlan(DEFAULT_NUM_AZS)
+    capture_vpc_plan = get_capture_vpc_plan(previous_capacity_plan.captureVpc, next_capture_cidr)
     os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, capture_vpc_plan.numAzs)
     ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instanceType)
     s3_plan = S3Plan(DEFAULT_S3_STORAGE_CLASS, user_config.pcapDays)
@@ -193,7 +201,7 @@ def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_k
         pass # We need to actually do work
 
     # Create the config archive
-    archive = archive_provider(cluster_name)
+    archive = archive_provider(cluster_name, aws_provider.get_aws_env())
 
     # Generate its metadata
     next_metadata = config_wrangling.ConfigDetails(

@@ -105,11 +105,21 @@ cli.add_command(demo_traffic_destroy)
     show_default=True,
     default=False
 )
+@click.option(
+    "--capture-cidr", 
+    help=("CAN ONLY BE SET ON INITIAL CLUSTER CREATION!  The CIDR to use for the Capture VPC, including the Capture"
+          " Nodes and OS Domain.  Includes the Viewer Nodes and the Viewer LB unless you specify a separate CIDR for"
+          " them.  Changing this requires deleting/recreating the Cluster."),
+    default=None,
+    type=click.STRING,
+    required=False)
 @click.pass_context
-def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage, just_print_cfn):
+def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage,
+                   just_print_cfn, capture_cidr):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage, just_print_cfn)
+    cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days,
+                       preconfirm_usage, just_print_cfn, capture_cidr)
 cli.add_command(cluster_create)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")

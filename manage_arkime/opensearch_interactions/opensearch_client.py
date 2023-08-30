@@ -14,7 +14,7 @@ class OpenSearchClient:
         self.port = port
         self.auth = auth
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return self.endpoint == other.endpoint and self.port == other.port and self.auth == other.auth
 
     def get_ism_policy(self, policy_id: str) -> ops.RESTResponse:

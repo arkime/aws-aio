@@ -124,7 +124,8 @@ export class CaptureNodesStack extends cdk.Stack {
         });
 
         const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
-            autoScalingGroup,
+            autoScalingGroup: autoScalingGroup,
+            enableManagedTerminationProtection: false
         });
         cluster.addAsgCapacityProvider(capacityProvider);
 
