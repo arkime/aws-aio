@@ -19,7 +19,7 @@ class UserConfig:
         valid_kwargs = {key: value for key, value in d.items() if key in valid_keys}
         return cls(**valid_kwargs)
 
-    def __equal__(self, other):
+    def __eq__(self, other):
         return (self.expectedTraffic == other.expectedTraffic and self.spiDays == other.spiDays
                 and self.replicas == other.replicas and self.pcapDays == other.pcapDays and self.historyDays == other.historyDays)
 

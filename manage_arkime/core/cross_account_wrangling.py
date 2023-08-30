@@ -22,7 +22,7 @@ class CrossAccountAssociation:
     vpcId: str
     vpceServiceId: str
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return (self.clusterAccount == other.clusterAccount
                 and self.clusterName == other.clusterName
                 and self.roleName == other.roleName
@@ -175,7 +175,7 @@ class CrossAccountVpcDetail:
     vpcAccount: str
     vpcId: str
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return (self.busArn == other.busArn
                 and self.mirrorFilterId == other.mirrorFilterId
                 and self.mirrorVni == other.mirrorVni

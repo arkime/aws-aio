@@ -1,8 +1,10 @@
 from dataclasses import dataclass, fields
 import math
 import logging
+import re
 import sys
 from typing import Dict, Type, TypeVar
+from core.user_config import UserConfig
 
 
 logger = logging.getLogger(__name__)
@@ -82,9 +84,9 @@ class CaptureNodesPlan:
     maxCount: int
     minCount: int
 
-    def __equal__(self, other) -> bool:
-        return (self.instanceType == other.instance_type and self.desiredCount == other.desired_count
-                and self.maxCount == other.max_count and self.minCount == other.min_count)
+    def __eq__(self, other) -> bool:
+        return (self.instanceType == other.instanceType and self.desiredCount == other.desiredCount
+                and self.maxCount == other.maxCount and self.minCount == other.minCount)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -122,7 +124,7 @@ class ViewerNodesPlan:
     maxCount: int
     minCount: int
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return (self.desiredCount == other.desired_count
                 and self.maxCount == other.max_count and self.minCount == other.min_count)
 
@@ -158,7 +160,7 @@ class EcsSysResourcePlan:
     cpu: int # vCPUs; 1024 per 1 vCPU
     memory: int # in MB
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return self.cpu == other.cpu and self.memory == other.memory
 
     def to_dict(self) -> Dict[str, any]:
@@ -198,9 +200,9 @@ class DataNodesPlan:
     instanceType: str
     volumeSize: int # in GiB
 
-    def __equal__(self, other) -> bool:
-        return (self.count == other.count and self.instanceType == other.type
-                and self.volumeSize == other.vol_size)
+    def __eq__(self, other) -> bool:
+        return (self.count == other.count and self.instanceType == other.instanceType
+                and self.volumeSize == other.volumeSize)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -214,8 +216,8 @@ class MasterNodesPlan:
     count: int
     instanceType: str
 
-    def __equal__(self, other) -> bool:
-        return (self.count == other.count and self.instanceType == other.type)
+    def __eq__(self, other) -> bool:
+        return (self.count == other.count and self.instanceType == other.instanceType)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -230,7 +232,7 @@ class OSDomainPlan:
     dataNodes: DataNodesPlan
     masterNodes: MasterNodesPlan
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return (self.dataNodes == other.dataNodes
                 and self.masterNodes == other.masterNodes)
 
@@ -350,17 +352,91 @@ def get_os_domain_plan(expected_traffic: float, spi_days: int, replicas: int, nu
 
     return OSDomainPlan(data_node_plan, master_node_plan)
 
-@dataclass
-class CaptureVpcPlan:
-    numAzs: int
+class InvalidCidr(Exception):
+    def __init__(self, cidr_str: str):
+        super().__init__(f"The string {cidr_str} is not a valid CIDR block")
 
-    def __equal__(self, other) -> bool:
-        return self.numAzs == other.numAzs
+class Cidr:
+    def __init__(self, cidr_str: str):
+        self._validate_cidr(cidr_str)
+
+        self.block = cidr_str
+        self.prefix = cidr_str.split("/")[0]
+        self.mask = cidr_str.split("/")[1]
+
+    def _validate_cidr(self, cidr_str: str ):
+        overall_form = re.compile("^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}/[0-9]{1,2}$")
+        if not overall_form.match(cidr_str):
+            raise InvalidCidr(cidr_str)
+        
+        prefix_portion = cidr_str.split("/")[0]
+        prefix_portions_correct = list(map(lambda x: int(x) >=0 and int(x) <= 255, prefix_portion.split(".")))
+        if not all(prefix_portions_correct):
+            raise InvalidCidr(cidr_str)
+        
+        mask_portion = cidr_str.split("/")[1]
+        mask_portion_correct = int(mask_portion) >= 0 and int(mask_portion) <= 32
+        if not mask_portion_correct:
+            raise InvalidCidr(cidr_str)
+        
+    def __eq__(self, other) -> bool:
+        return (self.block == other.block and self.prefix == other.prefix and self.mask == other.mask)
+    
+    def __str__(self) -> str:
+        return self.block
 
     def to_dict(self) -> Dict[str, any]:
         return {
-            "numAzs": self.numAzs
+            "block": self.block,
+            "prefix": self.prefix,
+            "mask": self.mask,
         }
+    
+DEFAULT_VPC_CIDR = Cidr("10.0.0.0/16") # What AWS VPC gives by default
+DEFAULT_CAPTURE_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the Capture VPC public subnets
+
+T_CaptureVpcPlan = TypeVar('T_CaptureVpcPlan', bound='CaptureVpcPlan')
+
+@dataclass
+class CaptureVpcPlan:    
+    cidr: Cidr
+    numAzs: int
+    publicSubnetMask: int
+
+    def __eq__(self, other) -> bool:
+        return (self.cidr == other.cidr and self.numAzs == other.numAzs
+                and self.publicSubnetMask == other.publicSubnetMask)
+
+    def to_dict(self) -> Dict[str, any]:
+        return {
+            "cidr": self.cidr.to_dict(),
+            "numAzs": self.numAzs,
+            "publicSubnetMask": self.publicSubnetMask,
+        }
+
+    @classmethod
+    def from_dict(cls: Type[T_CaptureVpcPlan], input: Dict[str, any]) -> T_CaptureVpcPlan:
+        cidr = Cidr(input['cidr']['block'])
+        numAzs = input["numAzs"]
+        publicSubnetMask = input["publicSubnetMask"]
+
+        return cls(cidr, numAzs, publicSubnetMask)
+    
+    def get_usable_ips(self) -> int:
+        total_ips = 2 ** (32 - int(self.cidr.mask))
+        public_ips = 2 ** (32 - int(self.publicSubnetMask)) * self.numAzs
+        reserved_ips_per_subnet = 2 # The first (local gateway) and last (broadcast) IP are often reserved
+        reserved_private_ips = reserved_ips_per_subnet * self.numAzs
+
+        return total_ips - public_ips - reserved_private_ips
+    
+def get_capture_vpc_plan(previous_plan: CaptureVpcPlan, capture_cidr_block: str) -> CaptureVpcPlan:
+    if all(value is not None for value in vars(previous_plan).values()):
+        return previous_plan
+    if not capture_cidr_block:
+        return CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+    else:
+        return CaptureVpcPlan(Cidr(capture_cidr_block), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
 
 DEFAULT_S3_STORAGE_CLASS = "STANDARD"
 DEFAULT_S3_STORAGE_DAYS = 30
@@ -370,7 +446,7 @@ class S3Plan:
     pcapStorageClass: str
     pcapStorageDays: int
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return self.pcapStorageClass == other.pcapStorageClass and self.pcapStorageDays == other.pcapStorageDays
 
     def to_dict(self) -> Dict[str, any]:
@@ -390,9 +466,9 @@ class ClusterPlan:
     s3: S3Plan
     viewerNodes: ViewerNodesPlan
 
-    def __equal__(self, other) -> bool:
+    def __eq__(self, other) -> bool:
         return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources
-                and self.osDomain == other.osDomain and self.captureVpc == other.vpc and self.s3 == other.s3)
+                and self.osDomain == other.osDomain and self.captureVpc == other.captureVpc and self.s3 == other.s3)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -407,7 +483,7 @@ class ClusterPlan:
     @classmethod
     def from_dict(cls: Type[T_ClusterPlan], input: Dict[str, any]) -> T_ClusterPlan:
         capture_nodes = CaptureNodesPlan(**input["captureNodes"])
-        capture_vpc = CaptureVpcPlan(**input["captureVpc"])
+        capture_vpc = CaptureVpcPlan.from_dict(input["captureVpc"])
         ecs_resources = EcsSysResourcePlan(**input["ecsResources"])
         os_domain = OSDomainPlan.from_dict(input["osDomain"])
         s3 = S3Plan(**input["s3"])
@@ -418,4 +494,15 @@ class ClusterPlan:
             viewer_nodes = ViewerNodesPlan(4, 2)
 
         return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3, viewer_nodes)
+    
+    def get_required_capture_ips(self) -> int:
+        required_capture_ips = self.captureNodes.maxCount + self.osDomain.dataNodes.count + self.osDomain.masterNodes.count
+        required_viewer_ips = self.viewerNodes.maxCount
 
+        return required_capture_ips + required_viewer_ips
+    
+    def will_capture_plan_fit(self) -> bool:
+        usable_ips = self.captureVpc.get_usable_ips()
+        required_ips = self.get_required_capture_ips()    
+
+        return usable_ips >= required_ips

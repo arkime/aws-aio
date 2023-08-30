@@ -5,13 +5,13 @@ import core.capacity_planning as cap
 from core.usage_report import UsageReport
 from core.user_config import UserConfig
 
-INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
+INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge"
 
 def test_WHEN_UsageReport_get_report_THEN_as_expected():
     # Set up the test
     prev_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(None, None, None, None),
-        cap.CaptureVpcPlan(None),
+        cap.CaptureVpcPlan(None, None, None),
         cap.EcsSysResourcePlan(None, None),
         cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, "m6g.before.search")),
         cap.S3Plan(None, None),
@@ -19,7 +19,7 @@ def test_WHEN_UsageReport_get_report_THEN_as_expected():
     )
     next_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(1),
+        cap.CaptureVpcPlan(cap.DEFAULT_VPC_CIDR, 1, cap.DEFAULT_CAPTURE_PUBLIC_MASK),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
@@ -61,7 +61,7 @@ def test_WHEN_UsageReport_get_confirmation_AND_yes_THEN_as_expected(mock_shell):
     # Set up the test
     prev_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(None, None, None, None),
-        cap.CaptureVpcPlan(None),
+        cap.CaptureVpcPlan(None, None, None),
         cap.EcsSysResourcePlan(None, None),
         cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, None)),
         cap.S3Plan(None, None),
@@ -69,7 +69,7 @@ def test_WHEN_UsageReport_get_confirmation_AND_yes_THEN_as_expected(mock_shell):
     )
     next_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(1),
+        cap.CaptureVpcPlan(cap.DEFAULT_VPC_CIDR, 1, cap.DEFAULT_CAPTURE_PUBLIC_MASK),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
@@ -93,7 +93,7 @@ def test_WHEN_UsageReport_get_confirmation_AND_no_THEN_as_expected(mock_shell):
     # Set up the test
     prev_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(None, None, None, None),
-        cap.CaptureVpcPlan(None),
+        cap.CaptureVpcPlan(None, None, None),
         cap.EcsSysResourcePlan(None, None),
         cap.OSDomainPlan(cap.DataNodesPlan(None, None, None), cap.MasterNodesPlan(None, None)),
         cap.S3Plan(None, None),
@@ -101,7 +101,7 @@ def test_WHEN_UsageReport_get_confirmation_AND_no_THEN_as_expected(mock_shell):
     )
     next_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(1),
+        cap.CaptureVpcPlan(cap.DEFAULT_VPC_CIDR, 1, cap.DEFAULT_CAPTURE_PUBLIC_MASK),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),

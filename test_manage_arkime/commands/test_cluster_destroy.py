@@ -7,7 +7,7 @@ from aws_interactions.ssm_operations import ParamDoesNotExist
 from commands.cluster_destroy import cmd_cluster_destroy, _destroy_viewer_cert, _delete_arkime_config_from_datastore
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysResourcePlan, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
-                                    ClusterPlan, CaptureVpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS)
+                                    ClusterPlan, CaptureVpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK)
 from core.user_config import UserConfig
 
 TEST_CLUSTER = "my-cluster"
@@ -35,7 +35,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(2),
+        CaptureVpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
@@ -124,7 +124,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(2),
+        CaptureVpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
