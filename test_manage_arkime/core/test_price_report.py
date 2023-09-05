@@ -11,11 +11,12 @@ def test_WHEN_PriceReport_get_report_THEN_as_expected():
     # Set up the test
     plan = cap.ClusterPlan(
         cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 1, 2, 1),
-        cap.CaptureVpcPlan(cap.DEFAULT_VPC_CIDR, 1, cap.DEFAULT_CAPTURE_PUBLIC_MASK),
+        cap.VpcPlan(cap.DEFAULT_VPC_CIDR, 1, cap.DEFAULT_CAPTURE_PUBLIC_MASK),
         cap.EcsSysResourcePlan(1, 1),
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
         cap.ViewerNodesPlan(5, 3),
+        None
     )
     config = UserConfig(0.5, 30, 365, 1, 120)
 

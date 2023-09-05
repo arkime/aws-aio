@@ -100,7 +100,8 @@ cli.add_command(demo_traffic_destroy)
 )
 @click.option(
     "--just-print-cfn", 
-    help="Skips a full deployment and just creates a copy of the CloudFormation templates to be deployed in a local directory",
+    help=("Skips a full deployment and just creates a copy of the CloudFormation templates to be deployed in a local directory."
+          " May perform some initial setup operations in AWS that are necessary in order to create those templates."),
     is_flag=True,
     show_default=True,
     default=False
@@ -113,13 +114,21 @@ cli.add_command(demo_traffic_destroy)
     default=None,
     type=click.STRING,
     required=False)
+@click.option(
+    "--viewer-cidr", 
+    help=("CAN ONLY BE SET ON INITIAL CLUSTER CREATION!  The CIDR to use for the Viewer Nodes.  Moves them out of the"
+          " Capture VPC into their own VPC, bounded by the CIDR you provided.  This VPC is peered with the Capture VPC,"
+          " so their CIDRs must not overlap.  Changing this requires deleting/recreating the Cluster."),
+    default=None,
+    type=click.STRING,
+    required=False)
 @click.pass_context
 def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage,
-                   just_print_cfn, capture_cidr):
+                   just_print_cfn, capture_cidr, viewer_cidr):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
     cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days,
-                       preconfirm_usage, just_print_cfn, capture_cidr)
+                       preconfirm_usage, just_print_cfn, capture_cidr, viewer_cidr)
 cli.add_command(cluster_create)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")

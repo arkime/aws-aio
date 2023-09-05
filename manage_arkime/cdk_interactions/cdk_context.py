@@ -3,7 +3,7 @@ import shlex
 from typing import Dict, List
 
 import core.constants as constants
-from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
+from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, VpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
                                     MasterNodesPlan, OSDomainPlan, DEFAULT_NUM_AZS, S3Plan, DEFAULT_S3_STORAGE_CLASS,
                                     DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK)
 from core.user_config import UserConfig
@@ -27,11 +27,12 @@ def generate_cluster_destroy_context(name: str) -> Dict[str, str]:
     fake_arn = "N/A"
     fake_cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
         ViewerNodesPlan(4, 2),
+        None
     )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
     fake_bucket_name = ""

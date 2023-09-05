@@ -125,8 +125,7 @@ class ViewerNodesPlan:
     minCount: int
 
     def __eq__(self, other) -> bool:
-        return (self.desiredCount == other.desired_count
-                and self.maxCount == other.max_count and self.minCount == other.min_count)
+        return (self.maxCount == other.maxCount and self.minCount == other.minCount)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -394,16 +393,20 @@ class Cidr:
     
 DEFAULT_VPC_CIDR = Cidr("10.0.0.0/16") # What AWS VPC gives by default
 DEFAULT_CAPTURE_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the Capture VPC public subnets
+DEFAULT_VIEWER_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the Viewer VPC public subnets either
 
-T_CaptureVpcPlan = TypeVar('T_CaptureVpcPlan', bound='CaptureVpcPlan')
+T_VpcPlan = TypeVar('T_VpcPlan', bound='VpcPlan')
 
 @dataclass
-class CaptureVpcPlan:    
+class VpcPlan:    
     cidr: Cidr
     numAzs: int
     publicSubnetMask: int
 
     def __eq__(self, other) -> bool:
+        if other is None:
+            return True if self is None else False
+
         return (self.cidr == other.cidr and self.numAzs == other.numAzs
                 and self.publicSubnetMask == other.publicSubnetMask)
 
@@ -415,7 +418,10 @@ class CaptureVpcPlan:
         }
 
     @classmethod
-    def from_dict(cls: Type[T_CaptureVpcPlan], input: Dict[str, any]) -> T_CaptureVpcPlan:
+    def from_dict(cls: Type[T_VpcPlan], input: Dict[str, any]) -> T_VpcPlan:
+        if not input:
+            return None
+
         cidr = Cidr(input['cidr']['block'])
         numAzs = input["numAzs"]
         publicSubnetMask = input["publicSubnetMask"]
@@ -430,13 +436,21 @@ class CaptureVpcPlan:
 
         return total_ips - public_ips - reserved_private_ips
     
-def get_capture_vpc_plan(previous_plan: CaptureVpcPlan, capture_cidr_block: str) -> CaptureVpcPlan:
-    if all(value is not None for value in vars(previous_plan).values()):
+def get_capture_vpc_plan(previous_plan: VpcPlan, capture_cidr_block: str) -> VpcPlan:
+    if previous_plan and all(value is not None for value in vars(previous_plan).values()):
         return previous_plan
-    if not capture_cidr_block:
-        return CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+    elif not capture_cidr_block:
+        return VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
     else:
-        return CaptureVpcPlan(Cidr(capture_cidr_block), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+        return VpcPlan(Cidr(capture_cidr_block), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+    
+def get_viewer_vpc_plan(previous_plan: VpcPlan, viewer_cidr_block: str) -> VpcPlan:
+    if previous_plan and all(value is not None for value in vars(previous_plan).values()):
+        return previous_plan
+    elif not viewer_cidr_block:
+        return None
+    else:
+        return VpcPlan(Cidr(viewer_cidr_block), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK)
 
 DEFAULT_S3_STORAGE_CLASS = "STANDARD"
 DEFAULT_S3_STORAGE_DAYS = 30
@@ -460,15 +474,17 @@ T_ClusterPlan = TypeVar('T_ClusterPlan', bound='ClusterPlan')
 @dataclass
 class ClusterPlan:
     captureNodes: CaptureNodesPlan
-    captureVpc: CaptureVpcPlan
+    captureVpc: VpcPlan
     ecsResources: EcsSysResourcePlan
     osDomain: OSDomainPlan
     s3: S3Plan
     viewerNodes: ViewerNodesPlan
+    viewerVpc: VpcPlan
 
     def __eq__(self, other) -> bool:
-        return (self.captureNodes == other.captureNodes and self.ecsResources == other.ecsResources
-                and self.osDomain == other.osDomain and self.captureVpc == other.captureVpc and self.s3 == other.s3)
+        return (self.captureNodes == other.captureNodes and self.captureVpc == other.captureVpc                
+                and self.ecsResources == other.ecsResources and self.osDomain == other.osDomain and self.s3 == other.s3
+                and self.viewerNodes == other.viewerNodes and self.viewerVpc == other.viewerVpc)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -478,12 +494,13 @@ class ClusterPlan:
             "osDomain": self.osDomain.to_dict(),
             "s3": self.s3.to_dict(),
             "viewerNodes": self.viewerNodes.to_dict(),
+            "viewerVpc": self.viewerVpc.to_dict() if self.viewerVpc else None,
         }
 
     @classmethod
     def from_dict(cls: Type[T_ClusterPlan], input: Dict[str, any]) -> T_ClusterPlan:
         capture_nodes = CaptureNodesPlan(**input["captureNodes"])
-        capture_vpc = CaptureVpcPlan.from_dict(input["captureVpc"])
+        capture_vpc = VpcPlan.from_dict(input["captureVpc"])
         ecs_resources = EcsSysResourcePlan(**input["ecsResources"])
         os_domain = OSDomainPlan.from_dict(input["osDomain"])
         s3 = S3Plan(**input["s3"])
@@ -493,11 +510,16 @@ class ClusterPlan:
         else:
             viewer_nodes = ViewerNodesPlan(4, 2)
 
-        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3, viewer_nodes)
+        if "viewerVpc" in input:
+            viewer_vpc = VpcPlan.from_dict(input["viewerVpc"])
+        else:
+            viewer_vpc = None
+
+        return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3, viewer_nodes, viewer_vpc)
     
     def get_required_capture_ips(self) -> int:
         required_capture_ips = self.captureNodes.maxCount + self.osDomain.dataNodes.count + self.osDomain.masterNodes.count
-        required_viewer_ips = self.viewerNodes.maxCount
+        required_viewer_ips = self.viewerNodes.maxCount if not self.viewerVpc else 0
 
         return required_capture_ips + required_viewer_ips
     

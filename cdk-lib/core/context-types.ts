@@ -51,15 +51,6 @@ export interface Cidr {
 }
 
 /**
- * Structure to hold the details of the cluster's Capture VPC
- */
-export interface CaptureVpcPlan {
-    cidr: Cidr;
-    numAzs: number;
-    publicSubnetMask: number;
-}
-
-/**
  * Structure to hold the details of the cluster's S3 usage plan
  */
 export interface S3Plan {
@@ -76,15 +67,25 @@ export interface ViewerNodesPlan {
 }
 
 /**
+ * Structure to hold the details of the cluster's Capture VPC
+ */
+export interface VpcPlan {
+    cidr: Cidr;
+    numAzs: number;
+    publicSubnetMask: number;
+}
+
+/**
  * Structure to hold the overall capacity plan for an Arkime Cluster
  */
 export interface ClusterPlan {
     captureNodes: CaptureNodesPlan;
-    captureVpc: CaptureVpcPlan;
+    captureVpc: VpcPlan;
     ecsResources: EcsSysResourcePlan;
     osDomain: OSDomainPlan;
     s3: S3Plan;
     viewerNodes: ViewerNodesPlan;
+    viewerVpc: VpcPlan;
 }
 
 /**
