@@ -15,7 +15,7 @@ BASE64_AUTH=$(echo -n "admin:$OPENSEARCH_PASS" | base64)
 sed -i'' "s/_OS_AUTH_/$BASE64_AUTH/g" /opt/arkime/etc/config.ini
 
 VIEWER_PASS_OBJ=$(aws secretsmanager get-secret-value --secret-id $VIEWER_PASS_ARN --output text --query SecretString)
-ADMIN_PASSWORD=$(echo $VIEWER_PASS_OBJ | jq -r .adminPassword)
+VIEWER_PASS=$(echo $VIEWER_PASS_OBJ | jq -r .adminPassword)
 AUTH_SECRET=$(echo $VIEWER_PASS_OBJ | jq -r .authSecret)
 PASSWORD_SECRET=$(echo $VIEWER_PASS_OBJ | jq -r .passwordSecret)
 
