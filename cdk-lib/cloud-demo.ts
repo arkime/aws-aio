@@ -42,7 +42,7 @@ switch(params.type) {
             planCluster: params.planCluster,
             ssmParamName: params.nameOSDomainSsmParam,
         });
-        osDomainStack.addDependency(captureVpcStack)
+        osDomainStack.addDependency(captureVpcStack);
 
         const captureNodesStack = new CaptureNodesStack(app, params.stackNames.captureNodes, {
             env: env,
@@ -59,9 +59,9 @@ switch(params.type) {
             ssmParamNameCluster: params.nameClusterSsmParam,
             userConfig: params.userConfig
         });
-        captureNodesStack.addDependency(captureBucketStack)
-        captureNodesStack.addDependency(captureVpcStack)
-        captureNodesStack.addDependency(osDomainStack)
+        captureNodesStack.addDependency(captureBucketStack);
+        captureNodesStack.addDependency(captureVpcStack);
+        captureNodesStack.addDependency(osDomainStack);
 
 
         let vpcStackToUse = null;
@@ -73,7 +73,7 @@ switch(params.type) {
                 env: env,
                 captureVpc: captureVpcStack.vpc
             });
-            captureTgwStack.addDependency(captureVpcStack)
+            captureTgwStack.addDependency(captureVpcStack);
 
             const viewerVpcStack = new ViewerVpcStack(app, params.stackNames.viewerVpc, {
                 env: env,
@@ -81,8 +81,9 @@ switch(params.type) {
                 captureVpc: captureVpcStack.vpc,
                 viewerVpcPlan: params.planCluster.viewerVpc
             });
-            viewerVpcStack.addDependency(captureVpcStack)
-            viewerVpcStack.addDependency(captureTgwStack)
+            viewerVpcStack.addDependency(captureVpcStack);
+            viewerVpcStack.addDependency(captureNodesStack);
+            viewerVpcStack.addDependency(captureTgwStack);
 
             vpcStackToUse = viewerVpcStack;
         }
@@ -100,10 +101,10 @@ switch(params.type) {
             ssmParamNameViewerDetails: params.nameViewerDetailsSsmParam,
             planCluster: params.planCluster,
         });
-        viewerNodesStack.addDependency(captureBucketStack)
-        viewerNodesStack.addDependency(vpcStackToUse)
-        viewerNodesStack.addDependency(osDomainStack)
-        viewerNodesStack.addDependency(captureNodesStack)
+        viewerNodesStack.addDependency(captureBucketStack);
+        viewerNodesStack.addDependency(vpcStackToUse);
+        viewerNodesStack.addDependency(osDomainStack);
+        viewerNodesStack.addDependency(captureNodesStack);
 
         break;
     case 'MirrorMgmtParams':

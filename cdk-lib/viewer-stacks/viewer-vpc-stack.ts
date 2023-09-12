@@ -50,7 +50,13 @@ export class ViewerVpcStack extends Stack {
 
     // Make sure that hosts inside the Viewer VPC's private subnets know how to talk to the Capture VPC
     this.vpc.privateSubnets.forEach((value, index) => {
+
         const subnet = value as ec2.Subnet;
+        // subnet.addRoute(`ToCaptureVpc${index + 1}`, {
+        //     routerId: props.captureTgw.attrId,
+        //     routerType: ec2.RouterType.TRANSIT_GATEWAY,
+        //     destinationCidrBlock: props.captureVpc.vpcCidrBlock,
+        // })
         const route = new ec2.CfnRoute(this, `ToCaptureVpc${index + 1}`, {
             routeTableId: subnet.routeTable.routeTableId,
             transitGatewayId: props.captureTgw.attrId,
@@ -62,6 +68,12 @@ export class ViewerVpcStack extends Stack {
     // Make sure that return traffic back to the Viewer VPC has a way to get there
     props.captureVpc.privateSubnets.forEach((value, index) => {
         const subnet = value as ec2.Subnet;
+        // subnet.addRoute(`ToViewerVpc${index + 1}`, {
+        //     routerId: props.captureTgw.attrId,
+        //     routerType: ec2.RouterType.TRANSIT_GATEWAY,
+        //     destinationCidrBlock: this.vpc.vpcCidrBlock,
+        // })
+
         const route = new ec2.CfnRoute(this, `ToViewerVpc${index + 1}`, {
             routeTableId: subnet.routeTable.routeTableId,
             transitGatewayId: props.captureTgw.attrId,

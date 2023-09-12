@@ -64,7 +64,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
     expected_stacks_calls = [mock.call(TEST_CLUSTER, False, False)]
     assert expected_stacks_calls == mock_get_stacks.call_args_list
 
-    expected_cdk_calls = [mock.call(TEST_CLUSTER)]
+    expected_cdk_calls = [mock.call(TEST_CLUSTER, False)]
     assert expected_cdk_calls == mock_get_context.call_args_list
 
     expected_calls = [
@@ -154,7 +154,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     expected_stacks_calls = [mock.call(TEST_CLUSTER, True, True)]
     assert expected_stacks_calls == mock_get_stacks.call_args_list
 
-    expected_cdk_calls = [mock.call(TEST_CLUSTER)]
+    expected_cdk_calls = [mock.call(TEST_CLUSTER, True)]
     assert expected_cdk_calls == mock_get_context.call_args_list
 
     expected_cdk_calls = [
@@ -383,7 +383,7 @@ def test_WHEN_get_stacks_to_destroy_called_THEN_as_expected():
     ]
     assert expected_value == actual_value
 
-def test_WHEN_get_cdk_context_called_THEN_as_expected():
+def test_WHEN_get_cdk_context_called_AND_viewer_vpc_THEN_as_expected():
     cluster_name = "MyCluster"
 
     default_plan = ClusterPlan(
@@ -393,7 +393,7 @@ def test_WHEN_get_cdk_context_called_THEN_as_expected():
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
         ViewerNodesPlan(4, 2),
-        None
+        VpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
     )
 
     stack_names = context.ClusterStackNames(
@@ -406,7 +406,53 @@ def test_WHEN_get_cdk_context_called_THEN_as_expected():
         viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
     )
 
-    actual_value = _get_cdk_context(cluster_name)
+    actual_value = _get_cdk_context(cluster_name, True)
+
+    expected_value = {
+        constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,
+        constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+            "nameCluster": cluster_name,
+            "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(cluster_name),
+            "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(cluster_name),
+            "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name(cluster_name),
+            "nameClusterConfigBucket": "",
+            "nameClusterSsmParam": constants.get_cluster_ssm_param_name(cluster_name),
+            "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(cluster_name),
+            "nameViewerCertArn": "N/A",
+            "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(cluster_name),
+            "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name(cluster_name),
+            "planCluster": json.dumps(default_plan.to_dict()),
+            "stackNames": json.dumps(stack_names.to_dict()),
+            "userConfig": json.dumps(UserConfig(1, 1, 1, 1, 1).to_dict()),
+        }))
+    }
+
+    assert expected_value == actual_value
+
+def test_WHEN_get_cdk_context_called_AND_no_viewer_vpc_THEN_as_expected():
+    cluster_name = "MyCluster"
+
+    default_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(1, 1),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
+        ViewerNodesPlan(4, 2),
+        None,
+    )
+
+    stack_names = context.ClusterStackNames(
+        captureBucket=constants.get_capture_bucket_stack_name(cluster_name),
+        captureNodes=constants.get_capture_nodes_stack_name(cluster_name),
+        captureTgw=constants.get_capture_tgw_stack_name(cluster_name),
+        captureVpc=constants.get_capture_vpc_stack_name(cluster_name),
+        osDomain=constants.get_opensearch_domain_stack_name(cluster_name),
+        viewerNodes=constants.get_viewer_nodes_stack_name(cluster_name),
+        viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
+    )
+
+    actual_value = _get_cdk_context(cluster_name, False)
 
     expected_value = {
         constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,

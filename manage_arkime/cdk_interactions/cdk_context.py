@@ -52,7 +52,7 @@ def generate_cluster_create_context(name: str, viewer_cert_arn: str, cluster_pla
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_cluster_create
     return create_context
 
-def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames) -> Dict[str, str]:
+def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames, has_viewer_vpc: bool) -> Dict[str, str]:
     # Hardcode these value because it saves us some implementation headaches and it doesn't matter what it is. Since
     # we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are irrelevant
     # or it fails/rolls back they are irrelevant.
@@ -64,7 +64,7 @@ def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames) 
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
         ViewerNodesPlan(4, 2),
-        None
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK) if has_viewer_vpc else None,
     )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
     fake_bucket_name = ""

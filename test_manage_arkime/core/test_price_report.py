@@ -16,7 +16,7 @@ def test_WHEN_PriceReport_get_report_THEN_as_expected():
         cap.OSDomainPlan(cap.DataNodesPlan(2, "t3.small.search", 100), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
         cap.ViewerNodesPlan(5, 3),
-        None
+        cap.VpcPlan(cap.DEFAULT_VPC_CIDR, 1, cap.DEFAULT_CAPTURE_PUBLIC_MASK),
     )
     config = UserConfig(0.5, 30, 365, 1, 120)
 
@@ -32,13 +32,14 @@ def test_WHEN_PriceReport_get_report_THEN_as_expected():
       + "   OS Master Node                  3 * $  93.4400/mo = $    280.32/mo\n"
       + "   OS Data Node                    2 * $  26.2800/mo = $     52.56/mo\n"
       + "   OS Storage                    200 * $   0.1000/GB = $     20.00/mo\n"
+      + "   TGW Attachments                 2 * $  36.5000/mo = $     73.00/mo\n"
       + "Variable:\n"
       + "   PCAP Storage first 50TB    40,500 * $   0.0230/GB = $    931.50/mo\n"
       + "   GWLB                      164,250 * $   0.0040/GB = $    657.00/mo\n"
       + "   GWLBE                     164,250 * $   0.0035/GB = $    574.88/mo\n"
       + "   Traffic Mirror/ENI              1 * $  10.9500/mo = $     10.95/mo\n"
       + "Total:\n"
-      + "                                                       $   2756.02/mo\n"
+      + "                                                       $   2829.02/mo\n"
     )
 
     assert expected_report == actual_report

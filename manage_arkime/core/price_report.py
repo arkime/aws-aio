@@ -35,6 +35,8 @@ US_EAST_1_PRICES: Dict[str, float] = {
     "fargate": 0.04048 * AWS_HOURS_PER_MONTH, # https://aws.amazon.com/fargate/pricing/
 
     "trafficmirror": 0.015 * AWS_HOURS_PER_MONTH, # https://aws.amazon.com/vpc/pricing/
+
+    "transitgateway": 0.05 * AWS_HOURS_PER_MONTH, # https://aws.amazon.com/transit-gateway/pricing/
 }
 
 
@@ -61,6 +63,8 @@ class PriceReport:
             return f"   {name:23} {num:9,} * ${cost:9.4f}/mo = ${cost * num:10.2f}/mo\n"
 
     def get_report(self) -> str:
+        tgw_attachments = 2 if self._plan.viewerVpc else 0
+
         expectedTraffic = self._config.expectedTraffic/8
         # Expect to only saving 25% of pcap because of TLS and zlib
         s3 = math.ceil(self._plan.s3.pcapStorageDays * expectedTraffic * 0.25 * 60 * 60 * 24)
@@ -72,6 +76,7 @@ class PriceReport:
             + self._line("OS Master Node", self._plan.osDomain.masterNodes.instanceType, self._plan.osDomain.masterNodes.count)
             + self._line("OS Data Node", self._plan.osDomain.dataNodes.instanceType, self._plan.osDomain.dataNodes.count)
             + self._line("OS Storage", "ebs-GB", self._plan.osDomain.dataNodes.count*self._plan.osDomain.dataNodes.volumeSize)
+            + self._line("TGW Attachments", "transitgateway", tgw_attachments)
             + "Variable:\n"
             + self._line("PCAP Storage first 50TB", "s3-STANDARD-50-GB", min(s3, 50000))
             + self._line("PCAP Storage next 450TB", "s3-STANDARD-450-GB", min(s3 - 50000, 450000))
