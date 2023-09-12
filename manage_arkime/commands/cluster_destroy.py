@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Dict, List
 
@@ -7,6 +8,7 @@ from aws_interactions.destroy_os_domain import destroy_os_domain_and_wait
 from aws_interactions.s3_interactions import destroy_bucket
 from aws_interactions.ssm_operations import get_ssm_param_json_value, get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
+from core.capacity_planning import ClusterPlan
 import core.constants as constants
 import cdk_interactions.cdk_context as context
 
@@ -17,6 +19,13 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     cdk_client = CdkClient(aws_provider.get_aws_env())
+
+    try:
+        cluster_plan_str = get_ssm_param_json_value(constants.get_cluster_ssm_param_name(name), "capacityPlan", aws_provider)
+        cluster_plan = ClusterPlan.from_dict(cluster_plan_str)
+    except ParamDoesNotExist:
+        logger.warning(f"The Cluster {name} does not appear to exist; aborting...")
+        return
 
     vpcs_search_path = f"{constants.get_cluster_ssm_param_name(name)}/vpcs"
     monitored_vpcs = get_ssm_names_by_path(vpcs_search_path, aws_provider)
@@ -38,7 +47,8 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
         bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
         destroy_bucket(bucket_name=bucket_name, aws_provider=aws_provider)
 
-    stacks_to_destroy = _get_stacks_to_destroy(name, destroy_everything)
+    has_viewer_vpc = not (cluster_plan.viewerVpc is None)
+    stacks_to_destroy = _get_stacks_to_destroy(name, destroy_everything, has_viewer_vpc)
     destroy_context = _get_cdk_context(name)
 
     cdk_client.destroy(stacks_to_destroy, context=destroy_context)
@@ -86,26 +96,45 @@ def _delete_arkime_config_from_datastore(cluster_name: str, aws_provider: AwsCli
         aws_provider=aws_provider
     )
 
-def _get_stacks_to_destroy(cluster_name: str, destroy_everything: bool) -> List[str]:
+def _get_stacks_to_destroy(cluster_name: str, destroy_everything: bool, has_viewer_vpc: bool) -> List[str]:
+    stacks = []
+
     if not destroy_everything:
         # By default, cluster-destroy just tears down the capture/viewer nodes in order to preserve the user's data.  We
         # could tear down the OpenSearch Domain and Bucket stacks, but that would leave loose (non-CloudFormation managed)
         # resources in the user's account that they'd likely stumble across later, so it's probably better to leave those
         # stacks intact.  We can't delete the VPC stack because the OpenSearch Domain has the VPC as a dependency, as we're
         # keeping the Domain.
-        return [
+        stacks.extend([
             constants.get_capture_nodes_stack_name(cluster_name),
             constants.get_viewer_nodes_stack_name(cluster_name)
-        ]
+        ])
     else:
         # Because we've destroyed the user data, we can tear down all CloudFormation stacks.
-        return [
+        stacks.extend([
             constants.get_capture_bucket_stack_name(cluster_name),
             constants.get_capture_nodes_stack_name(cluster_name),
             constants.get_capture_vpc_stack_name(cluster_name),
             constants.get_opensearch_domain_stack_name(cluster_name),
-            constants.get_viewer_nodes_stack_name(cluster_name)
-        ]
+            constants.get_viewer_nodes_stack_name(cluster_name),
+        ])
+    
+    if has_viewer_vpc:
+        stacks.extend([
+            constants.get_capture_tgw_stack_name(cluster_name),
+            constants.get_viewer_vpc_stack_name(cluster_name),
+        ])
+
+    return stacks
 
 def _get_cdk_context(cluster_name: str) -> Dict[str, any]:
-    return context.generate_cluster_destroy_context(cluster_name)
+    stack_names = context.ClusterStackNames(
+        captureBucket=constants.get_capture_bucket_stack_name(cluster_name),
+        captureNodes=constants.get_capture_nodes_stack_name(cluster_name),
+        captureTgw=constants.get_capture_tgw_stack_name(cluster_name),
+        captureVpc=constants.get_capture_vpc_stack_name(cluster_name),
+        osDomain=constants.get_opensearch_domain_stack_name(cluster_name),
+        viewerNodes=constants.get_viewer_nodes_stack_name(cluster_name),
+        viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
+    )
+    return context.generate_cluster_destroy_context(cluster_name, stack_names)

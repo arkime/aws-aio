@@ -8,6 +8,7 @@ from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
+import cdk_interactions.cdk_context as context
 
 from commands.cluster_create import (cmd_cluster_create, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config,
@@ -1137,6 +1138,30 @@ def test_WHEN_get_stacks_to_deploy_called_THEN_as_expected():
         constants.get_opensearch_domain_stack_name(cluster_name),
         constants.get_viewer_nodes_stack_name(cluster_name)
     ]
+    assert expected_value == actual_value  
+
+    # TEST: Has a Viewer VPC
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+    )
+
+    actual_value = _get_stacks_to_deploy(cluster_name, user_config, cluster_plan)
+
+    expected_value = [
+        constants.get_capture_bucket_stack_name(cluster_name),
+        constants.get_capture_nodes_stack_name(cluster_name),
+        constants.get_capture_vpc_stack_name(cluster_name),
+        constants.get_opensearch_domain_stack_name(cluster_name),
+        constants.get_viewer_nodes_stack_name(cluster_name),
+        constants.get_capture_tgw_stack_name(cluster_name),
+        constants.get_viewer_vpc_stack_name(cluster_name),
+    ]
     assert expected_value == actual_value
 
 def test_WHEN_get_cdk_context_called_THEN_as_expected():
@@ -1145,7 +1170,6 @@ def test_WHEN_get_cdk_context_called_THEN_as_expected():
     aws_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
     user_config = UserConfig(1, 30, 365, 2, 30)
 
-    # TEST: No Viewer VPC
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
         VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
@@ -1156,27 +1180,33 @@ def test_WHEN_get_cdk_context_called_THEN_as_expected():
         None
     )
 
+    stack_names = context.ClusterStackNames(
+        captureBucket=constants.get_capture_bucket_stack_name(cluster_name),
+        captureNodes=constants.get_capture_nodes_stack_name(cluster_name),
+        captureVpc=constants.get_capture_vpc_stack_name(cluster_name),
+        captureTgw=constants.get_capture_tgw_stack_name(cluster_name),
+        osDomain=constants.get_opensearch_domain_stack_name(cluster_name),
+        viewerNodes=constants.get_viewer_nodes_stack_name(cluster_name),
+        viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
+    )
+
     actual_value = _get_cdk_context(cluster_name, user_config, cluster_plan, cert_arn, aws_env)
 
     expected_value = {
         constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_create,
         constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
             "nameCluster": cluster_name,
-            "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(cluster_name),
             "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(cluster_name),
             "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(cluster_name),
             "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name(cluster_name),
-            "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(cluster_name),
-            "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(cluster_name),
             "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name),
             "nameClusterSsmParam": constants.get_cluster_ssm_param_name(cluster_name),
-            "nameOSDomainStack": constants.get_opensearch_domain_stack_name(cluster_name),
             "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(cluster_name),
             "nameViewerCertArn": cert_arn,
             "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(cluster_name),
             "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name(cluster_name),
-            "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(cluster_name),
             "planCluster": json.dumps(cluster_plan.to_dict()),
+            "stackNames": json.dumps(stack_names.to_dict()),
             "userConfig": json.dumps(user_config.to_dict()),
         }))
     }

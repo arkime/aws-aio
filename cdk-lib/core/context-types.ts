@@ -85,7 +85,7 @@ export interface ClusterPlan {
     osDomain: OSDomainPlan;
     s3: S3Plan;
     viewerNodes: ViewerNodesPlan;
-    viewerVpc: VpcPlan;
+    viewerVpc: VpcPlan | null;
 }
 
 /**
@@ -97,4 +97,17 @@ export interface UserConfig {
     historyDays: number;
     replicas: number;
     pcapDays: number;
+}
+
+/**
+ * Structure to hold the stack names for Cluster management commands
+ */
+export interface ClusterMgmtStackNames {
+    captureBucket: string;
+    captureNodes: string;
+    captureTgw: string;
+    captureVpc: string;
+    osDomain: string;
+    viewerNodes: string;
+    viewerVpc: string;
 }

@@ -3,7 +3,7 @@ import json
 import logging
 import shutil
 import sys
-from typing import Callable
+from typing import Callable, List
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.acm_interactions import upload_default_elb_cert
@@ -105,7 +105,7 @@ def _should_proceed_with_operation(initial_invocation: bool, previous_capacity_p
     if (not initial_invocation) and (capture_cidr_block or viewer_cidr_block):
         # We can't change the CIDR without tearing down the VPC, which effectively means tearing down the entire
         # Cluster and re-creating it.  Instead of attempting to do that, we make the CIDR only set-able on creation.
-        logger.error("You can only set the Capture VPC CIDR when you initially create the Cluster, as changing it"
+        logger.error("You can only specify the VPC CIDR(s) when you initially create the Cluster, as changing it"
                      " requires tearing down the entire Cluster.  Aborting...")
         return False
     
@@ -357,21 +357,44 @@ def _tag_domain(cluster_name: str, aws_provider: AwsClientProvider):
         ]
     )
 
-def _get_stacks_to_deploy(cluster_name: str, next_user_config: UserConfig, next_capacity_plan: ClusterPlan):
-    return [
+def _get_stacks_to_deploy(cluster_name: str, next_user_config: UserConfig, next_capacity_plan: ClusterPlan) -> List[str]:
+    # This list defines what actually gets deployed, as opposed to what the CDK has in its blueprint as being available
+    # to deploy.
+    stacks = [
         constants.get_capture_bucket_stack_name(cluster_name),
         constants.get_capture_nodes_stack_name(cluster_name),
         constants.get_capture_vpc_stack_name(cluster_name),
         constants.get_opensearch_domain_stack_name(cluster_name),
-        constants.get_viewer_nodes_stack_name(cluster_name)
+        constants.get_viewer_nodes_stack_name(cluster_name),
     ]
+
+    if next_capacity_plan.viewerVpc:
+        stacks.extend([
+            constants.get_capture_tgw_stack_name(cluster_name),
+            constants.get_viewer_vpc_stack_name(cluster_name),
+        ])
+
+    return stacks
 
 def _get_cdk_context(cluster_name: str, next_user_config: UserConfig, next_capacity_plan: ClusterPlan, cert_arn: str,
                      aws_env: AwsEnvironment):
+    
+    # We might not deploy all these, but we need to tell the CDK that they exist as something we might deploy in order
+    # for its auto-wiring to work.
+    stack_names = context.ClusterStackNames(
+        captureBucket=constants.get_capture_bucket_stack_name(cluster_name),
+        captureNodes=constants.get_capture_nodes_stack_name(cluster_name),
+        captureTgw=constants.get_capture_tgw_stack_name(cluster_name),
+        captureVpc=constants.get_capture_vpc_stack_name(cluster_name),
+        osDomain=constants.get_opensearch_domain_stack_name(cluster_name),
+        viewerNodes=constants.get_viewer_nodes_stack_name(cluster_name),
+        viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
+    )
     return context.generate_cluster_create_context(
         cluster_name,
         cert_arn,
         next_capacity_plan,
         next_user_config,
-        constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
+        constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name),
+        stack_names
     )

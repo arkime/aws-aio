@@ -125,6 +125,20 @@ Once you have an Arkime Cluster, you can begin capturing traffic in a target VPC
 ./manage_arkime.py vpc-add --cluster-name MyCluster --vpc-id vpc-123456789
 ```
 
+#### Using custom VPC CIDRs
+
+If you need your Capture and/or Viewer Nodes to live in a particular IP space, the CLI provides two optional parameters for `create-cluster` to achieve this: `--capture-cidr` and `--viewer-cidr`.
+
+```
+./manage_arkime.py cluster-create --name MyCluster --capture-cidr 192.168.0.0/26 --viewer-cidr 10.0.0.0/26
+```
+
+**NOTE:** You can only set these during the initial creation of the Cluster, as changing them would require tearing down the entire Cluster.
+
+When you specify the `--capture-cidr` parameter, it uses your preferred CIDR for the VPC containing the Cluster's components.  The CLI does some basic checks to see if your required compute capacity will fit in the IP space you indicated.
+
+The `--viewer-cidr` is a bit more complex, but allows you to ensure that the IPs your Arkime Dashboard is available on are taken from a specific range.  When you specify this parameter, the CLI will split the Viewer Nodes into their own VPC that's connected to the OpenSearch Domain in the Capture VPC using a Transit Gateway.  The CLI checks to see your Viewer Nodes will fit in the specified CIDR, but will also make sure that your Viewer CIDR doesn't overlap with your Capture CIDR to prevent IP-space collisions between the two connected VPCs.  This parameter is handy if you need to peer this VPC into your other networks and want to limit the number of IPs taken up.  Typically, there will be many more IPs required by the Capture components (the Capture Nodes, the OpenSearch Domain) than the Viewer Nodes.
+
 ### Setting up capture for a VPC in another account
 
 #### Setup

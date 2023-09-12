@@ -13,21 +13,17 @@ export interface CommandParamsRaw { }
 export interface ClusterMgmtParamsRaw extends CommandParamsRaw {
     type: 'ClusterMgmtParamsRaw';
     nameCluster: string;
-    nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
     nameCaptureConfigSsmParam: string;
     nameCaptureDetailsSsmParam: string;
-    nameCaptureNodesStack: string;
-    nameCaptureVpcStack: string;
     nameClusterConfigBucket: string;
     nameClusterSsmParam: string;
-    nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
     nameViewerCertArn: string;
     nameViewerConfigSsmParam: string;
     nameViewerDetailsSsmParam: string;
-    nameViewerNodesStack: string;
     planCluster: string;
+    stackNames: string;
     userConfig: string;
 }
 
@@ -79,21 +75,17 @@ export interface DestroyDemoTrafficParams extends CommandParams {
 export interface ClusterMgmtParams extends CommandParams {
     type: 'ClusterMgmtParams'
     nameCluster: string;
-    nameCaptureBucketStack: string;
     nameCaptureBucketSsmParam: string;
     nameCaptureConfigSsmParam: string;
     nameCaptureDetailsSsmParam: string;
-    nameCaptureNodesStack: string;
-    nameCaptureVpcStack: string;
     nameClusterConfigBucket: string;
     nameClusterSsmParam: string;
-    nameOSDomainStack: string;
     nameOSDomainSsmParam: string;
     nameViewerCertArn: string;
     nameViewerConfigSsmParam: string;
     nameViewerDetailsSsmParam: string;
-    nameViewerNodesStack: string;
     planCluster: types.ClusterPlan;
+    stackNames: types.ClusterMgmtStackNames;
     userConfig: types.UserConfig;
 }
 
