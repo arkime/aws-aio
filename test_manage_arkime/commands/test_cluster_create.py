@@ -8,33 +8,39 @@ from aws_interactions.aws_environment import AwsEnvironment
 from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
+import cdk_interactions.cdk_context as context
 
 from commands.cluster_create import (cmd_cluster_create, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config,
-                                     _tag_domain)
+                                     _tag_domain, _should_proceed_with_operation, _is_initial_invocation, _get_stacks_to_deploy, _get_cdk_context)
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
-                                    CaptureVpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
-                                    DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, Cidr, DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK)
+                                    VpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
+                                    DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS, Cidr, DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK,
+                                    DEFAULT_VIEWER_PUBLIC_MASK)
 import core.local_file as local_file
 from core.user_config import UserConfig
 from core.versioning import VersionInfo
 
 
 @mock.patch("commands.cluster_create.AwsClientProvider")
+@mock.patch("commands.cluster_create._get_cdk_context")
+@mock.patch("commands.cluster_create._get_stacks_to_deploy")
+@mock.patch("commands.cluster_create._is_initial_invocation")
 @mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create._set_up_arkime_config")
 @mock.patch("commands.cluster_create._configure_ism")
 @mock.patch("commands.cluster_create._get_previous_user_config")
 @mock.patch("commands.cluster_create._get_previous_capacity_plan")
-@mock.patch("commands.cluster_create._confirm_usage")
+@mock.patch("commands.cluster_create._should_proceed_with_operation")
 @mock.patch("commands.cluster_create._get_next_user_config")
 @mock.patch("commands.cluster_create._get_next_capacity_plan")
 @mock.patch("commands.cluster_create._set_up_viewer_cert")
 @mock.patch("commands.cluster_create.CdkClient")
 def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
-                                                                 mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                 mock_set_up_arkime_conf, mock_tag, mock_aws_provider_cls):
+                                                                 mock_proceed, mock_get_prev_plan, mock_get_prev_config, mock_configure,
+                                                                 mock_set_up_arkime_conf, mock_tag, mock_initial,mock_get_stacks,
+                                                                 mock_get_context, mock_aws_provider_cls):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -51,51 +57,29 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
         ViewerNodesPlan(20, 5),
+        None
     )
     mock_get_plans.return_value = cluster_plan
 
-    mock_confirm.return_value = True
+    mock_initial.return_value = True
+    mock_proceed.return_value = True
+
+    mock_get_stacks.return_value = ["stack1", "stack2"]
+    mock_get_context.return_value = {"key": "value"}
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None, None)
 
     # Check our results
     expected_calls = [
         mock.call(
-            [
-                constants.get_capture_bucket_stack_name("my-cluster"),
-                constants.get_capture_nodes_stack_name("my-cluster"),
-                constants.get_capture_vpc_stack_name("my-cluster"),
-                constants.get_opensearch_domain_stack_name("my-cluster"),
-                constants.get_viewer_nodes_stack_name("my-cluster"),
-            ],
-            context={
-                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_create,
-                constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "nameCluster": "my-cluster",
-                    "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
-                    "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
-                    "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name("my-cluster"),
-                    "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name("my-cluster"),
-                    "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
-                    "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
-                    "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, "my-cluster"),
-                    "nameClusterSsmParam": constants.get_cluster_ssm_param_name("my-cluster"),
-                    "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
-                    "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
-                    "nameViewerCertArn": "arn",
-                    "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name("my-cluster"),
-                    "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name("my-cluster"),
-                    "nameViewerNodesStack": constants.get_viewer_nodes_stack_name("my-cluster"),
-                    "planCluster": json.dumps(cluster_plan.to_dict()),
-                    "userConfig": json.dumps(user_config.to_dict()),
-                }))
-            }
+            ["stack1", "stack2"],
+            context={"key": "value"}
         )
     ]
     assert expected_calls == mock_client.deploy.call_args_list
@@ -126,99 +110,46 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
     assert expected_tag_calls == mock_tag.call_args_list
 
 @mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_create._is_initial_invocation")
 @mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create._set_up_arkime_config")
 @mock.patch("commands.cluster_create._configure_ism")
 @mock.patch("commands.cluster_create._get_previous_user_config")
 @mock.patch("commands.cluster_create._get_previous_capacity_plan")
-@mock.patch("commands.cluster_create._confirm_usage")
+@mock.patch("commands.cluster_create._should_proceed_with_operation")
 @mock.patch("commands.cluster_create._get_next_user_config")
 @mock.patch("commands.cluster_create._get_next_capacity_plan")
 @mock.patch("commands.cluster_create._set_up_viewer_cert")
 @mock.patch("commands.cluster_create.CdkClient")
-def test_WHEN_cmd_cluster_create_called_AND_change_capture_cidr_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
-                                                                         mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_set_up_arkime_conf, mock_tag):
+def test_WHEN_cmd_cluster_create_called_AND_shouldnt_proceed_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
+                                                                         mock_proceed, mock_get_prev_plan, mock_get_prev_config, mock_configure,
+                                                                         mock_set_up_arkime_conf, mock_tag, mock_initial):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
 
-    user_config = UserConfig(1, 30, 365, 2, 30)
+    user_config = mock.Mock()
     mock_get_config.return_value = user_config
+    mock_get_prev_config.return_value = user_config
 
-    cluster_plan = ClusterPlan(
-        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
-        EcsSysResourcePlan(3584, 15360),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
-        ViewerNodesPlan(20, 5),
-    )
+    cluster_plan = mock.Mock()
     mock_get_plans.return_value = cluster_plan
+    mock_get_prev_plan.return_value = cluster_plan
+
+    mock_initial.return_value = True
+    mock_proceed.return_value = False
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24")
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26")
 
     # Check our results
-    expected_calls = []
-    assert expected_calls == mock_client.deploy.call_args_list
+    expected_proceed_calls = [
+        mock.call(True, cluster_plan, cluster_plan, user_config, user_config, True, "1.2.3.4/24", "2.3.4.5/26")
+    ]
+    assert expected_proceed_calls == mock_proceed.call_args_list
 
-    expected_confirm_calls = []
-    assert expected_confirm_calls == mock_confirm.call_args_list
-
-    expected_set_up_calls = []
-    assert expected_set_up_calls == mock_set_up.call_args_list
-
-    expected_configure_calls = []
-    assert expected_configure_calls == mock_configure.call_args_list
-
-    expected_tag_calls = []
-    assert expected_tag_calls == mock_tag.call_args_list
-
-    expected_set_up_arkime_conf_calls = []
-    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
-
-@mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_create._tag_domain")
-@mock.patch("commands.cluster_create._set_up_arkime_config")
-@mock.patch("commands.cluster_create._configure_ism")
-@mock.patch("commands.cluster_create._get_previous_user_config")
-@mock.patch("commands.cluster_create._get_previous_capacity_plan")
-@mock.patch("commands.cluster_create._confirm_usage")
-@mock.patch("commands.cluster_create._get_next_user_config")
-@mock.patch("commands.cluster_create._get_next_capacity_plan")
-@mock.patch("commands.cluster_create._set_up_viewer_cert")
-@mock.patch("commands.cluster_create.CdkClient")
-def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
-                                                                         mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_set_up_arkime_conf, mock_tag):
-    # Set up our mock
-    mock_set_up.return_value = "arn"
-
-    mock_client = mock.Mock()
-    mock_cdk_client_cls.return_value = mock_client
-
-    user_config = UserConfig(1, 30, 365, 2, 30)
-    mock_get_config.return_value = user_config
-
-    cluster_plan = ClusterPlan(
-        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
-        EcsSysResourcePlan(3584, 15360),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
-        ViewerNodesPlan(20, 5),
-    )
-    mock_get_plans.return_value = cluster_plan
-
-    mock_confirm.return_value = False
-
-    # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None)
-
-    # Check our results
     expected_calls = []
     assert expected_calls == mock_client.deploy.call_args_list
 
@@ -234,54 +165,10 @@ def test_WHEN_cmd_cluster_create_called_AND_abort_usage_THEN_as_expected(mock_cd
     expected_set_up_arkime_conf_calls = []
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
-@mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_create._tag_domain")
-@mock.patch("commands.cluster_create._set_up_arkime_config")
-@mock.patch("commands.cluster_create._configure_ism")
-@mock.patch("commands.cluster_create._get_previous_user_config")
-@mock.patch("commands.cluster_create._get_previous_capacity_plan")
-@mock.patch("commands.cluster_create._confirm_usage")
-@mock.patch("commands.cluster_create._get_next_user_config")
-@mock.patch("commands.cluster_create._get_next_capacity_plan")
-@mock.patch("commands.cluster_create._set_up_viewer_cert")
-@mock.patch("commands.cluster_create.CdkClient")
-def test_WHEN_cmd_cluster_create_called_AND_plan_doesnt_fit_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
-                                                                         mock_confirm, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_set_up_arkime_conf, mock_tag):
-    # Set up our mock
-    mock_set_up.return_value = "arn"
 
-    mock_client = mock.Mock()
-    mock_cdk_client_cls.return_value = mock_client
-
-    user_config = UserConfig(1, 30, 365, 2, 30)
-    mock_get_config.return_value = user_config
-
-    mock_cluster_plan = mock.Mock()
-    mock_cluster_plan.will_capture_plan_fit.return_value = False
-    mock_get_plans.return_value = mock_cluster_plan
-
-    mock_confirm.return_value = True
-
-    # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None)
-
-    # Check our results
-    expected_calls = []
-    assert expected_calls == mock_client.deploy.call_args_list
-
-    expected_set_up_calls = []
-    assert expected_set_up_calls == mock_set_up.call_args_list
-
-    expected_configure_calls = []
-    assert expected_configure_calls == mock_configure.call_args_list
-
-    expected_tag_calls = []
-    assert expected_tag_calls == mock_tag.call_args_list
-
-    expected_set_up_arkime_conf_calls = []
-    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
-
+@mock.patch("commands.cluster_create._get_cdk_context")
+@mock.patch("commands.cluster_create._get_stacks_to_deploy")
+@mock.patch("commands.cluster_create._is_initial_invocation")
 @mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create.cfn.set_up_cloudformation_template_dir")
 @mock.patch("commands.cluster_create.constants.get_repo_root_dir")
@@ -292,16 +179,17 @@ def test_WHEN_cmd_cluster_create_called_AND_plan_doesnt_fit_THEN_as_expected(moc
 @mock.patch("commands.cluster_create._configure_ism")
 @mock.patch("commands.cluster_create._get_previous_user_config")
 @mock.patch("commands.cluster_create._get_previous_capacity_plan")
-@mock.patch("commands.cluster_create._confirm_usage")
+@mock.patch("commands.cluster_create._should_proceed_with_operation")
 @mock.patch("commands.cluster_create._get_next_user_config")
 @mock.patch("commands.cluster_create._get_next_capacity_plan")
 @mock.patch("commands.cluster_create._set_up_viewer_cert")
 @mock.patch("commands.cluster_create.CdkClient")
 def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans,
-                                                                mock_get_config, mock_confirm, mock_get_prev_plan,
+                                                                mock_get_config, mock_proceed, mock_get_prev_plan,
                                                                 mock_get_prev_config, mock_configure, mock_set_up_arkime_conf,
                                                                 mock_aws_provider_cls, mock_get_cdk_dir, mock_rmtree,
-                                                                mock_get_root_dir, mock_set_up_cfn, mock_tag):
+                                                                mock_get_root_dir, mock_set_up_cfn, mock_tag, mock_initial,
+                                                                mock_get_stacks, mock_get_context):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -318,54 +206,32 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
         ViewerNodesPlan(20, 5),
+        None
     )
     mock_get_plans.return_value = cluster_plan
 
-    mock_confirm.return_value = True
+    mock_initial.return_value = True
+    mock_proceed.return_value = True
 
     mock_get_cdk_dir.return_value = "/path/cdk.out"
     mock_get_root_dir.return_value = "/path"
 
+    mock_get_stacks.return_value = ["stack1", "stack2"]
+    mock_get_context.return_value = {"key": "value"}
+
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True, None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True, None, None)
 
     # Check our results
     expected_calls = [
         mock.call(
-            [
-                constants.get_capture_bucket_stack_name("my-cluster"),
-                constants.get_capture_nodes_stack_name("my-cluster"),
-                constants.get_capture_vpc_stack_name("my-cluster"),
-                constants.get_opensearch_domain_stack_name("my-cluster"),
-                constants.get_viewer_nodes_stack_name("my-cluster"),
-            ],
-            context={
-                constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_create,
-                constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
-                    "nameCluster": "my-cluster",
-                    "nameCaptureBucketStack": constants.get_capture_bucket_stack_name("my-cluster"),
-                    "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name("my-cluster"),
-                    "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name("my-cluster"),
-                    "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name("my-cluster"),
-                    "nameCaptureNodesStack": constants.get_capture_nodes_stack_name("my-cluster"),
-                    "nameCaptureVpcStack": constants.get_capture_vpc_stack_name("my-cluster"),
-                    "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, "my-cluster"),
-                    "nameClusterSsmParam": constants.get_cluster_ssm_param_name("my-cluster"),
-                    "nameOSDomainStack": constants.get_opensearch_domain_stack_name("my-cluster"),
-                    "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name("my-cluster"),
-                    "nameViewerCertArn": "arn",
-                    "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name("my-cluster"),
-                    "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name("my-cluster"),
-                    "nameViewerNodesStack": constants.get_viewer_nodes_stack_name("my-cluster"),
-                    "planCluster": json.dumps(cluster_plan.to_dict()),
-                    "userConfig": json.dumps(user_config.to_dict()),
-                }))
-            }
+            ["stack1", "stack2"],
+            context={"key": "value"}
         )
     ]
     assert expected_calls == mock_client.synthesize.call_args_list
@@ -408,6 +274,179 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
         mock.call("my-cluster", aws_env, "/path")
     ]
     assert expected_set_up_cfn_calls == mock_set_up_cfn.call_args_list
+
+@mock.patch("commands.cluster_create._confirm_usage")
+def test_WHEN_should_proceed_with_operation_AND_happy_path_THEN_as_expected(mock_confirm):
+    # Set up our mock
+    user_config = UserConfig(1, 30, 365, 2, 30)   
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        None
+    )
+
+    mock_confirm.return_value = True
+
+    # Run our test
+    actual_value = _should_proceed_with_operation(True, cluster_plan, cluster_plan, user_config, user_config, True,
+                                                  "1.2.3.4/24", "2.3.4.5/26")
+
+    # Check our results
+    assert True == actual_value
+
+    expected_confirm_calls = [
+        mock.call(cluster_plan, cluster_plan, user_config, user_config, True)
+    ]
+    assert expected_confirm_calls == mock_confirm.call_args_list
+
+@mock.patch("commands.cluster_create._confirm_usage")
+def test_WHEN_should_proceed_with_operation_AND_change_capture_cidr_THEN_as_expected(mock_confirm):
+    # Set up our mock
+    user_config = UserConfig(1, 30, 365, 2, 30)  
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
+        None
+    )
+
+    mock_confirm.return_value = False
+
+    # Run our test
+    actual_value = _should_proceed_with_operation(False, cluster_plan, cluster_plan, user_config, user_config, True, "1.2.3.4/24", None)
+
+    # Check our results
+    assert False == actual_value
+
+    expected_confirm_calls = []
+    assert expected_confirm_calls == mock_confirm.call_args_list
+
+@mock.patch("commands.cluster_create._confirm_usage")
+def test_WHEN_should_proceed_with_operation_AND_change_viewer_cidr_THEN_as_expected(mock_confirm):
+    # Set up our mock
+    user_config = UserConfig(1, 30, 365, 2, 30)  
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
+        None
+    )
+
+    mock_confirm.return_value = False
+
+    # Run our test
+    actual_value = _should_proceed_with_operation(False, cluster_plan, cluster_plan, user_config, user_config, True, None, "1.2.3.4/24")
+
+    # Check our results
+    assert False == actual_value
+
+    expected_confirm_calls = []
+    assert expected_confirm_calls == mock_confirm.call_args_list
+
+@mock.patch("commands.cluster_create._confirm_usage")
+def test_WHEN_should_proceed_with_operation_AND_check_overlapping_cidrs_THEN_as_expected(mock_confirm):
+    user_config = UserConfig(1, 30, 365, 2, 30)
+    mock_confirm.return_value = True
+
+    # TEST: Both specified, and don't overlap
+    cluster_plan =  ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
+        VpcPlan(Cidr("2.3.4.5/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+    )    
+
+    actual_value = _should_proceed_with_operation(False, cluster_plan, cluster_plan, user_config, user_config, True, None, None)
+    assert True == actual_value
+
+    assert mock_confirm.called
+
+    # TEST: Both specified, and do overlap
+    cluster_plan =  ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 20, 25, 1),
+        VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(20, 5),
+        VpcPlan(Cidr("1.2.3.48/26"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+    )
+    user_config = UserConfig(1, 30, 365, 2, 30)
+
+    actual_value = _should_proceed_with_operation(False, cluster_plan, cluster_plan, user_config, user_config, True, None, None)
+    assert False == actual_value
+
+@mock.patch("commands.cluster_create._confirm_usage")
+def test_WHEN_should_proceed_with_operation_AND_abort_usage_THEN_as_expected(mock_confirm):
+    # Set up our mock
+    user_config = UserConfig(1, 30, 365, 2, 30) 
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        None
+    )
+
+    mock_confirm.return_value = False
+
+    # Run our test
+    actual_value = _should_proceed_with_operation(True, cluster_plan, cluster_plan, user_config, user_config, True, None, None)
+
+    # Check our results
+    assert False == actual_value
+
+    expected_confirm_calls = [
+        mock.call(cluster_plan, cluster_plan, user_config, user_config, True)
+    ]
+    assert expected_confirm_calls == mock_confirm.call_args_list
+
+@mock.patch("commands.cluster_create._confirm_usage")
+def test_WHEN_should_proceed_with_operation_AND_doesnt_fit_THEN_as_expected(mock_confirm):
+    # Set up our mock
+    user_config = UserConfig(1, 30, 365, 2, 30) 
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 100, 200, 100),
+        VpcPlan(Cidr("1.2.3.4/28"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(100, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        None
+    )
+
+    mock_confirm.return_value = True
+
+    # Run our test
+    actual_value = _should_proceed_with_operation(True, cluster_plan, cluster_plan, user_config, user_config, True, None, None)
+
+    # Check our results
+    assert False == actual_value
+
+    expected_confirm_calls = [
+        mock.call(cluster_plan, cluster_plan, user_config, user_config, True)
+    ]
+    assert expected_confirm_calls == mock_confirm.call_args_list
 
 @mock.patch("commands.cluster_create.ssm_ops")
 def test_WHEN_get_previous_user_config_called_AND_exists_THEN_as_expected(mock_ssm_ops):
@@ -582,7 +621,20 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
         "s3": {
             "pcapStorageClass": "STANDARD",
             "pcapStorageDays": 30
-        }
+        },
+        "viewerNodes": {
+            "maxCount": 4,
+            "minCount": 2,
+        },
+        "viewerVpc": {
+            "cidr": {
+                "block": "2.3.4.5/26",
+                "prefix": "2.3.4.5",
+                "mask": "26",
+            },
+            "numAzs": 2,
+            "publicSubnetMask": 28,
+        },
     }
 
     mock_provider = mock.Mock()
@@ -593,11 +645,12 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
     # Check our results
     expected_value = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "r6g.large.search", 1024), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 30),
         ViewerNodesPlan(4, 2),
+        VpcPlan(Cidr("2.3.4.5/26"), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK),
     )
     assert expected_value == actual_value
 
@@ -621,11 +674,12 @@ def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expecte
     # Check our results
     expected_value = ClusterPlan(
         CaptureNodesPlan(None, None, None, None),
-        CaptureVpcPlan(None, None, None),
+        VpcPlan(None, None, None),
         EcsSysResourcePlan(None, None),
         OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
         S3Plan(None, None),
         ViewerNodesPlan(None, None),
+        None
     )
     assert expected_value == actual_value
 
@@ -635,39 +689,43 @@ def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expecte
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
+@mock.patch("commands.cluster_create.get_viewer_vpc_plan")
 @mock.patch("commands.cluster_create.get_capture_vpc_plan")
 @mock.patch("commands.cluster_create.get_os_domain_plan")
 @mock.patch("commands.cluster_create.get_capture_node_capacity_plan")
 @mock.patch("commands.cluster_create.ssm_ops")
-def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os, mock_get_capture):
+def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os, mock_get_capture, mock_get_viewer):
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
     mock_ssm_ops.get_ssm_param_json_value.side_effect = ssm_ops.ParamDoesNotExist("")
 
     mock_get_cap.return_value = CaptureNodesPlan("m5.xlarge", 1, 2, 1)
     mock_get_os.return_value = OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
-    mock_get_capture.return_value = CaptureVpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+    mock_get_capture.return_value = VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+    mock_get_viewer.return_value = VpcPlan(Cidr("2.3.4.5/26"), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK)
 
     previous_cluster_plan = ClusterPlan(
         CaptureNodesPlan(None, None, None, None),
-        CaptureVpcPlan(None, None, None),
+        VpcPlan(None, None, None),
         EcsSysResourcePlan(None, None),
         OSDomainPlan(DataNodesPlan(None, None, None), MasterNodesPlan(None, None)),
         S3Plan(None, None),
         ViewerNodesPlan(None, None),
+        None
     )
 
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_capacity_plan(UserConfig(1, 40, 120, 2, 35), "1.2.3.4/24", previous_cluster_plan)
+    actual_value = _get_next_capacity_plan(UserConfig(1, 40, 120, 2, 35), previous_cluster_plan, "1.2.3.4/24", "2.3.4.5/26")
 
     # Check our results
     assert mock_get_cap.return_value == actual_value.captureNodes
-    assert CaptureVpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value.captureVpc
+    assert VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value.captureVpc
     assert mock_get_os.return_value == actual_value.osDomain
     assert EcsSysResourcePlan(3584, 15360) == actual_value.ecsResources
     assert S3Plan(DEFAULT_S3_STORAGE_CLASS, 35) == actual_value.s3
+    assert VpcPlan(Cidr("2.3.4.5/26"), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK) == actual_value.viewerVpc
 
     expected_get_cap_calls = [
         mock.call(1)
@@ -680,9 +738,15 @@ def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_
     assert expected_get_os_calls == mock_get_os.call_args_list
 
     expected_get_capture_vpc_calls = [
-        mock.call(CaptureVpcPlan(None, None, None), "1.2.3.4/24")
+        mock.call(VpcPlan(None, None, None), "1.2.3.4/24")
     ]
     assert expected_get_capture_vpc_calls == mock_get_capture.call_args_list
+
+    expected_get_viewer_vpc_calls = [
+        mock.call(None, "2.3.4.5/26")
+    ]
+    assert expected_get_viewer_vpc_calls == mock_get_viewer.call_args_list
+
 
 @mock.patch("commands.cluster_create.UsageReport")
 @mock.patch("commands.cluster_create.PriceReport")
@@ -1027,4 +1091,125 @@ def test_WHEN_tag_domain_called_THEN_as_expected(mock_get_ssm_json):
         )
     ]
     assert expected_add_tag_calls == mock_os_client.add_tags.call_args_list
+
+@mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_value")
+def test_WHEN_is_initial_invocation_called_THEN_as_expected(mock_get_ssm):
+    # Set up our mock
+    mock_provider = mock.Mock()
+
+    # TEST: This is the "initial" invocation of the command
+    mock_get_ssm.side_effect = ssm_ops.ParamDoesNotExist("")
+
+    actual_value = _is_initial_invocation("MyCluster", mock_provider)
+    assert True == actual_value
+    
+    expected_get_ssm_calls = [
+        mock.call(constants.get_cluster_ssm_param_name("MyCluster"), mock_provider)
+    ]
+    assert expected_get_ssm_calls == mock_get_ssm.call_args_list
+
+    # TEST: This is not the "initial" invocation of the command
+    mock_get_ssm.side_effect = ["blah"]
+
+    actual_value = _is_initial_invocation("MyCluster", mock_provider)
+    assert False == actual_value
+
+def test_WHEN_get_stacks_to_deploy_called_THEN_as_expected():
+    cluster_name = "MyCluster"
+    user_config = UserConfig(1, 30, 365, 2, 30)   
+
+    # TEST: No Viewer VPC
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        None
+    )
+
+    actual_value = _get_stacks_to_deploy(cluster_name, user_config, cluster_plan)
+
+    expected_value = [
+        constants.get_capture_bucket_stack_name(cluster_name),
+        constants.get_capture_nodes_stack_name(cluster_name),
+        constants.get_capture_vpc_stack_name(cluster_name),
+        constants.get_opensearch_domain_stack_name(cluster_name),
+        constants.get_viewer_nodes_stack_name(cluster_name)
+    ]
+    assert expected_value == actual_value  
+
+    # TEST: Has a Viewer VPC
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+    )
+
+    actual_value = _get_stacks_to_deploy(cluster_name, user_config, cluster_plan)
+
+    expected_value = [
+        constants.get_capture_bucket_stack_name(cluster_name),
+        constants.get_capture_nodes_stack_name(cluster_name),
+        constants.get_capture_vpc_stack_name(cluster_name),
+        constants.get_opensearch_domain_stack_name(cluster_name),
+        constants.get_viewer_nodes_stack_name(cluster_name),
+        constants.get_capture_tgw_stack_name(cluster_name),
+        constants.get_viewer_vpc_stack_name(cluster_name),
+    ]
+    assert expected_value == actual_value
+
+def test_WHEN_get_cdk_context_called_THEN_as_expected():
+    cluster_name = "MyCluster"
+    cert_arn = "arn:cert"
+    aws_env = AwsEnvironment("XXXXXXXXXXX", "my-region-1", "profile")
+    user_config = UserConfig(1, 30, 365, 2, 30)
+
+    cluster_plan = ClusterPlan(
+        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        EcsSysResourcePlan(3584, 15360),
+        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
+        S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
+        ViewerNodesPlan(4, 2),
+        None
+    )
+
+    stack_names = context.ClusterStackNames(
+        captureBucket=constants.get_capture_bucket_stack_name(cluster_name),
+        captureNodes=constants.get_capture_nodes_stack_name(cluster_name),
+        captureVpc=constants.get_capture_vpc_stack_name(cluster_name),
+        captureTgw=constants.get_capture_tgw_stack_name(cluster_name),
+        osDomain=constants.get_opensearch_domain_stack_name(cluster_name),
+        viewerNodes=constants.get_viewer_nodes_stack_name(cluster_name),
+        viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
+    )
+
+    actual_value = _get_cdk_context(cluster_name, user_config, cluster_plan, cert_arn, aws_env)
+
+    expected_value = {
+        constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_create,
+        constants.CDK_CONTEXT_PARAMS_VAR: shlex.quote(json.dumps({
+            "nameCluster": cluster_name,
+            "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(cluster_name),
+            "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(cluster_name),
+            "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name(cluster_name),
+            "nameClusterConfigBucket": constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name),
+            "nameClusterSsmParam": constants.get_cluster_ssm_param_name(cluster_name),
+            "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(cluster_name),
+            "nameViewerCertArn": cert_arn,
+            "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(cluster_name),
+            "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name(cluster_name),
+            "planCluster": json.dumps(cluster_plan.to_dict()),
+            "stackNames": json.dumps(stack_names.to_dict()),
+            "userConfig": json.dumps(user_config.to_dict()),
+        }))
+    }
+
+    assert expected_value == actual_value
     

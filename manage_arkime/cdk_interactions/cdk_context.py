@@ -1,64 +1,100 @@
+from dataclasses import dataclass
 import json
 import shlex
 from typing import Dict, List
 
 import core.constants as constants
-from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, CaptureVpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
+from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, VpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
                                     MasterNodesPlan, OSDomainPlan, DEFAULT_NUM_AZS, S3Plan, DEFAULT_S3_STORAGE_CLASS,
                                     DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK)
 from core.user_config import UserConfig
 
+@dataclass
+class ClusterStackNames:
+    captureBucket: str
+    captureNodes: str
+    captureTgw: str
+    captureVpc: str
+    osDomain: str
+    viewerNodes: str
+    viewerVpc: str
+
+    def __eq__(self, other) -> bool:
+        return (
+            self.captureBucket == other.captureBucket and self.captureNodes == other.captureNodes
+            and self.captureTgw == other.captureTgw and self.captureVpc == other.captureVpc
+            and self.osDomain == other.osDomain and self.viewerNodes == other.viewerNodes
+            and self.viewerVpc == other.viewerVpc    
+        )
+    
+    def to_dict(self) -> Dict[str, str]:
+        return {
+            "captureBucket": self.captureBucket,
+            "captureNodes": self.captureNodes,
+            "captureTgw": self.captureTgw,
+            "captureVpc": self.captureVpc,
+            "osDomain": self.osDomain,
+            "viewerNodes": self.viewerNodes,
+            "viewerVpc": self.viewerVpc,
+        }
+
 def generate_cluster_create_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan,
-                                    user_config: UserConfig, cluster_config_bucket_name: str) -> Dict[str, str]:
+                                    user_config: UserConfig, cluster_config_bucket_name: str,
+                                    stack_names: ClusterStackNames) -> Dict[str, str]:
     create_context = _generate_cluster_context(
         name,
         viewer_cert_arn,
         cluster_plan,
         user_config,
-        cluster_config_bucket_name
+        cluster_config_bucket_name,
+        stack_names
     )
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_cluster_create
     return create_context
 
-def generate_cluster_destroy_context(name: str) -> Dict[str, str]:
+def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames, has_viewer_vpc: bool) -> Dict[str, str]:
     # Hardcode these value because it saves us some implementation headaches and it doesn't matter what it is. Since
     # we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are irrelevant
     # or it fails/rolls back they are irrelevant.
     fake_arn = "N/A"
     fake_cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        CaptureVpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
         ViewerNodesPlan(4, 2),
+        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK) if has_viewer_vpc else None,
     )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
     fake_bucket_name = ""
 
-    destroy_context = _generate_cluster_context(name, fake_arn, fake_cluster_plan, fake_user_config, fake_bucket_name)
+    destroy_context = _generate_cluster_context(
+        name,
+        fake_arn,
+        fake_cluster_plan,
+        fake_user_config,
+        fake_bucket_name,
+        stack_names
+    )
     destroy_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_cluster_destroy
     return destroy_context
 
 def _generate_cluster_context(name: str, viewer_cert_arn: str, cluster_plan: ClusterPlan, user_config: UserConfig,
-                              cluster_config_bucket_name: str) -> Dict[str, str]:
+                              cluster_config_bucket_name: str, stack_names: ClusterStackNames) -> Dict[str, str]:
     cmd_params = {
         "nameCluster": name,
-        "nameCaptureBucketStack": constants.get_capture_bucket_stack_name(name),
         "nameCaptureBucketSsmParam": constants.get_capture_bucket_ssm_param_name(name),
         "nameCaptureConfigSsmParam": constants.get_capture_config_details_ssm_param_name(name),
         "nameCaptureDetailsSsmParam": constants.get_capture_details_ssm_param_name(name),
-        "nameCaptureNodesStack": constants.get_capture_nodes_stack_name(name),
-        "nameCaptureVpcStack": constants.get_capture_vpc_stack_name(name),
         "nameClusterConfigBucket": cluster_config_bucket_name,
         "nameClusterSsmParam": constants.get_cluster_ssm_param_name(name),
-        "nameOSDomainStack": constants.get_opensearch_domain_stack_name(name),
         "nameOSDomainSsmParam": constants.get_opensearch_domain_ssm_param_name(name),
         "nameViewerCertArn": viewer_cert_arn,
         "nameViewerConfigSsmParam": constants.get_viewer_config_details_ssm_param_name(name),
         "nameViewerDetailsSsmParam": constants.get_viewer_details_ssm_param_name(name),
-        "nameViewerNodesStack": constants.get_viewer_nodes_stack_name(name),
         "planCluster": json.dumps(cluster_plan.to_dict()),
+        "stackNames": json.dumps(stack_names.to_dict()),
         "userConfig": json.dumps(user_config.to_dict()),
     }
 

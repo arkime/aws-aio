@@ -203,59 +203,94 @@ def test_WHEN_cidr_created_THEN_as_expected():
 
 def test_WHEN_get_capture_vpc_plan_called_THEN_as_expected():
     # TEST: There's an existing plan, return it
-    previous_plan = cap.CaptureVpcPlan(cap.Cidr("1.2.3.4/24"), 2, cap.DEFAULT_CAPTURE_PUBLIC_MASK)
+    previous_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 2, cap.DEFAULT_CAPTURE_PUBLIC_MASK)
     actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16")
 
     assert previous_plan == actual_value
 
     # TEST: There's not an existing plan, use defaults
-    previous_plan = cap.CaptureVpcPlan(None, None, None)
+    previous_plan = cap.VpcPlan(None, None, None)
     actual_value = cap.get_capture_vpc_plan(previous_plan, None)
 
-    assert cap.CaptureVpcPlan(cap.DEFAULT_VPC_CIDR, cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
+    assert cap.VpcPlan(cap.DEFAULT_VPC_CIDR, cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
 
     # TEST: There's not an existing plan, use specified CIDR
-    previous_plan = cap.CaptureVpcPlan(None, None, None)
+    previous_plan = cap.VpcPlan(None, None, None)
     actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16")
 
-    assert cap.CaptureVpcPlan(cap.Cidr("5.5.5.5/16"), cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
+    assert cap.VpcPlan(cap.Cidr("5.5.5.5/16"), cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
 
-def test_WHEN_get_usable_capture_ips_called_THEN_as_expected():
+def test_WHEN_get_viewer_vpc_plan_called_THEN_as_expected():
+    # TEST: There's an existing plan, return it
+    previous_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 2, cap.DEFAULT_VIEWER_PUBLIC_MASK)
+    actual_value = cap.get_viewer_vpc_plan(previous_plan, "5.5.5.5/16")
+
+    assert previous_plan == actual_value
+
+    # TEST: There's not an existing plan, return None
+    previous_plan = None
+    actual_value = cap.get_viewer_vpc_plan(previous_plan, None)
+
+    assert None == actual_value
+
+    # TEST: There's not an existing plan, use specified CIDR
+    previous_plan = None
+    actual_value = cap.get_viewer_vpc_plan(previous_plan, "5.5.5.5/16")
+
+    assert cap.VpcPlan(cap.Cidr("5.5.5.5/16"), cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
+
+def test_WHEN_get_usable_ips_called_THEN_as_expected():
     # TEST: Example 1
-    test_plan = cap.CaptureVpcPlan(cap.Cidr("1.2.3.4/26"), 2, 28)
+    test_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/26"), 2, 28)
     actual_value = test_plan.get_usable_ips()
 
     assert 28 == actual_value
 
     # TEST: Example 2
-    test_plan = cap.CaptureVpcPlan(cap.Cidr("1.2.3.4/24"), 2, 28)
+    test_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 2, 28)
     actual_value = test_plan.get_usable_ips()
 
     assert 220 == actual_value
 
 def test_WHEN_will_capture_plan_fit_called_THEN_as_expected():
-    # TEST: The plan fits
+    # TEST: The plan fits - single VPC
     test_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan("m5.xlarge", 10, 15, 10),
-        cap.CaptureVpcPlan(cap.Cidr("1.2.3.4/24"), 3, 28),
+        cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 3, 28),
         cap.EcsSysResourcePlan(3584, 15360),
         cap.OSDomainPlan(cap.DataNodesPlan(10, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
         cap.ViewerNodesPlan(4, 2),
+        None
     )
     actual_value = test_plan.will_capture_plan_fit()
 
     assert True == actual_value
 
-    # TEST: The plan doesn't fit
+    # TEST: The plan doesn't fit - single VPC
     test_plan = cap.ClusterPlan(
-        cap.CaptureNodesPlan("m5.xlarge", 10, 15, 10),
-        cap.CaptureVpcPlan(cap.Cidr("1.2.3.4/26"), 3, 28),
+        cap.CaptureNodesPlan("m5.xlarge", 3, 5, 3),
+        cap.VpcPlan(cap.Cidr("1.2.3.4/25"), 3, 28),
         cap.EcsSysResourcePlan(3584, 15360),
-        cap.OSDomainPlan(cap.DataNodesPlan(40, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
+        cap.OSDomainPlan(cap.DataNodesPlan(64, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
         cap.ViewerNodesPlan(4, 2),
+        None
     )
     actual_value = test_plan.will_capture_plan_fit()
 
     assert False == actual_value
+
+    # TEST: The plan fits - dual VPC
+    test_plan = cap.ClusterPlan(
+        cap.CaptureNodesPlan("m5.xlarge", 3, 5, 3),
+        cap.VpcPlan(cap.Cidr("1.2.3.4/25"), 3, 28),
+        cap.EcsSysResourcePlan(3584, 15360),
+        cap.OSDomainPlan(cap.DataNodesPlan(62, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
+        cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
+        cap.ViewerNodesPlan(4, 2),
+        cap.VpcPlan(cap.Cidr("2.3.4.5/26"), 2, 28),
+    )
+    actual_value = test_plan.will_capture_plan_fit()
+
+    assert True == actual_value

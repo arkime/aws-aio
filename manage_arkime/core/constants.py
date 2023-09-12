@@ -62,6 +62,9 @@ def get_capture_details_ssm_param_name(cluster_name: str) -> str:
 def get_capture_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureNodes"
 
+def get_capture_tgw_stack_name(cluster_name: str) -> str:
+    return f"{cluster_name}-CaptureTGW"
+
 def get_capture_vpc_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-CaptureVPC"
 
@@ -109,6 +112,9 @@ def get_viewer_user_ssm_param_name(cluster_name: str) -> str:
 
 def get_viewer_nodes_stack_name(cluster_name: str) -> str:
     return f"{cluster_name}-ViewerNodes"
+
+def get_viewer_vpc_stack_name(cluster_name: str) -> str:
+    return f"{cluster_name}-ViewerVpc"
 
 def get_vpc_mirror_setup_stack_name(cluster_name: str, vpc_id: str) -> str:
     return f"{cluster_name}-{vpc_id}-Mirror"
