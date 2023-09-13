@@ -69,7 +69,7 @@ class PriceReport:
         # Expect to only saving 25% of pcap because of TLS and zlib
         s3 = math.ceil(self._plan.s3.pcapStorageDays * expectedTraffic * 0.25 * 60 * 60 * 24)
         report_text = (
-            "OnDemand us-east-1 cost estimate, your cost may be different based on region, discounts or reserve instances:\n"
+            "Estimated OnDemand costs based on us-east-1 pricing. Your actual cost may vary depending on usage, region, discounts, and additional services used:\n"
             + "Allocated:\n"
             + self._line("Capture", self._plan.captureNodes.instanceType, self._plan.captureNodes.desiredCount)
             + self._line("Viewer", "fargate", self._plan.viewerNodes.minCount)
