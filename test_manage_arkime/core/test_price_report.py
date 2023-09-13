@@ -25,7 +25,7 @@ def test_WHEN_PriceReport_get_report_THEN_as_expected():
 
     # Check the results
     expected_report = (
-      "OnDemand us-east-1 cost estimate, your cost may be different based on region, discounts or reserve instances:\n"
+      "Estimated OnDemand costs based on us-east-1 pricing. Your actual cost may vary depending on usage, region, discounts, and additional services used:\n"
       + "Allocated:\n"
       + "   Capture                         1 * $ 140.1600/mo = $    140.16/mo\n"
       + "   Viewer                          3 * $  29.5504/mo = $     88.65/mo\n"
