@@ -22,9 +22,9 @@ Resources of those types should have capture configured for them when they are b
 ![High Level Design](./cloud_arkime_design.png?raw=true)
 
 
-**Figure 2:** Current detailed design of the Arkime AWS All-in-One Project
+**Figure 2:** Current detailed design of the Arkime AWS All-in-One Project w/ all features in use
 
-![Detailed Design](./cloud_arkime_design_detailed.png?raw=true)
+![Detailed, All-Features Design](./cloud_arkime_design_all_features.png?raw=true)
 
 
 ## How to run the AWS All-in-One CLI
