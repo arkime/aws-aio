@@ -23,7 +23,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest
           python -m venv .venv
           source .venv/bin/activate
           (cd manage_arkime ; pip install -r requirements.txt)
@@ -33,7 +32,7 @@ jobs:
           # stop the build if there are Python syntax errors or undefined names
           ruff --format=github --select=E9,F63,F7,F82 --target-version=py37 .
           # default set of ruff rules with GitHub Annotations
-          #          ruff --format=github --target-version=py37 .
+          ruff --format=github .
       - name: Test with pytest
         run: |
           source .venv/bin/activate
