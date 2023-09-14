@@ -70,7 +70,7 @@ You can deploy copies of this container to your AWS Account like so.  First, set
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+(cd manage_arkime ; pip install -r requirements.txt)
 ```
 
 Next, pull in the Node dependencies required for the CDK:
@@ -294,7 +294,7 @@ and then terminating the Arkime Cluster:
 ./manage_arkime.py cluster-destroy --name MyCluster
 ```
 
-By default, this will tear down the Capture/Viewer Nodes and leave the OpenSearch Domain and Capture Bucket intact.  Consequently, it will also leave a number of CloudFormation stacks in place as well.  
+By default, this will tear down the Capture/Viewer Nodes and leave the OpenSearch Domain and Capture Bucket intact.  Consequently, it will also leave a number of CloudFormation stacks in place as well.
 
 If you want to tear down **EVERYTHING** and are willing to blow away all your data, you can use the "nuke" option:
 
