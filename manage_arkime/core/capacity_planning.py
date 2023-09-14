@@ -4,7 +4,6 @@ import logging
 import re
 import sys
 from typing import Dict, Type, TypeVar
-from core.user_config import UserConfig
 
 
 logger = logging.getLogger(__name__)
@@ -175,7 +174,7 @@ def get_ecs_sys_resource_plan(instance_type: str) -> EcsSysResourcePlan:
     """
 
     chosen_instance = next((instance for instance in CAPTURE_INSTANCES if instance_type == instance.instanceType), None)
-    if chosen_instance == None:
+    if chosen_instance is None:
         raise UnknownInstanceType(instance_type)
     else:
         return EcsSysResourcePlan(chosen_instance.ecsCPU, chosen_instance.ecsMemory)

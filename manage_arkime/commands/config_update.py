@@ -2,7 +2,7 @@ import json
 import logging
 from sys import exit
 from time import sleep
-from typing import Callable, Dict, List
+from typing import Callable
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider

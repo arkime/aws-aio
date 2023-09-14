@@ -69,7 +69,7 @@ class CreateEniMirrorHandler:
                     aws_provider,
                     virtual_network=create_event.vni
                 )
-            except ec2i.NonMirrorableEniType as ex:
+            except ec2i.NonMirrorableEniType:
                 self.logger.warning(f"Eni {eni.eni_id} is of unsupported type {eni.eni_type}; aborting...")
                 cwi.put_event_metrics(
                     cwi.CreateEniMirrorEventMetrics(

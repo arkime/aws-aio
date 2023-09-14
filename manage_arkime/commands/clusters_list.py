@@ -7,7 +7,7 @@ import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
-from core.cross_account_wrangling import CrossAccountAssociation, get_cross_account_vpc_details
+from core.cross_account_wrangling import get_cross_account_vpc_details
 
 logger = logging.getLogger(__name__)
 

@@ -23,7 +23,7 @@ from core.capacity_planning import (get_capture_node_capacity_plan, get_viewer_n
                                     ClusterPlan, VpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, get_capture_vpc_plan,
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS,
                                     CaptureNodesPlan, ViewerNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan,
-                                    get_viewer_vpc_plan, DEFAULT_VPC_CIDR)
+                                    get_viewer_vpc_plan)
 from core.versioning import get_version_info
 from core.user_config import UserConfig
 

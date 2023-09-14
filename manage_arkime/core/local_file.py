@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import os
 import shutil
 import tarfile
-from typing import Dict, List
+from typing import Dict
 
 
 class FileNotGenerated(Exception):

@@ -7,7 +7,6 @@ from typing import Dict, List
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ec2_interactions as ec2i
 import aws_interactions.events_interactions as events
-import core.constants as constants
 
 class AwsEventType(Enum):
     EC2_RUNNING="Ec2Running"
