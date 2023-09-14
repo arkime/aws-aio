@@ -349,7 +349,7 @@ You can read more about running unit tests with Pytest [here](https://docs.pytes
 ### Step 3 - Run Ruff
 The linter is executed by invoking Ruff:
 ```
-ruff --target-version=py39 .
+ruff .
 ```
 
 You can read more about Python linting with Ruff [here](https://beta.ruff.rs/docs/).

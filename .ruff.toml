@@ -8,3 +8,6 @@ line-length = 200
 ignore= [
 "F541", # Allow f strings always
 ]
+
+# Minimum version required
+target-version = "py39"
