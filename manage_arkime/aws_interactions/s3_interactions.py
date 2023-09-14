@@ -4,7 +4,6 @@ import logging
 from botocore.exceptions import ClientError
 
 from aws_interactions.aws_client_provider import AwsClientProvider
-import core.constants as constants
 from core.local_file import S3File
 
 logger = logging.getLogger(__name__)

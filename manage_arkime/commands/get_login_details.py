@@ -2,7 +2,6 @@ from dataclasses import dataclass
 import json
 import logging
 import sys
-from typing import Dict, List
 
 from arkime_interactions.config_wrangling import ViewerDetails
 from aws_interactions.aws_client_provider import AwsClientProvider

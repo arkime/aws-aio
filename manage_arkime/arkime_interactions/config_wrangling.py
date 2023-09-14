@@ -187,7 +187,7 @@ def set_up_arkime_config_dir(cluster_name: str, aws_env: AwsEnvironment, parent_
     try:
         logger.info(f"Copying default Arkime Config to dir: {cluster_config_dir_path}")
         _copy_default_config_to_cluster_dir(cluster_name, aws_env, parent_dir)
-    except ConfigDirNotEmpty as ex:
+    except ConfigDirNotEmpty:
         logger.info("Cluster config directory not empty; skipping copy")
 
 def get_capture_config_archive(cluster_name: str, aws_env: AwsEnvironment) -> LocalFile:

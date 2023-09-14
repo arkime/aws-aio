@@ -1,8 +1,5 @@
-from dataclasses import dataclass
 import logging
-from typing import List, Dict
 
-from botocore.exceptions import ClientError
 
 from aws_interactions.aws_client_provider import AwsClientProvider
 

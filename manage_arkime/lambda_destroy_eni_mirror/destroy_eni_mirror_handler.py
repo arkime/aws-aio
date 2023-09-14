@@ -40,7 +40,7 @@ class DestroyEniMirrorHandler:
             self.logger.info(f"Removing mirroring session for eni {destroy_event.eni_id}: {traffic_session_id}...")
             try:
                 ec2i.delete_eni_mirroring(traffic_session_id, aws_provider)
-            except ec2i.MirrorDoesntExist as ex:
+            except ec2i.MirrorDoesntExist:
                 self.logger.info(f"Traffic mirroring session {traffic_session_id} not found; something else must have deleted it. Skipping...")
 
             self.logger.info(f"Deleting SSM parameter for ENI {destroy_event.eni_id}: {eni_param}")

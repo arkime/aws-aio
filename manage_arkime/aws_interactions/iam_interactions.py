@@ -1,6 +1,4 @@
-from dataclasses import dataclass
 import logging
-from typing import List, Dict
 
 from botocore.exceptions import ClientError
 

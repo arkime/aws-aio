@@ -1,0 +1,10 @@
+# Don't check tests directory
+extend-exclude = ["test_manage_arkime"]
+
+# For now allow long lines
+line-length = 200
+
+# rules to disable
+ignore= [
+"F541", # Allow f strings always
+]
