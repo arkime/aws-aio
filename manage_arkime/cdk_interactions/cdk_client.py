@@ -1,5 +1,4 @@
 import logging
-import re
 from typing import Dict, List
 
 import core.shell_interactions as shell
@@ -66,7 +65,7 @@ class CdkClient:
 
         try:
             exceptions.raise_common_exceptions(exit_code, stdout)
-        except exceptions.CommonCdkNotBootstrapped as exception:
+        except exceptions.CommonCdkNotBootstrapped:
             # If the CDK setup isn't bootstrapped, attempt to bootstrap and redeploy
             logger.warning("The AWS Account/Region does not appear to be CDK Bootstrapped, which is required for"
                         + " deployment.  Attempting to bootstrap now...")

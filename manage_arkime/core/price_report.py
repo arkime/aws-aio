@@ -1,7 +1,6 @@
 from core.capacity_planning import ClusterPlan
 from core.user_config import UserConfig
 from typing import Dict
-from dataclasses import dataclass
 import math
 
 AWS_HOURS_PER_MONTH=730

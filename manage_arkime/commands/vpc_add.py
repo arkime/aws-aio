@@ -80,7 +80,7 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
     try:
         subnet_ids = ec2i.get_subnets_of_vpc(vpc_id, vpc_acct_provider)
         vpc_details = ec2i.get_vpc_details(vpc_id, vpc_acct_provider)
-    except ec2i.VpcDoesNotExist as ex:
+    except ec2i.VpcDoesNotExist:
         logger.error(f"The VPC {vpc_id} does not exist in the account/region")
         logger.warning("Aborting...")
         return

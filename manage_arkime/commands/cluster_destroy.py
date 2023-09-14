@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Dict, List
 
@@ -47,7 +46,7 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
         bucket_name = get_ssm_param_value(param_name=constants.get_capture_bucket_ssm_param_name(name), aws_client_provider=aws_provider)
         destroy_bucket(bucket_name=bucket_name, aws_provider=aws_provider)
 
-    has_viewer_vpc = not (cluster_plan.viewerVpc is None)
+    has_viewer_vpc = cluster_plan.viewerVpc is not None
     stacks_to_destroy = _get_stacks_to_destroy(name, destroy_everything, has_viewer_vpc)
     destroy_context = _get_cdk_context(name, has_viewer_vpc)
 
