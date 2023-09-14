@@ -33,7 +33,7 @@ Resources of those types should have capture configured for them when they are b
 
 * REQUIRED: A copy of the repo on your local host
 * REQUIRED: A properly installed/configured copy of Node ([see instructions here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
-* REQUIRED: A properly installed/configured copy of Python 3.6+ and venv ([see instructions here](https://realpython.com/installing-python/))
+* REQUIRED: A properly installed/configured copy of Python 3.9+ and venv ([see instructions here](https://realpython.com/installing-python/))
 * REQUIRED: A properly installed/configured copy of Docker (instructions vary by platform/organization)
 * REQUIRED: A properly installed/configured copy of the CDK CLI ([see instructions here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html))
 * REQUIRED: Valid, accessible AWS Credentials (see [instructions here](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html) and [here](https://docs.aws.amazon.com/sdk-for-javascript/v2/developer-guide/setting-credentials-node.html))
@@ -316,7 +316,9 @@ Finally, you can create an interactive session using the AWS CLI.  You'll need t
 aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/bash"
 ```
 
-## How to run the unit tests
+## How to run the unit tests & lint
+
+We now require that the ruff linter and unit tests pass before merging PRs.
 
 ### Step 1 - Activate your Python virtual environment
 
@@ -324,9 +326,7 @@ To isolate the Python environment for the project from your local machine, creat
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-cd manage_arkime/
-pip install -r requirements.txt
-cd ../
+(cd manage_arkime ; pip install -r requirements.txt)
 ```
 
 You can exit the Python virtual environment and remove its resources like so:
@@ -345,6 +345,15 @@ python -m pytest test_manage_arkime/
 ```
 
 You can read more about running unit tests with Pytest [here](https://docs.pytest.org/en/7.2.x/how-to/usage.html).
+
+### Step 3 - Run Ruff
+The linter is executed by invoking Ruff:
+```
+ruff --target-version=py39 .
+```
+
+You can read more about Python linting with Ruff [here](https://beta.ruff.rs/docs/).
+
 
 ## Performing CDK Bootstrap
 
