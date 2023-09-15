@@ -255,7 +255,7 @@ export class CaptureNodesStack extends cdk.Stack {
             },
             targets: [new targets.CloudWatchLogGroup(clusterLogGroup)]
         });
-        
+
         /**
          * This SSM parameter will enable us share the details of our Cluster.
          */
@@ -296,7 +296,7 @@ export class CaptureNodesStack extends cdk.Stack {
         /**
          * Create the Lambda set up the ISM policy for the OpenSearch Domain.  It receives events via a rule on the
          * Cluster Event Bus.
-        */ 
+        */
         const configureIsmLambda = new lambda.Function(this, 'ConfigureIsmLambda', {
             vpc: props.captureVpc,
             functionName: `${props.clusterName}-ConfigureIsm`,
@@ -309,7 +309,7 @@ export class CaptureNodesStack extends cdk.Stack {
                     'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
                     ],
                 },
-            }),            
+            }),
             handler: 'lambda_handlers.configure_ism_handler',
             timeout:  cdk.Duration.seconds(30), // Something has gone very wrong if this is exceeded,
             environment: {
