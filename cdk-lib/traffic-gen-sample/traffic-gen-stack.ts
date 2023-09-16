@@ -19,23 +19,11 @@ export class TrafficGenStack extends cdk.Stack {
         /**
          * Set up our demo Traffic Generator's networking
          */
-        // This is a Stock VPC w/ a Public/Private subnet pair in 1 AZ along with NATGateways providing internet access 
+        // This is a Stock VPC w/ a Public/Private subnet pair in 1 AZ along with NATGateways providing internet access
         // to the private subnet.
         const vpc = new ec2.Vpc(this, 'VPC', {
             ipAddresses: ec2.IpAddresses.cidr(props.cidr),
             maxAzs: 1
-        });
-
-        // Set up VPC Flow Logs to enable visibility of the traffic mirroring on the user-side
-        const flowLogsGroup = new logs.LogGroup(this, 'FlowLogsLogGroup', {
-            logGroupName: `FlowLogs-${id}`,
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-            retention: logs.RetentionDays.TEN_YEARS,
-        });
-
-        new ec2.FlowLog(this, 'FlowLogs', {
-            resourceType: ec2.FlowLogResourceType.fromVpc(vpc),
-            destination: ec2.FlowLogDestination.toCloudWatchLogs(flowLogsGroup),
         });
 
         /**
@@ -71,7 +59,7 @@ export class TrafficGenStack extends cdk.Stack {
             memoryLimitMiB: 512,
             logging: new ecs.AwsLogDriver({ streamPrefix: 'DemoTrafficGenFargate', mode: ecs.AwsLogDriverMode.NON_BLOCKING })
         });
-        
+
         const fargateService = new ecs.FargateService(this, 'Service', {
             cluster: fargateCluster,
             taskDefinition: fargateTaskDef,
@@ -83,7 +71,7 @@ export class TrafficGenStack extends cdk.Stack {
          * Create an ECS-on-EC2 Cluster that runs our traffic generation image
          */
 
-        // 
+        //
         const ecsAsg = new autoscaling.AutoScalingGroup(this, 'EcsASG', {
             vpc: vpc,
             instanceType: new ec2.InstanceType('t3.micro'), // Arbitrarily chosen

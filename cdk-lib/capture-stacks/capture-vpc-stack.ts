@@ -12,7 +12,6 @@ export interface CaptureVpcStackProps extends StackProps {
 
 export class CaptureVpcStack extends Stack {
   public readonly vpc: ec2.Vpc;
-  public readonly flowLog: ec2.FlowLog;
 
   constructor(scope: Construct, id: string, props: CaptureVpcStackProps) {
     super(scope, id, props);
@@ -31,17 +30,6 @@ export class CaptureVpcStack extends Stack {
                 name: 'CaptureNodes'
             }
         ]
-    });
-    
-    const flowLogsGroup = new logs.LogGroup(this, 'FlowLogsLogGroup', {
-        logGroupName: `FlowLogs-${id}`,
-        removalPolicy: RemovalPolicy.DESTROY,
-        retention: logs.RetentionDays.TEN_YEARS,
-    });
-
-    this.flowLog = new ec2.FlowLog(this, 'FlowLogs', {
-        resourceType: ec2.FlowLogResourceType.fromVpc(this.vpc),
-        destination: ec2.FlowLogDestination.toCloudWatchLogs(flowLogsGroup),
     });
   }
 }
