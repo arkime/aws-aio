@@ -13,7 +13,7 @@ import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as path from 'path'
+import * as path from 'path';
 import { Construct } from 'constructs';
 
 import * as constants from '../core/constants';
@@ -164,14 +164,10 @@ export class CaptureNodesStack extends cdk.Stack {
         props.captureBucketKey.grantEncryptDecrypt(taskDefinition.taskRole);
 
         // Enable NET_ADMIN capability so we use ip commands and /dev/net items work
-        const kernelCapabilitiesProperty: ecs.CfnTaskDefinition.KernelCapabilitiesProperty = {
-            add: ['NET_ADMIN'],
-        };
-
         const linuxParameters = new ecs.LinuxParameters(this, 'LinuxParameters');
         linuxParameters.addCapabilities(ecs.Capability.NET_ADMIN);
 
-        const container = taskDefinition.addContainer('CaptureContainer', {
+        taskDefinition.addContainer('CaptureContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-capture-node')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'CaptureNodes', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
             environment: {
@@ -231,7 +227,7 @@ export class CaptureNodesStack extends cdk.Stack {
         /**
          * Set up shared resources for event-based management of mirroring.
          */
-        const clusterBus = new events.EventBus(this, 'ClusterBus', {})
+        const clusterBus = new events.EventBus(this, 'ClusterBus', {});
 
         // Store a copy of the Arkime events that occur for later replay
         clusterBus.archive('Archive', {
@@ -248,7 +244,7 @@ export class CaptureNodesStack extends cdk.Stack {
             logGroupName: `Arkime-${props.clusterName}`,
             removalPolicy: cdk.RemovalPolicy.DESTROY // The archive contains the real events
         });
-        const logClusterEventsRule = new events.Rule(this, 'RuleLogClusterEvents', {
+        new events.Rule(this, 'RuleLogClusterEvents', {
             eventBus: clusterBus,
             eventPattern: {
                 source: [constants.EVENT_SOURCE],
@@ -267,7 +263,7 @@ export class CaptureNodesStack extends cdk.Stack {
             vpceServiceId: gwlbEndpointService.ref,
             capacityPlan: props.planCluster,
             userConfig: props.userConfig
-        }
+        };
         const clusterParam = new ssm.StringParameter(this, 'ClusterParam', {
             allowedPattern: '.*',
             description: 'The Cluster\'s details',
@@ -284,7 +280,7 @@ export class CaptureNodesStack extends cdk.Stack {
         const captureParamValue: CaptureSsmValue = {
             ecsCluster: service.cluster.clusterName,
             ecsService: service.serviceName,
-        }
+        };
         const captureParam = new ssm.StringParameter(this, 'CaptureDetails', {
             description: 'Details about the Arkime Capture Nodes',
             parameterName: props.ssmParamNameCaptureDetails,
@@ -305,8 +301,8 @@ export class CaptureNodesStack extends cdk.Stack {
                 bundling: {
                     image: lambda.Runtime.PYTHON_3_9.bundlingImage,
                     command: [
-                    'bash', '-c',
-                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                        'bash', '-c',
+                        'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
                     ],
                 },
             }),
@@ -336,7 +332,7 @@ export class CaptureNodesStack extends cdk.Stack {
                     'cloudwatch:PutMetricData',
                 ],
                 resources: [
-                    "*"
+                    '*'
                 ]
             })
         );

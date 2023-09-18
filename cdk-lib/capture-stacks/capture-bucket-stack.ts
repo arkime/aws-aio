@@ -39,8 +39,8 @@ export class CaptureBucketStack extends Stack {
                     enabled: true,
                     expiration: Duration.days(props.planCluster.s3.pcapStorageDays),
                 },
-              ],
-          });
+            ],
+        });
 
         // This SSM parameter will be used to export the name of the capture bucket to other consumers outside of
         // CloudFormation (such as our management CLI)

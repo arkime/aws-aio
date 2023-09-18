@@ -9,7 +9,7 @@ import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as path from 'path'
+import * as path from 'path';
 import { Construct } from 'constructs';
 import * as ssmwrangling from '../core/ssm-wrangling';
 import * as plan from '../core/context-types';
@@ -33,13 +33,13 @@ export class ViewerNodesStack extends cdk.Stack {
 
         // Some configuration values
         const viewerPort = 8005; // Arkime default
-        const viewerUser = "admin";
+        const viewerUser = 'admin';
 
         const viewerPass = new secretsmanager.Secret(this, 'ViewerPassword', {
             generateSecretString: {
                 secretStringTemplate: JSON.stringify({
-                    authSecret: "",
-                    passwordSecret: "ignore"
+                    authSecret: '',
+                    passwordSecret: 'ignore'
                 }), // Changing value here causes cdk to generate new secrets
                 generateStringKey: 'adminPassword',
                 excludeCharacters: '\\$:()[]&\'"<>`|;*?# ' // Characters likely to cause problems in shells
@@ -139,7 +139,7 @@ export class ViewerNodesStack extends cdk.Stack {
         container.addPortMappings({
             containerPort: viewerPort,
             hostPort: viewerPort
-        })
+        });
 
         listener.addTargets('TargetGroup', {
             protocol: elbv2.ApplicationProtocol.HTTP,
@@ -186,7 +186,7 @@ export class ViewerNodesStack extends cdk.Stack {
             ecsService: service.serviceName,
             passwordArn: viewerPass.secretArn,
             user: viewerUser
-        }
+        };
         const viewerParam = new ssm.StringParameter(this, 'ViewerDetails', {
             description: 'Details about the Arkime Viewer Nodes',
             parameterName: props.ssmParamNameViewerDetails,

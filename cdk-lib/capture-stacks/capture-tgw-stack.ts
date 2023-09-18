@@ -10,26 +10,26 @@ export class CaptureTgwStack extends Stack {
     readonly tgw: ec2.CfnTransitGateway;
     readonly tgwAttachment: ec2.CfnTransitGatewayAttachment;
 
-  constructor(scope: Construct, id: string, props: CaptureTgwStackProps) {
-    super(scope, id, props);
+    constructor(scope: Construct, id: string, props: CaptureTgwStackProps) {
+        super(scope, id, props);
 
-    this.tgw = new ec2.CfnTransitGateway(this, 'TGW', {
-        autoAcceptSharedAttachments: 'enable',
-        defaultRouteTableAssociation: 'enable',
-        defaultRouteTablePropagation: 'enable',
-        description: 'TGW providing access to Arkime Cluster',
-        dnsSupport: 'enable',
-      });
+        this.tgw = new ec2.CfnTransitGateway(this, 'TGW', {
+            autoAcceptSharedAttachments: 'enable',
+            defaultRouteTableAssociation: 'enable',
+            defaultRouteTablePropagation: 'enable',
+            description: 'TGW providing access to Arkime Cluster',
+            dnsSupport: 'enable',
+        });
 
-      this.tgwAttachment = new ec2.CfnTransitGatewayAttachment(this, 'TGWAttachment', {
-        subnetIds: props.captureVpc.privateSubnets.map(obj => obj.subnetId),
-        transitGatewayId: this.tgw.attrId,
-        vpcId: props.captureVpc.vpcId,
+        this.tgwAttachment = new ec2.CfnTransitGatewayAttachment(this, 'TGWAttachment', {
+            subnetIds: props.captureVpc.privateSubnets.map(obj => obj.subnetId),
+            transitGatewayId: this.tgw.attrId,
+            vpcId: props.captureVpc.vpcId,
       
-        // the properties below are optional
-        options: {
-            "DnsSupport": "enable"
-        },
-      });
-  }
+            // the properties below are optional
+            options: {
+                'DnsSupport': 'enable'
+            },
+        });
+    }
 }

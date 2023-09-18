@@ -21,124 +21,125 @@ const params: (prms.ClusterMgmtParams | prms.DeployDemoTrafficParams | prms.Dest
 const env: Environment = {
     account: params.awsAccount,
     region: params.awsRegion
-}
+};
 
 switch(params.type) {
-    case 'ClusterMgmtParams':
-        const captureBucketStack = new CaptureBucketStack(app, params.stackNames.captureBucket, {
-            env: env,
-            planCluster: params.planCluster,
-            ssmParamName: params.nameCaptureBucketSsmParam,
-        });
+case 'ClusterMgmtParams': {
+    const captureBucketStack = new CaptureBucketStack(app, params.stackNames.captureBucket, {
+        env: env,
+        planCluster: params.planCluster,
+        ssmParamName: params.nameCaptureBucketSsmParam,
+    });
 
-        const captureVpcStack = new CaptureVpcStack(app, params.stackNames.captureVpc, {
-            env: env,
-            planCluster: params.planCluster,
-        });
+    const captureVpcStack = new CaptureVpcStack(app, params.stackNames.captureVpc, {
+        env: env,
+        planCluster: params.planCluster,
+    });
 
-        const osDomainStack = new OpenSearchDomainStack(app, params.stackNames.osDomain, {
+    const osDomainStack = new OpenSearchDomainStack(app, params.stackNames.osDomain, {
+        env: env,
+        captureVpc: captureVpcStack.vpc,
+        planCluster: params.planCluster,
+        ssmParamName: params.nameOSDomainSsmParam,
+    });
+    osDomainStack.addDependency(captureVpcStack);
+
+    const captureNodesStack = new CaptureNodesStack(app, params.stackNames.captureNodes, {
+        env: env,
+        captureBucket: captureBucketStack.bucket,
+        captureBucketKey: captureBucketStack.bucketKey,
+        captureVpc: captureVpcStack.vpc,
+        clusterConfigBucketName: params.nameClusterConfigBucket,
+        clusterName: params.nameCluster,
+        osDomain: osDomainStack.domain,
+        osPassword: osDomainStack.osPassword,
+        planCluster: params.planCluster,
+        ssmParamNameCaptureConfig: params.nameCaptureConfigSsmParam,
+        ssmParamNameCaptureDetails: params.nameCaptureDetailsSsmParam,
+        ssmParamNameCluster: params.nameClusterSsmParam,
+        userConfig: params.userConfig
+    });
+    captureNodesStack.addDependency(captureBucketStack);
+    captureNodesStack.addDependency(captureVpcStack);
+    captureNodesStack.addDependency(osDomainStack);
+
+
+    let vpcStackToUse = null;
+
+    if (params.planCluster.viewerVpc == null){
+        vpcStackToUse = captureVpcStack;
+    } else {
+        const captureTgwStack = new CaptureTgwStack(app, params.stackNames.captureTgw, {
             env: env,
+            captureVpc: captureVpcStack.vpc
+        });
+        captureTgwStack.addDependency(captureVpcStack);
+
+        const viewerVpcStack = new ViewerVpcStack(app, params.stackNames.viewerVpc, {
+            env: env,
+            captureTgw: captureTgwStack.tgw,
             captureVpc: captureVpcStack.vpc,
-            planCluster: params.planCluster,
-            ssmParamName: params.nameOSDomainSsmParam,
+            viewerVpcPlan: params.planCluster.viewerVpc
         });
-        osDomainStack.addDependency(captureVpcStack);
+        viewerVpcStack.addDependency(captureVpcStack);
+        viewerVpcStack.addDependency(captureNodesStack);
+        viewerVpcStack.addDependency(captureTgwStack);
 
-        const captureNodesStack = new CaptureNodesStack(app, params.stackNames.captureNodes, {
-            env: env,
-            captureBucket: captureBucketStack.bucket,
-            captureBucketKey: captureBucketStack.bucketKey,
-            captureVpc: captureVpcStack.vpc,
-            clusterConfigBucketName: params.nameClusterConfigBucket,
-            clusterName: params.nameCluster,
-            osDomain: osDomainStack.domain,
-            osPassword: osDomainStack.osPassword,
-            planCluster: params.planCluster,
-            ssmParamNameCaptureConfig: params.nameCaptureConfigSsmParam,
-            ssmParamNameCaptureDetails: params.nameCaptureDetailsSsmParam,
-            ssmParamNameCluster: params.nameClusterSsmParam,
-            userConfig: params.userConfig
-        });
-        captureNodesStack.addDependency(captureBucketStack);
-        captureNodesStack.addDependency(captureVpcStack);
-        captureNodesStack.addDependency(osDomainStack);
+        vpcStackToUse = viewerVpcStack;
+    }
 
+    const viewerNodesStack = new ViewerNodesStack(app, params.stackNames.viewerNodes, {
+        env: env,
+        arnViewerCert: params.nameViewerCertArn,
+        captureBucket: captureBucketStack.bucket,
+        viewerVpc: vpcStackToUse.vpc,
+        clusterConfigBucketName: params.nameClusterConfigBucket,
+        clusterName: params.nameCluster,
+        osDomain: osDomainStack.domain,
+        osPassword: osDomainStack.osPassword,
+        ssmParamNameViewerConfig: params.nameViewerConfigSsmParam,
+        ssmParamNameViewerDetails: params.nameViewerDetailsSsmParam,
+        planCluster: params.planCluster,
+    });
+    viewerNodesStack.addDependency(captureBucketStack);
+    viewerNodesStack.addDependency(vpcStackToUse);
+    viewerNodesStack.addDependency(osDomainStack);
+    viewerNodesStack.addDependency(captureNodesStack);
 
-        let vpcStackToUse = null;
-
-        if (params.planCluster.viewerVpc == null){
-            vpcStackToUse = captureVpcStack;
-        } else {
-            const captureTgwStack = new CaptureTgwStack(app, params.stackNames.captureTgw, {
-                env: env,
-                captureVpc: captureVpcStack.vpc
-            });
-            captureTgwStack.addDependency(captureVpcStack);
-
-            const viewerVpcStack = new ViewerVpcStack(app, params.stackNames.viewerVpc, {
-                env: env,
-                captureTgw: captureTgwStack.tgw,
-                captureVpc: captureVpcStack.vpc,
-                viewerVpcPlan: params.planCluster.viewerVpc
-            });
-            viewerVpcStack.addDependency(captureVpcStack);
-            viewerVpcStack.addDependency(captureNodesStack);
-            viewerVpcStack.addDependency(captureTgwStack);
-
-            vpcStackToUse = viewerVpcStack;
-        }
-
-        const viewerNodesStack = new ViewerNodesStack(app, params.stackNames.viewerNodes, {
-            env: env,
-            arnViewerCert: params.nameViewerCertArn,
-            captureBucket: captureBucketStack.bucket,
-            viewerVpc: vpcStackToUse.vpc,
-            clusterConfigBucketName: params.nameClusterConfigBucket,
-            clusterName: params.nameCluster,
-            osDomain: osDomainStack.domain,
-            osPassword: osDomainStack.osPassword,
-            ssmParamNameViewerConfig: params.nameViewerConfigSsmParam,
-            ssmParamNameViewerDetails: params.nameViewerDetailsSsmParam,
-            planCluster: params.planCluster,
-        });
-        viewerNodesStack.addDependency(captureBucketStack);
-        viewerNodesStack.addDependency(vpcStackToUse);
-        viewerNodesStack.addDependency(osDomainStack);
-        viewerNodesStack.addDependency(captureNodesStack);
-
-        break;
-    case 'MirrorMgmtParams':
-        new VpcMirrorStack(app, params.nameVpcMirrorStack, {
-            clusterName: params.nameCluster,
-            subnetIds: params.listSubnetIds,
-            subnetSsmParamNames: params.listSubnetSsmParams,
-            vpcId: params.idVpc,
-            vpcCidrs: params.vpcCidrs,
-            vpcSsmParamName: params.nameVpcSsmParam,
-            vpceServiceId: params.idVpceService,
-            mirrorVni: params.idVni,
-        })
-        break;
-    case 'DeployDemoTrafficParams':
-        new TrafficGenStack(app, 'DemoTrafficGen01', {
-            cidr: "10.0.0.0/16",
-            env: env
-        });
-        new TrafficGenStack(app, 'DemoTrafficGen02', {
-            cidr: "192.168.0.0/17",
-            env: env
-        });
-        break;
-    case 'DestroyDemoTrafficParams':
-        new TrafficGenStack(app, 'DemoTrafficGen01', {
-            cidr: "10.0.0.0/16",
-            env: env
-        });
-        new TrafficGenStack(app, 'DemoTrafficGen02', {
-            cidr: "192.168.0.0/17",
-            env: env
-        });
-        break;
+    break;
+}
+case 'MirrorMgmtParams':
+    new VpcMirrorStack(app, params.nameVpcMirrorStack, {
+        clusterName: params.nameCluster,
+        subnetIds: params.listSubnetIds,
+        subnetSsmParamNames: params.listSubnetSsmParams,
+        vpcId: params.idVpc,
+        vpcCidrs: params.vpcCidrs,
+        vpcSsmParamName: params.nameVpcSsmParam,
+        vpceServiceId: params.idVpceService,
+        mirrorVni: params.idVni,
+    });
+    break;
+case 'DeployDemoTrafficParams':
+    new TrafficGenStack(app, 'DemoTrafficGen01', {
+        cidr: '10.0.0.0/16',
+        env: env
+    });
+    new TrafficGenStack(app, 'DemoTrafficGen02', {
+        cidr: '192.168.0.0/17',
+        env: env
+    });
+    break;
+case 'DestroyDemoTrafficParams':
+    new TrafficGenStack(app, 'DemoTrafficGen01', {
+        cidr: '10.0.0.0/16',
+        env: env
+    });
+    new TrafficGenStack(app, 'DemoTrafficGen02', {
+        cidr: '192.168.0.0/17',
+        env: env
+    });
+    break;
 }
 
 
