@@ -1,9 +1,42 @@
 # Arkime AWS All-in-One
 
-The goals of this project are 1) provide a demonstration of how Arkime can be deployed in a cloud-native manner and 2) provide scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure.
+This project provides scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure using Arkime. It is a Python CLI which uses the AWS Cloud Development Kit (CDK) to provide orchestration and the CloudFormation Templates based on inputs.
 
-The AWS Cloud Development Kit (CDK) is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
+The CDK is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
 
+## Table of Contents
+- [Background](#background)
+- [Quick Start Guide](#quick-start-guide)
+- [Architecture and Design](#architecture-and-design)
+- [How to Run the AWS All-in-One CLI](#how-to-run-the-aws-all-in-one-cli)
+  - [Performing CDK Bootstrap](#performing-cdk-bootstrap)
+  - [Setting up your Arkime Cluster](#setting-up-your-arkime-cluster)
+  - [Setting up capture for a VPC in the Cluster account](#setting-up-capture-for-a-vpc-in-the-cluster-account)
+  - [Setting up capture for a VPC in another account](#setting-up-capture-for-a-vpc-in-another-account)
+  - [Viewing the captured sessions](#viewing-the-captured-sessions)
+  - [Changing Arkime Configuration](#changing-arkime-configuration)
+  - [Viewing the Deployed Clusters](#viewing-the-deployed-clusters)
+  - [Tearing down your Arkime Cluster](#tearing-down-your-arkime-cluster)
+- [How to shell into the ECS containers](#how-to-shell-into-the-ecs-containers)
+- [Setting Up Demo Traffic Generation](#setting-up-demo-traffic-generation)
+- [Account Limits, Scaling, and Other Concerns](#account-limits-scaling-and-other-concerns)
+- [Generally useful NPM/CDK commands](#generally-useful-npmcdk-commands)
+- [Contribute](#contribute)
+- [Maintainers](#maintainers)
+- [License](#license)
+
+
+## Background
+Deploying Arkime in AWS is a complex task. There are many resources that need to be created and configured. This project aims to provide a simple Python CLI that can handle this complexity to allow you to create and manage Arkime clusters as easily as on-prem.
+
+## Quick Start Guide
+1. Install the [prerequisites](#pre-requisites)
+2. run `aws iam create-service-linked-role --aws-service-name es.amazonaws.com` (see [Setting up your Arkime Cluster](#setting-up-your-arkime-cluster))
+3. run `./manage_arkime.py cluster-create --name ClusterName` (see `manage_arkime.py cluster-create --help` for important options)
+4. run `./manage_arkime.py vpc-add --cluster-name ClusterName --vpc-id VPCID #` to add the cluster
+5. run `./manage_arkime.py get-login-details --name ClusterName #` to see default login details
+
+See the [detailed instructions below](#how-to-run-the-aws-all-in-one-cli) for more information on how to run the AWS AIO CLI.
 
 ## Architecture and Design
 
@@ -26,8 +59,9 @@ Resources of those types should have capture configured for them when they are b
 
 ![Detailed, All-Features Design](./cloud_arkime_design_all_features.png?raw=true)
 
+---
 
-## How to run the AWS All-in-One CLI
+## How to Run the AWS All-in-One CLI
 
 ### Pre-requisites
 
@@ -49,46 +83,16 @@ Why each of these needed:
 NOTE: By default, the CDK CLI will use the AWS Region specified as default in your AWS Configuration file; you can set this using the `aws configure` command.  It will also use the AWS Account your credentials are associated with.
 
 
-### Setting up traffic generation
-This demo uses Docker containers to generate traffic (`./docker-traffic-gen`).  The containers are simple Ubuntu boxes that continuously curl a selection of Alexa Top 20 websites.  You can run the container locally like so:
+### Performing CDK Bootstrap
+
+Before deploying AWS Resources to your account using the CDK, you must first perform a bootstrapping step.  The management CLI should take care of this for you, but the following is provided in case you want/need to do this manually.
+
+At a high level the CDK needs some existing resources in your AWS account before it deploys your target infrastructure, which you can [learn more about here](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html).  Examples include an AWS S3 bucket to stage deployment resources and an AWS ECR repo to receive/house locally-defined Docker images.
+
+You can bootstrap your AWS Account/Region like so:
 
 ```
-cd ./docker-traffic-gen
-
-# To build the docker container
-npm run build
-
-# To run the docker container
-npm run start
-
-# To stop the docker container
-npm run stop
-```
-
-You can deploy copies of this container to your AWS Account like so.  First, set up your Python virtual environment:
-
-```
-python3 -m venv .venv
-source .venv/bin/activate
-(cd manage_arkime ; pip install -r requirements.txt)
-```
-
-Next, pull in the Node dependencies required for the CDK:
-
-```
-npm ci
-```
-
-Finally, invoke the management CLI.  It will use your default AWS Credentials and Region unless you specify otherwise (see `./manage_arkime.py --help`).
-
-```
-./manage_arkime.py demo-traffic-deploy
-```
-
-You can tear down the demo stacks using an additional command:
-
-```
-./manage_arkime.py demo-traffic-deploy
+cdk bootstrap
 ```
 
 ### Setting up your Arkime Cluster
@@ -316,62 +320,47 @@ Finally, you can create an interactive session using the AWS CLI.  You'll need t
 aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/bash"
 ```
 
-## How to run the unit tests & lint
+## Setting Up Demo Traffic Generation
+This demo uses Docker containers to generate traffic (`./docker-traffic-gen`).  The containers are simple Ubuntu boxes that continuously curl a selection of Alexa Top 20 websites.  You can run the container locally like so:
 
-We now require that the ruff linter and unit tests pass before merging PRs.
+```
+cd ./docker-traffic-gen
 
-### Step 1 - Activate your Python virtual environment
+# To build the docker container
+npm run build
 
-To isolate the Python environment for the project from your local machine, create virtual environment like so:
+# To run the docker container
+npm run start
+
+# To stop the docker container
+npm run stop
+```
+
+You can deploy copies of this container to your AWS Account like so.  First, set up your Python virtual environment:
+
 ```
 python3 -m venv .venv
 source .venv/bin/activate
 (cd manage_arkime ; pip install -r requirements.txt)
 ```
 
-You can exit the Python virtual environment and remove its resources like so:
-```
-deactivate
-rm -rf .venv
-```
-
-Learn more about venv [here](https://docs.python.org/3/library/venv.html).
-
-### Step 2 - Run Pytest
-The unit tests are executed by invoking Pytest:
+Next, pull in the Node dependencies required for the CDK:
 
 ```
-python -m pytest test_manage_arkime/
+npm ci
 ```
 
-You can read more about running unit tests with Pytest [here](https://docs.pytest.org/en/7.2.x/how-to/usage.html).
-
-### Step 3 - Run Ruff
-The Python linter is executed by invoking Ruff:
-```
-ruff .
-```
-
-You can read more about Python linting with Ruff [here](https://beta.ruff.rs/docs/).
-
-### Step 4 - Run eslint
-The Typescript linter is executed by invoking [eslint]((https://eslint.org/):
-```
-npx eslint .
-```
-
-## Performing CDK Bootstrap
-
-Before deploying AWS Resources to your account using the CDK, you must first perform a bootstrapping step.  The management CLI should take care of this for you, but the following is provided in case you want/need to do this manually.
-
-At a high level the CDK needs some existing resources in your AWS account before it deploys your target infrastructure, which you can [learn more about here](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html).  Examples include an AWS S3 bucket to stage deployment resources and an AWS ECR repo to receive/house locally-defined Docker images.
-
-You can bootstrap your AWS Account/Region like so:
+Finally, invoke the management CLI.  It will use your default AWS Credentials and Region unless you specify otherwise (see `./manage_arkime.py --help`).
 
 ```
-cdk bootstrap
+./manage_arkime.py demo-traffic-deploy
 ```
 
+You can tear down the demo stacks using an additional command:
+
+```
+./manage_arkime.py demo-traffic-deploy
+```
 
 ## Account Limits, Scaling, and Other Concerns
 
@@ -389,7 +378,6 @@ Here are some account limits you'll want to watch out for:
 * There's a max of 10,000 Traffic Mirroring Sessions.  We use one per traffic source.
 * There's a max of 10,000 Standard SSM Parameters per account/region.  We use at least one for each User ENI, several for each Subnet in a User VPC, and several for each User VPC and Cluster.
 
-
 ## Generally useful NPM/CDK commands
 
 * `npm run build`   compile typescript to js
@@ -398,3 +386,15 @@ Here are some account limits you'll want to watch out for:
 * `cdk deploy`      deploy this stack to your default AWS account/region
 * `cdk diff`        compare deployed stack with current state
 * `cdk synth`       emits the synthesized CloudFormation template
+
+## Contribute
+
+Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for information about how to get involved. We welcome issues, feature requests, pull requests, and documentation updates in GitHub. For questions about using and troubleshooting Arkime AWS AIO please use the Slack channels.
+
+## Maintainers
+
+The best way to reach us is on Slack.  Please request an invitation to join the Arkime Slack workspace [here](https://slackinvite.arkime.com).
+
+## License
+
+This project is licensed under the terms of the Apache 2.0 open source license. Please refer to [LICENSE](LICENSE) for the full terms.
