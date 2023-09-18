@@ -4,8 +4,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import * as logs from 'aws-cdk-lib/aws-logs';
-import * as path from 'path'
+import * as path from 'path';
 import { Construct } from 'constructs';
 
 export interface TrafficGenStackProps extends cdk.StackProps {
@@ -54,13 +53,13 @@ export class TrafficGenStack extends cdk.Stack {
             }),
         );
 
-        const fargateContainer = fargateTaskDef.addContainer('FargateContainer', {
+        fargateTaskDef.addContainer('FargateContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-traffic-gen')),
             memoryLimitMiB: 512,
             logging: new ecs.AwsLogDriver({ streamPrefix: 'DemoTrafficGenFargate', mode: ecs.AwsLogDriverMode.NON_BLOCKING })
         });
 
-        const fargateService = new ecs.FargateService(this, 'Service', {
+        new ecs.FargateService(this, 'Service', {
             cluster: fargateCluster,
             taskDefinition: fargateTaskDef,
             desiredCount: 1,
@@ -102,7 +101,7 @@ export class TrafficGenStack extends cdk.Stack {
             }),
         );
 
-        const ecsContainer = ecsTaskDef.addContainer('EcsContainer', {
+        ecsTaskDef.addContainer('EcsContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-traffic-gen')),
             logging: new ecs.AwsLogDriver({ streamPrefix: 'DemoTrafficGenEcs', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
 
@@ -113,7 +112,7 @@ export class TrafficGenStack extends cdk.Stack {
             memoryLimitMiB: 768, // 0.75 GiB
         });
 
-        const ecsService = new ecs.Ec2Service(this, 'EcsService', {
+        new ecs.Ec2Service(this, 'EcsService', {
             cluster: ecsCluster,
             taskDefinition: ecsTaskDef,
             desiredCount: 1,

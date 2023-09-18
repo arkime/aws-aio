@@ -9,10 +9,10 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import * as path from 'path'
+import * as path from 'path';
 
-import {SubnetSsmValue, VpcSsmValue} from '../core/ssm-wrangling'
-import * as constants from '../core/constants'
+import {SubnetSsmValue, VpcSsmValue} from '../core/ssm-wrangling';
+import * as constants from '../core/constants';
 
 export interface VpcMirrorStackProps extends StackProps {
     readonly clusterName: string;
@@ -30,13 +30,13 @@ export interface VpcMirrorStackProps extends StackProps {
  * Capture VPC.  That is, one of these stacks should exist for each combination of Capture VPC/Source VPC.  It
  * instantiates AWS Resources into the user's Source VPC in order for their traffic to be mirrored to the Capture
  * VPC.
- * 
+ *
  * The components it contains are considered 'core/shared' components because they are (relatively) static.  They
  * should remain unchanged as long as the subnets in the user's Source VPC remain unchanged.  They will shared by the
  * many, fluidly-defined mirroring configurations we make for each Elastic Network Interface in the user's VPC.  We
  * create/manage the ENI-specific components from the Python management CLI.  It is presumed that the subnets in a User
  * VPC will change much less often than the ENIs (e.g. compute auto-scaling)
- * 
+ *
  * See: https://docs.aws.amazon.com/vpc/latest/mirroring/tm-example-glb-endpoints.html
  */
 export class VpcMirrorStack extends Stack {
@@ -48,7 +48,7 @@ export class VpcMirrorStack extends Stack {
 
         for (const [subnetId, subnetParamName] of combinedList) {
             // Since we're relying on stable/consistent ordering of the two lists, let's make sure that's true
-            assert.ok(subnetParamName.includes(subnetId), `Expected Subnet SSM Param ${subnetParamName} to contain Subnet ID ${subnetId}`)
+            assert.ok(subnetParamName.includes(subnetId), `Expected Subnet SSM Param ${subnetParamName} to contain Subnet ID ${subnetId}`);
 
             const vpcEndpoint = new ec2.CfnVPCEndpoint(this, `VPCE-${subnetId}`, {
                 serviceName: `com.amazonaws.vpce.${this.region}.${props.vpceServiceId}`,
@@ -62,7 +62,7 @@ export class VpcMirrorStack extends Stack {
             });
 
             // These SSM parameter will enable us share the details of our subnet-specific Capture setups
-            const subnetParamValue: SubnetSsmValue = {mirrorTargetId: mirrorTarget.ref, subnetId: subnetId, vpcEndpointId: vpcEndpoint.ref}
+            const subnetParamValue: SubnetSsmValue = {mirrorTargetId: mirrorTarget.ref, subnetId: subnetId, vpcEndpointId: vpcEndpoint.ref};
             const subnetParam = new ssm.StringParameter(this, `SubnetParam-${subnetId}`, {
                 allowedPattern: '.*',
                 description: 'The Subnet\'s details',
@@ -71,11 +71,11 @@ export class VpcMirrorStack extends Stack {
                 tier: ssm.ParameterTier.STANDARD,
             });
             subnetParam.node.addDependency(mirrorTarget);
-        };
+        }
 
         // Let's mirror all non-local VPC traffic
         // See: https://docs.aws.amazon.com/vpc/latest/mirroring/tm-example-non-vpc.html
-        const filter = new ec2.CfnTrafficMirrorFilter(this, `Filter`, {
+        const filter = new ec2.CfnTrafficMirrorFilter(this, 'Filter', {
             description: 'Mirror non-local VPC traffic',
             tags: [{key: 'Name', value: props.vpcId}],
             networkServices: ['amazon-dns']
@@ -91,7 +91,7 @@ export class VpcMirrorStack extends Stack {
                 description: 'Reject all intra-VPC traffic'
             });
         }
-        new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherOutbound`, {
+        new ec2.CfnTrafficMirrorFilterRule(this, 'FRule-AllowOtherOutbound', {
             destinationCidrBlock: '0.0.0.0/0',
             ruleAction: 'ACCEPT',
             ruleNumber: 20,
@@ -105,13 +105,13 @@ export class VpcMirrorStack extends Stack {
                 destinationCidrBlock: '0.0.0.0/0',
                 ruleAction: 'REJECT',
                 ruleNumber: 10 + block_num,
-                sourceCidrBlock: props.vpcCidrs[block_num], 
+                sourceCidrBlock: props.vpcCidrs[block_num],
                 trafficDirection: 'INGRESS',
                 trafficMirrorFilterId: filter.ref,
                 description: 'Reject all intra-VPC traffic'
             });
-        }        
-        new ec2.CfnTrafficMirrorFilterRule(this, `FRule-AllowOtherInbound`, {
+        }
+        new ec2.CfnTrafficMirrorFilterRule(this, 'FRule-AllowOtherInbound', {
             destinationCidrBlock: '0.0.0.0/0',
             ruleAction: 'ACCEPT',
             ruleNumber: 20,
@@ -126,7 +126,7 @@ export class VpcMirrorStack extends Stack {
          * those events into something more actionable for our system
          */
 
-        const vpcBus = new events.EventBus(this, 'VpcBus', {})
+        const vpcBus = new events.EventBus(this, 'VpcBus', {});
 
         // Create the Lambda that listen for AWS Service events on the default bus and transform them into events we
         // can action
@@ -137,11 +137,11 @@ export class VpcMirrorStack extends Stack {
                 bundling: {
                     image: lambda.Runtime.PYTHON_3_9.bundlingImage,
                     command: [
-                    'bash', '-c',
-                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                        'bash', '-c',
+                        'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
                     ],
                 },
-            }), 
+            }),
             handler: 'lambda_handlers.aws_event_listener_handler',
             timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded,
             environment: {
@@ -169,7 +169,7 @@ export class VpcMirrorStack extends Stack {
                 actions: [
                     'ec2:DescribeInstances'
                 ],
-                resources: ["*"]
+                resources: ['*']
             })
         );
 
@@ -180,20 +180,20 @@ export class VpcMirrorStack extends Stack {
         });
 
         // Capture Fargate stop/start events for processing
-        const fargateEventsRule = new events.Rule(this, 'RuleFargateEvents', {
+        new events.Rule(this, 'RuleFargateEvents', {
             eventBus: undefined, // We want to listen to the Account/Region's default bus
             eventPattern: {
-                source: ["aws.ecs"],
-                detailType: ["ECS Task State Change"],
+                source: ['aws.ecs'],
+                detailType: ['ECS Task State Change'],
                 detail: {
                     attachments: {
                         details: {
-                            name: ["subnetId"],
+                            name: ['subnetId'],
                             value: props.subnetIds // Only care about subnets in *this* User VPC
                         }
                     },
-                    launchType: ["FARGATE"],
-                    lastStatus: ["RUNNING", "STOPPED"]
+                    launchType: ['FARGATE'],
+                    lastStatus: ['RUNNING', 'STOPPED']
                 }
             },
             targets: [
@@ -205,16 +205,16 @@ export class VpcMirrorStack extends Stack {
         // Capture EC2 instance start/stop events.  This should cover one-off instance creation, EC2 Autoscaling
         // activities, and ECS-on-EC2.  All three of those situations map to an ENI being created or destroyed when
         // a concrete instance starts/stops, regardless of how many other steps/events are involved in the process.
-        // 
+        //
         // Unfortunately, this event does not give us the information we need to pre-screen it at the Rule level so
         // we have to check if it applies to our VPC in our Lambda code.
-        const ec2EventsRule = new events.Rule(this, 'RuleEc2Events', {
+        new events.Rule(this, 'RuleEc2Events', {
             eventBus: undefined, // We want to listen to the Account/Region's default bus
             eventPattern: {
-                source: ["aws.ec2"],
-                detailType: ["EC2 Instance State-change Notification"],
+                source: ['aws.ec2'],
+                detailType: ['EC2 Instance State-change Notification'],
                 detail: {
-                    state: ["running", "shutting-down"]
+                    state: ['running', 'shutting-down']
                 }
             },
             targets: [
@@ -247,11 +247,11 @@ export class VpcMirrorStack extends Stack {
                 bundling: {
                     image: lambda.Runtime.PYTHON_3_9.bundlingImage,
                     command: [
-                    'bash', '-c',
-                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                        'bash', '-c',
+                        'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
                     ],
                 },
-            }), 
+            }),
             handler: 'lambda_handlers.create_eni_mirror_handler',
             timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded
         });
@@ -292,7 +292,7 @@ export class VpcMirrorStack extends Stack {
                     'cloudwatch:PutMetricData',
                 ],
                 resources: [
-                    "*"
+                    '*'
                 ]
             })
         );
@@ -314,16 +314,16 @@ export class VpcMirrorStack extends Stack {
         // Create the Lambda that will tear down the traffic mirroring for ENIs in our VPC
         const destroyLambda = new lambda.Function(this, 'DestroyEniMirrorLambda', {
             functionName: `${props.clusterName}-DestroyEniMirror-${props.vpcId}`,
-            runtime: lambda.Runtime.PYTHON_3_9,            
+            runtime: lambda.Runtime.PYTHON_3_9,
             code: lambda.Code.fromAsset(path.resolve(__dirname, '..', '..', 'manage_arkime'), {
                 bundling: {
                     image: lambda.Runtime.PYTHON_3_9.bundlingImage,
                     command: [
-                    'bash', '-c',
-                    'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
+                        'bash', '-c',
+                        'pip install -r requirements.txt -t /asset-output && cp -au . /asset-output'
                     ],
                 },
-            }),            
+            }),
             handler: 'lambda_handlers.destroy_eni_mirror_handler',
             timeout:  Duration.seconds(30), // Something has gone very wrong if this is exceeded
         });
@@ -359,7 +359,7 @@ export class VpcMirrorStack extends Stack {
                     'cloudwatch:PutMetricData',
                 ],
                 resources: [
-                    "*"
+                    '*'
                 ]
             })
         );
@@ -384,7 +384,7 @@ export class VpcMirrorStack extends Stack {
             mirrorFilterId: filter.ref,
             mirrorVni: props.mirrorVni,
             vpcId: props.vpcId,
-        }
+        };
         const vpcParam = new ssm.StringParameter(this, `VpcParam-${props.vpcId}`, {
             allowedPattern: '.*',
             description: 'The VPC\'s details',

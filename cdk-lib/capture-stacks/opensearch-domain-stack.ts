@@ -47,8 +47,8 @@ export class OpenSearchDomainStack extends Stack {
         // });
 
         // Enable access to our OpenSearch Domain
-        this.osSg = new ec2.SecurityGroup(this, `opensearch-sg`, {
-            securityGroupName: `opensearch-sg`,
+        this.osSg = new ec2.SecurityGroup(this, 'opensearch-sg', {
+            securityGroupName: 'opensearch-sg',
             vpc: props.captureVpc
         });
       
@@ -64,7 +64,7 @@ export class OpenSearchDomainStack extends Stack {
             }
         });
         this.domain = new Domain(this, 'ArkimeDomain', {
-            version: EngineVersion.openSearch("2.5"),
+            version: EngineVersion.openSearch('2.5'),
             enableVersionUpgrade: true,
             capacity: {
                 masterNodes: props.planCluster.osDomain.masterNodes.count,
@@ -107,7 +107,7 @@ export class OpenSearchDomainStack extends Stack {
             domainArn: this.domain.domainArn,
             domainName: this.domain.domainName,
             domainSecret: this.osPassword.secretName
-        }
+        };
         new ssm.StringParameter(this, 'DomainDetails', {
             allowedPattern: '.*',
             description: 'The details of the Capture OpenSearch Domain',

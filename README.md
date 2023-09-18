@@ -347,13 +347,18 @@ python -m pytest test_manage_arkime/
 You can read more about running unit tests with Pytest [here](https://docs.pytest.org/en/7.2.x/how-to/usage.html).
 
 ### Step 3 - Run Ruff
-The linter is executed by invoking Ruff:
+The Python linter is executed by invoking Ruff:
 ```
 ruff .
 ```
 
 You can read more about Python linting with Ruff [here](https://beta.ruff.rs/docs/).
 
+### Step 4 - Run eslint
+The Typescript linter is executed by invoking [eslint]((https://eslint.org/):
+```
+npx eslint .
+```
 
 ## Performing CDK Bootstrap
 
