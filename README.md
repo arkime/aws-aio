@@ -1,9 +1,15 @@
 # Arkime AWS All-in-One
 
-The goals of this project are 1) provide a demonstration of how Arkime can be deployed in a cloud-native manner and 2) provide scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure.
+The goals of this project:
+1) Demonstrate how Arkime can be deployed in a cloud-native manner
+2) Provide scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure
 
 The AWS Cloud Development Kit (CDK) is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
 
+## Quick Start Guide
+TODO
+
+See the [detailed instructions below](#how-to-run-the-aws-all-in-one-cli) for more information on how to run the AWS AIO CLI.
 
 ## Architecture and Design
 
@@ -26,6 +32,7 @@ Resources of those types should have capture configured for them when they are b
 
 ![Detailed, All-Features Design](./cloud_arkime_design_all_features.png?raw=true)
 
+---
 
 ## How to run the AWS All-in-One CLI
 
@@ -316,50 +323,6 @@ Finally, you can create an interactive session using the AWS CLI.  You'll need t
 aws ecs execute-command --cluster <your cluster ID> --container CaptureContainer --task <your task id> --interactive --command "/bin/bash"
 ```
 
-## How to run the unit tests & lint
-
-We now require that the ruff linter and unit tests pass before merging PRs.
-
-### Step 1 - Activate your Python virtual environment
-
-To isolate the Python environment for the project from your local machine, create virtual environment like so:
-```
-python3 -m venv .venv
-source .venv/bin/activate
-(cd manage_arkime ; pip install -r requirements.txt)
-```
-
-You can exit the Python virtual environment and remove its resources like so:
-```
-deactivate
-rm -rf .venv
-```
-
-Learn more about venv [here](https://docs.python.org/3/library/venv.html).
-
-### Step 2 - Run Pytest
-The unit tests are executed by invoking Pytest:
-
-```
-python -m pytest test_manage_arkime/
-```
-
-You can read more about running unit tests with Pytest [here](https://docs.pytest.org/en/7.2.x/how-to/usage.html).
-
-### Step 3 - Run Ruff
-The Python linter is executed by invoking Ruff:
-```
-ruff .
-```
-
-You can read more about Python linting with Ruff [here](https://beta.ruff.rs/docs/).
-
-### Step 4 - Run eslint
-The Typescript linter is executed by invoking [eslint]((https://eslint.org/):
-```
-npx eslint .
-```
-
 ## Performing CDK Bootstrap
 
 Before deploying AWS Resources to your account using the CDK, you must first perform a bootstrapping step.  The management CLI should take care of this for you, but the following is provided in case you want/need to do this manually.
@@ -398,3 +361,15 @@ Here are some account limits you'll want to watch out for:
 * `cdk deploy`      deploy this stack to your default AWS account/region
 * `cdk diff`        compare deployed stack with current state
 * `cdk synth`       emits the synthesized CloudFormation template
+
+## Contribute
+
+Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for information about how to get involved. We welcome issues, feature requests, pull requests, and documentation updates in GitHub. For questions about using and troubleshooting Arkime AWS AIO please use the Slack channels.
+
+## Maintainers
+
+The best way to reach us is on Slack.  Please request an invitation to join the Arkime Slack workspace [here](https://slackinvite.arkime.com).
+
+## License
+
+This project is licensed under the terms of the Apache 2.0 open source license. Please refer to [LICENSE](LICENSE) for the full terms.
