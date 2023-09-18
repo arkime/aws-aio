@@ -56,6 +56,10 @@ To implement something new, please create an issue first so we can discuss it to
 * Provide a clear and descriptive title
 * Clearly describe the problem and solution
 * Include the relevant issue number(s) if applicable
+* Additionally, any substantive changes should include:
+  * A clear explanation of what automated and manual testing you performed
+  * The output from the CLI of the test commands you ran to confirm the change operated as expected
+  * Screenshots of the AWS Console/Arkime Dashboard/etc as appropriate to demonstrate the change operates as expected
 * Run unit tests and lint as [described below](how-to-run-the-unit-tests-&-lint)
 * When creating a Pull Request please follow [best practices](https://github.com/trein/dev-best-practices/wiki/Git-Commit-Best-Practices) for creating git commits.
 * When your code is ready to be submitted, submit a Pull Request to begin the code review process.
