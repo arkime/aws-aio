@@ -1,8 +1,6 @@
 # Arkime AWS All-in-One
 
-The goals of this project:
-1) Demonstrate how Arkime can be deployed in a cloud-native manner
-2) Provide scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure
+This project provides scripting to enable users to easily begin capturing the traffic in their existing AWS cloud infrastructure.
 
 The AWS Cloud Development Kit (CDK) is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
 
