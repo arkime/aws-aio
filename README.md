@@ -6,9 +6,10 @@ The AWS Cloud Development Kit (CDK) is used to perform infrastructure specificat
 
 ## Quick Start Guide
 1. Install the [prereqs](#pre-requisites)
-2. run `./manage_arkime.py cluster-create --name ClusterName` (see `manage_arkime.py cluster-create --help` for important options)
-3. run `./manage_arkime.py vpc-add --cluster-name ClusterName --vpc-id VPCID #` to add the cluster
-4. run `./manage_arkime.py get-login-details --name ClusterName #` to see default login details
+2. run `aws iam create-service-linked-role --aws-service-name es.amazonaws.com` (see [Setting up your Arkime Cluster](#setting-up-your-arkime-cluster))
+3. run `./manage_arkime.py cluster-create --name ClusterName` (see `manage_arkime.py cluster-create --help` for important options)
+4. run `./manage_arkime.py vpc-add --cluster-name ClusterName --vpc-id VPCID #` to add the cluster
+5. run `./manage_arkime.py get-login-details --name ClusterName #` to see default login details
 
 See the [detailed instructions below](#how-to-run-the-aws-all-in-one-cli) for more information on how to run the AWS AIO CLI.
 
