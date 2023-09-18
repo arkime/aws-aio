@@ -5,7 +5,10 @@ This project provides scripting to enable users to easily begin capturing the tr
 The AWS Cloud Development Kit (CDK) is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
 
 ## Quick Start Guide
-TODO
+1. Install the [prereqs](#pre-requisites)
+2. run `./manage_arkime.py cluster-create --name ClusterName` (see `manage_arkime.py cluster-create --help` for important options)
+3. run `./manage_arkime.py vpc-add --cluster-name ClusterName --vpc-id VPCID #` to add the cluster
+4. run `./manage_arkime.py get-login-details --name ClusterName #` to see default login details
 
 See the [detailed instructions below](#how-to-run-the-aws-all-in-one-cli) for more information on how to run the AWS AIO CLI.
 
