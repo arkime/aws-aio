@@ -31,10 +31,12 @@ Deploying Arkime in AWS is a complex task. There are many resources that need to
 
 ## Quick Start Guide
 1. Install the [prerequisites](#pre-requisites)
-2. run `aws iam create-service-linked-role --aws-service-name es.amazonaws.com` (see [Setting up your Arkime Cluster](#setting-up-your-arkime-cluster))
-3. run `./manage_arkime.py cluster-create --name ClusterName` (see `manage_arkime.py cluster-create --help` for important options)
-4. run `./manage_arkime.py vpc-add --cluster-name ClusterName --vpc-id VPCID #` to add the cluster
-5. run `./manage_arkime.py get-login-details --name ClusterName #` to see default login details
+2. `aws iam create-service-linked-role --aws-service-name es.amazonaws.com` (see [Setting up your Arkime Cluster](#setting-up-your-arkime-cluster))
+3. `./manage_arkime.py --region REGION cluster-create --name CLUSTER_NAME` (see `manage_arkime.py cluster-create --help` for important options)
+4. `./manage_arkime.py --region REGION vpc-add --cluster-name CLUSTER_NAME --vpc-id VPC_ID` to add the vpc to the cluster
+5. `./manage_arkime.py --region REGION get-login-details --name CLUSTER_NAME` to see login details and viewer URL
+6. Update the files in the `config-CLUSTER_NAME-ACCOUNT_ID-REGION` directory with viewer/capture configuration changes
+7. `./manage_arkime.py --region REGION config-update --cluster-name CLUSTER_NAME` to update running config
 
 See the [detailed instructions below](#how-to-run-the-aws-all-in-one-cli) for more information on how to run the AWS AIO CLI.
 
@@ -65,7 +67,7 @@ Resources of those types should have capture configured for them when they are b
 
 ### Pre-requisites
 
-* REQUIRED: A copy of the repo on your local host
+* REQUIRED: A copy of the aws-aio repo
 * REQUIRED: A properly installed/configured copy of Node ([see instructions here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
 * REQUIRED: A properly installed/configured copy of Python 3.9+ and venv ([see instructions here](https://realpython.com/installing-python/))
 * REQUIRED: A properly installed/configured copy of Docker (instructions vary by platform/organization)
@@ -75,7 +77,7 @@ Resources of those types should have capture configured for them when they are b
 
 Why each of these needed:
 * Node is required to work with the CDK (our CDK Apps are written in TypeScript)
-* The Management CLI is writting in Python, so Python is needed to run it
+* The Management CLI is written in Python, so Python is needed to run it
 * Docker is required to transform our local Dockerfiles into images to be uploaded/deployed into the AWS Account by the CDK
 * The CDK CLI is how we deploy/manage the underlying AWS CloudFormation Stacks that encapsulate the Arkime AWS Resoruces; the Management CLI wraps this
 * The AWS CLI is recommended (but not strictly required) as a way to set up your AWS Credentials and default region, etc.  The CDK CLI needs these to be configured, but technically you can configure these manually without using the AWS CLI (see [the CDK setup guide](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_prerequisites) for details)
