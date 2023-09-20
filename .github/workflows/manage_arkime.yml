@@ -1,4 +1,4 @@
-name: Lint & Tests
+name: Manage Arkime Tests
 
 on:
   push:
