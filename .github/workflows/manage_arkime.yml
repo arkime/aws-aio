@@ -34,5 +34,9 @@ jobs:
         run: |
           source .venv/bin/activate
           ./manage_arkime.py --region us-east-1 clusters-list
+      - name: Run cluster-create
+        run: |
+          source .venv/bin/activate
+          ./manage_arkime.py --region us-east-1 cluster-create --replicas 0 --name test --spi-days 1 --expected-traffic 0.01 --history-days 7 --pcap-days 1 --preconfirm-usage
 
 
