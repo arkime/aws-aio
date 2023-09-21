@@ -25,6 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m venv .venv
           npm ci
+          npm install -g aws-cdk
           source .venv/bin/activate
           (cd manage_arkime ; pip install -r requirements.txt)
       - name: Create AWS config file
