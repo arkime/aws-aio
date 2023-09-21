@@ -87,6 +87,7 @@ export class TrafficGenStack extends cdk.Stack {
 
         const ecsCapacityProvider = new ecs.AsgCapacityProvider(this, 'EcsCapacityProvider', {
             autoScalingGroup: ecsAsg,
+            enableManagedTerminationProtection: false,
         });
         ecsCluster.addAsgCapacityProvider(ecsCapacityProvider);
 

@@ -14,6 +14,7 @@ setuptools.setup(
         "cryptography",
         "pexpect",
         "pytest",
+        "pytest-cov",
         "ruff",
         "requests",
     ],
