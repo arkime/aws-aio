@@ -36,5 +36,5 @@ jobs:
       - name: Test with pytest
         run: |
           source .venv/bin/activate
-          pytest test_manage_arkime
+          pytest test_manage_arkime --cov manage_arkime
 
