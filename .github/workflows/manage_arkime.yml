@@ -1,0 +1,44 @@
+name: Manage Arkime Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency: only-one
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv .venv
+          npm ci
+          npm install -g aws-cdk
+          source .venv/bin/activate
+          (cd manage_arkime ; pip install -r requirements.txt)
+      - name: Create AWS config file
+        run: |
+          mkdir -p $HOME/.aws
+          echo "[default]" > $HOME/.aws/config
+      - name: Run list clusters
+        run: |
+          source .venv/bin/activate
+          ./manage_arkime.py --region us-east-1 clusters-list
+      - name: Run cluster-create
+        run: |
+          source .venv/bin/activate
+          ./manage_arkime.py --region us-east-1 cluster-create --replicas 0 --name test --spi-days 1 --expected-traffic 0.01 --history-days 7 --pcap-days 1 --preconfirm-usage
+
+

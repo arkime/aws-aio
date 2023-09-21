@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
           + "  Uses the credentials in your AWS profile to determine which account it will act against.")
 )
 @click.option(
-    "--profile", 
-    help="The AWS credential profile to perform the operation with.  Uses 'default' if not supplied.",
-    default="default"
+    "--profile",
+    help="The AWS credential profile to perform the operation with.  Uses standard AWS credential acquisition process if not supplied.",
+    default=None
 )
 @click.option("--region", help="The AWS Region to perform the operation in.  Uses your AWS Config default if not supplied.")
 @click.pass_context
@@ -61,45 +61,45 @@ cli.add_command(demo_traffic_destroy)
 @click.command(help="Creates an Arkime Cluster in your account")
 @click.option("--name", help="The name you want your Arkime Cluster and its associated resources to have", required=True)
 @click.option(
-    "--expected-traffic", 
+    "--expected-traffic",
     help=("The average amount of traffic, in gigabits-per-second, you expect your Arkime Cluster to receive."
         + f"Maximum: {MAX_TRAFFIC} Gbps"),
     default=None,
     type=click.FLOAT,
     required=False)
 @click.option(
-    "--spi-days", 
+    "--spi-days",
     help=(f"The number of days to store SPI metadata in the OpenSearch Domain.  Default: {DEFAULT_SPI_DAYS}"),
     default=None,
     type=click.INT,
     required=False)
 @click.option(
-    "--history-days", 
+    "--history-days",
     help=(f"The number of days to store Arkime Viewer user history in the OpenSearch Domain.  Default: {DEFAULT_HISTORY_DAYS}"),
     default=None,
     type=click.INT,
     required=False)
 @click.option(
-    "--replicas", 
+    "--replicas",
     help=(f"The number replicas to make of the SPI metadata in the OpenSearch Domain.  Default: {DEFAULT_REPLICAS}"),
     default=None,
     type=click.INT,
     required=False)
 @click.option(
-    "--pcap-days", 
+    "--pcap-days",
     help=(f"The number of days to store PCAP files in S3.  Default: {DEFAULT_S3_STORAGE_DAYS}"),
     default=None,
     type=click.INT,
     required=False)
 @click.option(
-    "--preconfirm-usage", 
+    "--preconfirm-usage",
     help="Skips the manual confirmation that the capacity to be provisioned is as expected.",
     is_flag=True,
     show_default=True,
     default=False
 )
 @click.option(
-    "--just-print-cfn", 
+    "--just-print-cfn",
     help=("Skips a full deployment and just creates a copy of the CloudFormation templates to be deployed in a local directory."
           " May perform some initial setup operations in AWS that are necessary in order to create those templates."),
     is_flag=True,
@@ -107,7 +107,7 @@ cli.add_command(demo_traffic_destroy)
     default=False
 )
 @click.option(
-    "--capture-cidr", 
+    "--capture-cidr",
     help=("CAN ONLY BE SET ON INITIAL CLUSTER CREATION!  The CIDR to use for the Capture VPC, including the Capture"
           " Nodes and OS Domain.  Includes the Viewer Nodes and the Viewer LB unless you specify a separate CIDR for"
           " them.  Changing this requires deleting/recreating the Cluster."),
@@ -115,7 +115,7 @@ cli.add_command(demo_traffic_destroy)
     type=click.STRING,
     required=False)
 @click.option(
-    "--viewer-cidr", 
+    "--viewer-cidr",
     help=("CAN ONLY BE SET ON INITIAL CLUSTER CREATION!  The CIDR to use for the Viewer Nodes.  Moves them out of the"
           " Capture VPC into their own VPC, bounded by the CIDR you provided.  This VPC is peered with the Capture VPC,"
           " so their CIDRs must not overlap.  Changing this requires deleting/recreating the Cluster."),
@@ -134,7 +134,7 @@ cli.add_command(cluster_create)
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")
 @click.option("--name", help="The name of the Arkime Cluster to tear down", required=True)
 @click.option(
-    "--destroy-everything", 
+    "--destroy-everything",
     help="Tears down all resources and ALL DATA associated with the cluster instead of preserving that data",
     is_flag=True,
     show_default=True,
@@ -174,7 +174,7 @@ cli.add_command(clusters_list)
               + " result in multiple VPCs using the same VNI, and VNIs to potentially be re-used long after they are"
               + " relinquished."), default=None, type=int)
 @click.option(
-    "--just-print-cfn", 
+    "--just-print-cfn",
     help="Skips a full deployment and just creates a copy of the CloudFormation templates to be deployed in a local directory",
     is_flag=True,
     show_default=True,
