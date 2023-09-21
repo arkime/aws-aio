@@ -26,6 +26,10 @@ jobs:
           python -m venv .venv
           source .venv/bin/activate
           (cd manage_arkime ; pip install -r requirements.txt)
+      - name: Create AWS config file
+        run: |
+          mkdir -p $HOME/.aws
+          echo "[default]" > $HOME/.aws/config
       - name: Run list clusters
         run: |
           source .venv/bin/activate
