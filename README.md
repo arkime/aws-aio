@@ -4,6 +4,8 @@ This project provides scripting to enable users to easily begin capturing the tr
 
 The CDK is used to perform infrastructure specification, setup, management, and teardown.  You can learn more about infrastructure-as-code using the CDK [here](https://docs.aws.amazon.com/cdk/v2/guide/home.html).
 
+[Watch Chris's demo](https://www.youtube.com/watch?v=2r1bYg0GLSg) to learn more and see the project in action.
+
 ## Table of Contents
 - [Background](#background)
 - [Quick Start Guide](#quick-start-guide)
