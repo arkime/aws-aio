@@ -9,7 +9,7 @@ T3_SMALL_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "t3.small
 T3_MEDIUM_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "t3.medium.search" == instance.type))
 R6G_LARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.large.search" == instance.type))
 R6G_4XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.4xlarge.search" == instance.type))
-R6G_12XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.12xlarge.search" == instance.type))
+OR1_8XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "or1.8xlarge.search" == instance.type))
 
 def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
     # TEST 1: No expected traffic number
@@ -119,12 +119,12 @@ def test_WHEN_get_data_node_plan_called_THEN_as_expected():
 
     # TEST 7: Large setup (1)
     actual_value = cap._get_data_node_plan(500000, 3)
-    expected_value = cap.DataNodesPlan(41, R6G_12XLARGE_SEARCH.type, R6G_12XLARGE_SEARCH.volSize)
+    expected_value = cap.DataNodesPlan(41, OR1_8XLARGE_SEARCH.type, OR1_8XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
     # TEST 8: Enormous setup
     actual_value = cap._get_data_node_plan(1200000, 3)
-    expected_value = cap.DataNodesPlan(98, R6G_12XLARGE_SEARCH.type, R6G_12XLARGE_SEARCH.volSize)
+    expected_value = cap.DataNodesPlan(98, OR1_8XLARGE_SEARCH.type, OR1_8XLARGE_SEARCH.volSize)
     assert expected_value == actual_value
 
 def test_WHEN_get_master_node_plan_called_THEN_as_expected():
