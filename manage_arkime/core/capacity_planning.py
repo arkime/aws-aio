@@ -65,7 +65,7 @@ DATA_INSTANCES = [
     DataInstance("t3.medium.search", 200, 6),
     DataInstance("r6g.large.search", 1024, 80),
     DataInstance("r6g.4xlarge.search", 6*1024, 80),
-    DataInstance("r6g.12xlarge.search", 12*1024, sys.maxsize)
+    DataInstance("or1.8xlarge.search", 12*1024, sys.maxsize)
 ]
 
 class TooMuchTraffic(Exception):
