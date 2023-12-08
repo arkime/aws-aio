@@ -16,7 +16,7 @@ US_EAST_1_PRICES: Dict[str, float] = {
     "r6g.large.search": 0.1670 * AWS_HOURS_PER_MONTH,
     "r6g.2xlarge.search": 0.6690 * AWS_HOURS_PER_MONTH,
     "r6g.4xlarge.search": 1.3390 * AWS_HOURS_PER_MONTH,
-    "r6g.12xlarge.search": 4.0160 * AWS_HOURS_PER_MONTH,
+    "or1.8xlarge.search": 3.3460 * AWS_HOURS_PER_MONTH,
 
     # https://aws.amazon.com/ec2/pricing/on-demand/
     "t3.medium": 0.0416 * AWS_HOURS_PER_MONTH,

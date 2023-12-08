@@ -2,10 +2,20 @@
 import unittest.mock as mock
 
 import core.capacity_planning as cap
-from core.price_report import PriceReport
+from core.price_report import PriceReport, US_EAST_1_PRICES
 from core.user_config import UserConfig
 
 INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
+
+def test_CONFIRM_all_master_instance_types_have_a_price():
+    # Run the test
+    for instance_type in cap.MASTER_INSTANCES:
+        assert instance_type.instanceType in US_EAST_1_PRICES
+
+def test_CONFIRM_all_data_instance_types_have_a_price():
+    # Run the test
+    for instance_type in cap.DATA_INSTANCES:
+        assert instance_type.type in US_EAST_1_PRICES
 
 def test_WHEN_PriceReport_get_report_THEN_as_expected():
     # Set up the test
