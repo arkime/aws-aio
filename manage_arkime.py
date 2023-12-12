@@ -4,6 +4,7 @@ import logging
 import click
 
 from commands.vpc_add import cmd_vpc_add
+from commands.config_list import cmd_config_list
 from commands.config_update import cmd_config_update
 from commands.cluster_create import cmd_cluster_create
 from commands.cluster_deregister_vpc import cmd_cluster_deregister_vpc
@@ -271,6 +272,30 @@ def vpc_deregister_cluster(ctx, cluster_name, vpc_id):
     region = ctx.obj.get("region")
     cmd_vpc_deregister_cluster(profile, region, cluster_name, vpc_id)
 cli.add_command(vpc_deregister_cluster)
+
+@click.command(help="Retrieves metadata about the Arkime Cluster's config deployed to the Capture or Viewer Nodes")
+@click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
+@click.option("--capture",
+    help="Performs the operation for the Capture Nodes' configuration",
+    is_flag=True,
+    default=False
+)
+@click.option("--viewer",
+    help="Performs the operation for the Viewer Nodes' configuration",
+    is_flag=True,
+    default=False
+)
+@click.option("--deployed",
+    help="Gets info on the current and previous (if it exists) configuration",
+    is_flag=True,
+    default=False
+)
+@click.pass_context
+def config_list(ctx, cluster_name, capture, viewer, deployed):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_config_list(profile, region, cluster_name, capture, viewer, deployed)
+cli.add_command(config_list)
 
 def main():
     logging_wrangler = LoggingWrangler()

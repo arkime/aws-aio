@@ -1,5 +1,6 @@
 from enum import Enum
 import logging
+from typing import Dict, List
 
 from botocore.exceptions import ClientError
 
@@ -140,3 +141,43 @@ def ensure_bucket_exists(bucket_name: str, aws_provider: AwsClientProvider):
         # If we got here, it means we have an enum we're not handling
         raise RuntimeError("We didn't expect to get here; please cut a bug report to the Arkime AWS-AIO team")
 
+def list_bucket_objects(bucket_name: str, aws_provider: AwsClientProvider, prefix: str = None) -> List[Dict[str, str]]:
+    """
+    Gets the keys and last modified date of all objects in an S3 bucket.  Returned in the format: [{"key", "date_modified"}]
+    """
+    s3_client = aws_provider.get_s3()
+    
+    paginator = s3_client.get_paginator('list_objects_v2')
+    all_objects = []
+
+    # Adding the prefix parameter to the pagination call if it's provided
+    page_iterator = (
+        paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+        if prefix
+        else paginator.paginate(Bucket=bucket_name)
+    )
+
+    for page in page_iterator:
+        contents = page.get('Contents', [])
+        for obj in contents:
+            all_objects.append({
+                "key": obj["Key"],
+                "date_modified": obj["LastModified"],
+            })
+    
+    return all_objects
+
+# all_objects.sort(key=lambda x: x["date_modified"], reverse=True)
+
+def get_object_user_metadata(bucket_name: str, s3_key: str, aws_provider: AwsClientProvider) -> Dict[str, str]:
+    """
+    Gets the user-defined object metadata for a specified S3 Key
+    """
+    s3_client = aws_provider.get_s3()
+
+    response = s3_client.head_object(
+        Bucket=bucket_name,
+        Key=s3_key,
+    )
+    object_metadata = response.get("Metadata", None)
+    return object_metadata
