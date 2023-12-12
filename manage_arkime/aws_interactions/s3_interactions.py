@@ -167,8 +167,6 @@ def list_bucket_objects(bucket_name: str, aws_provider: AwsClientProvider, prefi
     
     return all_objects
 
-# all_objects.sort(key=lambda x: x["date_modified"], reverse=True)
-
 def get_object_user_metadata(bucket_name: str, s3_key: str, aws_provider: AwsClientProvider) -> Dict[str, str]:
     """
     Gets the user-defined object metadata for a specified S3 Key
