@@ -49,7 +49,6 @@ def test_WHEN_create_bucket_called_THEN_as_expected():
     mock_aws_provider.get_aws_env.return_value = test_env_use1
     s3.create_bucket("bucket-name", mock_aws_provider)
 
-
     create_bucket_calls = [
         mock.call(        
             ACL="private",
@@ -219,3 +218,76 @@ def test_WHEN_put_file_to_bucket_called_THEN_as_expected(mock_open):
     mock_s3_client.put_object.side_effect = s3.BucketDoesntExist(bucket_name)
     with pytest.raises(s3.BucketDoesntExist):
         s3.put_file_to_bucket(mock_s3_file, bucket_name, s3_key, mock_aws_provider)
+
+def test_WHEN_list_bucket_objects_called_THEN_as_expected():
+    # Set up our mock
+    mock_s3_client = mock.Mock()
+    mock_paginator = mock.Mock()
+    mock_s3_client.get_paginator.return_value = mock_paginator
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_s3.return_value = mock_s3_client
+
+    page_1 = {
+        "Contents": [
+            {"Key": "prefix/file1.txt", "LastModified": "2021-01-01T12:00:00"},
+            {"Key": "prefix/file2.txt", "LastModified": "2021-01-02T12:00:00"}
+        ]
+    }
+    page_2 = {
+        "Contents": [
+            {"Key": "prefix/file3.txt", "LastModified": "2021-01-03T12:00:00"}
+        ]
+    }
+    mock_paginator.paginate.return_value = [page_1, page_2]
+
+    # Run our test
+    result = s3.list_bucket_objects("my-bucket", mock_aws_provider, prefix="prefix")
+
+    # Check the results
+    expected_result = [
+        {"key": "prefix/file1.txt", "date_modified": "2021-01-01T12:00:00"},
+        {"key": "prefix/file2.txt", "date_modified": "2021-01-02T12:00:00"},
+        {"key": "prefix/file3.txt", "date_modified": "2021-01-03T12:00:00"},
+    ]
+    assert expected_result == result
+
+    expected_paginate_calls = [
+        mock.call(Bucket="my-bucket", Prefix="prefix")
+    ]
+    assert expected_paginate_calls == mock_paginator.paginate.call_args_list
+
+
+def test_WHEN_get_object_user_metadata_called_THEN_as_expected():
+    # Set up our mock
+    mock_s3_client = mock.Mock()
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_s3.return_value = mock_s3_client
+
+    # TEST: Has metadata
+    mock_metadata = {
+        "Metadata": {
+            "time_utc": "2023-09-22 16:05:28",
+            "aws_aio_version": "1",
+            "config_version": "1",
+            "source_version": "v0.1.1-62-g8ac9e44",
+            "md5_version": "1c42f3c8f3b70abe58afac52df89ba15"
+        }
+    }
+    mock_s3_client.head_object.return_value = mock_metadata
+
+    result = s3.get_object_user_metadata("my-bucket", "key", mock_aws_provider)
+
+    assert mock_metadata["Metadata"] == result
+
+    # TEST: Does not have metadata
+    mock_metadata = {
+        "SomethingElse": {
+            "foo": "bar",
+        }
+    }
+    mock_s3_client.head_object.return_value = mock_metadata
+
+    result = s3.get_object_user_metadata("my-bucket", "key", mock_aws_provider)
+
+    assert None == result

@@ -46,11 +46,24 @@ class ConfigDetails:
                 and self.version == other.version
                 and self.previous == other.previous)
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> Dict[str, any]:
+        """
+        Converts the current current ConfigDetails to a dict, including recursive calls to any previous ones
+        """
+
         return {
             "s3": self.s3.to_dict(),
             "version": self.version.to_dict(),
             "previous": self.previous.to_dict() if self.previous else "None",
+        }
+    
+    def self_to_dict(self) -> Dict[str, any]:
+        """
+        Converts the current current ConfigDetails's info to a dict, but does not include any previous ones
+        """
+        return {
+            "s3": self.s3.to_dict(),
+            "version": self.version.to_dict(),
         }
     
     @classmethod

@@ -242,6 +242,12 @@ After running `cluster-create` and uploading the initial configuration, you'll n
 
 `config-update` will take a look at the local configuration and compare it what is currently deployed on your Nodes.  If the local configuration is different, it will be archived, sent to S3, and your ECS Containers recycled to pull down the new configuration.  If we see that Containers with the new configuration fail to start up correctly, we automatically revert to the previously deployed configuration.
 
+You can list the details of the currently (and previously) deployed configuration using the `config-list` command:
+
+```
+./manage_arkime.py config-list --cluster-name MyCluster --viewer --deployed
+```
+
 ### Viewing the Deployed Clusters
 
 To see the clusters you currently have deployed, you can use the `clusters-list` CLI command.  This will return a list of clusters and their associated details like so:

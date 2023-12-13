@@ -1,3 +1,4 @@
+import json
 import os
 import pytest
 import unittest.mock as mock
@@ -8,6 +9,40 @@ import core.constants as constants
 
 
 TEST_ENV = AwsEnvironment("account", "region", "profile")
+
+def test_WHEN_ConfigDetails_self_to_dict_called_THEN_as_expected():
+    # TEST: Does have a previous config
+    previous_details = config.ConfigDetails(
+        config.S3Details("bucket-name", "viewer/5/archive.zip"),
+        config.VersionInfo("1", "5", "2222", "v0.1.1", "then")
+    )
+    current_details = config.ConfigDetails(
+        config.S3Details("bucket-name", "viewer/6/archive.zip"),
+        config.VersionInfo("1", "6", "3333", "v0.1.1", "now"),
+        previous=previous_details
+    )
+    actual_value = current_details.self_to_dict()
+
+    expected_value = {
+        "s3": {"bucket": "bucket-name","key": "viewer/6/archive.zip"},
+        "version": {"aws_aio_version": "1","config_version": "6","md5_version": "3333","source_version": "v0.1.1","time_utc": "now"}
+    }
+    assert expected_value == actual_value
+
+    # TEST: Does not have a previous config
+    previous_details = None
+    current_details = config.ConfigDetails(
+        config.S3Details("bucket-name", "viewer/6/archive.zip"),
+        config.VersionInfo("1", "6", "3333", "v0.1.1", "now"),
+        previous=previous_details
+    )
+    actual_value = current_details.self_to_dict()
+
+    expected_value = {
+        "s3": {"bucket": "bucket-name","key": "viewer/6/archive.zip"},
+        "version": {"aws_aio_version": "1","config_version": "6","md5_version": "3333","source_version": "v0.1.1","time_utc": "now"}
+    }
+    assert expected_value == actual_value
 
 def test_WHEN_get_cluster_dir_name_called_THEN_as_expected():
     # TEST: Valid name should give right answer
