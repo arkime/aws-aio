@@ -139,6 +139,22 @@ def get_cluster_dir_name(cluster_name: str, aws_env: AwsEnvironment) -> str:
     # We want to avoid collisions between Clusters across accounts/regions
     return f"config-{cluster_name}-{aws_env.aws_account}-{aws_env.aws_region}"
 
+def get_capture_config_copy_file_name(cluster_name: str, aws_env: AwsEnvironment, config_version: str) -> str:
+    return f"{get_cluster_dir_name(cluster_name, aws_env)}-capture-v{config_version}.zip"
+
+def get_capture_config_copy_path(cluster_name: str, aws_env: AwsEnvironment, config_version: str) -> str:
+    parent_dir = get_repo_root_dir()
+
+    return os.path.join(parent_dir, get_capture_config_copy_file_name(cluster_name, aws_env, config_version))
+
+def get_viewer_config_copy_file_name(cluster_name: str, aws_env: AwsEnvironment, config_version: str) -> str:
+    return f"{get_cluster_dir_name(cluster_name, aws_env)}-viewer-v{config_version}.zip"
+
+def get_viewer_config_copy_path(cluster_name: str, aws_env: AwsEnvironment, config_version: str) -> str:
+    parent_dir = get_repo_root_dir()
+
+    return os.path.join(parent_dir, get_viewer_config_copy_file_name(cluster_name, aws_env, config_version))
+
 def get_cluster_dir_path(cluster_name: str, aws_env: AwsEnvironment, parent_dir: str):
     cluster_dir_name = get_cluster_dir_name(cluster_name, aws_env)
     return os.path.join(parent_dir, cluster_dir_name)

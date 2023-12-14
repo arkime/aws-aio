@@ -291,3 +291,64 @@ def test_WHEN_get_object_user_metadata_called_THEN_as_expected():
     result = s3.get_object_user_metadata("my-bucket", "key", mock_aws_provider)
 
     assert None == result
+
+@mock.patch("aws_interactions.s3_interactions.os.path.exists")
+@mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
+def test_WHEN_get_object_called_AND_file_exists_THEN_raises(mock_aws_provider, mock_exists):
+    # Set up our mock
+    mock_exists.side_effect = lambda path: True
+
+    # Run our test
+    with pytest.raises(s3.CantWriteFileAlreadyExists):
+        s3.get_object("test_bucket", "test_key", "test_local_path", mock_aws_provider)
+
+@mock.patch("aws_interactions.s3_interactions.os.path.dirname", mock.Mock())
+@mock.patch("aws_interactions.s3_interactions.os.path.exists")
+@mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
+def test_WHEN_get_object_called_AND_dir_doesnt_exist_THEN_raises(mock_aws_provider, mock_exists):
+    # Set up our mock
+    mock_exists.side_effect = [False, False]
+
+    # Run our test
+    with pytest.raises(s3.CantWriteFileDirDoesntExist):
+        s3.get_object("test_bucket", "test_key", "test_local_path", mock_aws_provider)
+
+@mock.patch("aws_interactions.s3_interactions.open")
+@mock.patch("aws_interactions.s3_interactions.os.path.exists")
+@mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
+def test_WHEN_get_object_called_AND_lack_perms_THEN_raises(mock_aws_provider, mock_exists, mock_open):
+    # Set up our mock
+    mock_exists.side_effect = [False, True]
+    mock_open.side_effect = PermissionError
+
+    # Run our test
+    with pytest.raises(s3.CantWriteFileLackPermission):
+        s3.get_object("test_bucket", "test_key", "test_local_path", mock_aws_provider)
+
+@mock.patch("aws_interactions.s3_interactions.os.path.exists")
+@mock.patch("aws_interactions.s3_interactions.open", new_callable=mock.mock_open)
+@mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
+def test_WHEN_get_object_called_AND_happy_path_THEN_as_expected(mock_aws_provider, mock_open, mock_exists):
+    # Set up our mock
+    mock_exists.side_effect = [False, True]
+    mock_s3_client = mock.Mock()
+    mock_response = {
+        'Body': mock.Mock(read=mock.Mock(return_value=b'test data')),
+        'Metadata': {'key1': 'value1'}
+    }
+    mock_s3_client.get_object.return_value = mock_response
+    mock_aws_provider.get_s3.return_value = mock_s3_client
+
+    # Run our test
+    result = s3.get_object("test_bucket", "test_key", "test_local_path", mock_aws_provider)
+
+    # Check our results
+    mock_open.assert_called_once_with("test_local_path", 'wb')
+    handle = mock_open()
+    handle.write.assert_called_once_with(b'test data')
+
+    expected_result = s3.S3File(
+        s3.PlainFile("test_local_path"),
+        metadata={'key1': 'value1'}
+    )
+    assert expected_result == result
