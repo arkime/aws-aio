@@ -311,11 +311,16 @@ cli.add_command(config_list)
     is_flag=True,
     default=False
 )
+@click.option("--previous",
+    help="Pulls the most recent, previously deployed config rather than the current (if there is one)",
+    is_flag=True,
+    default=False
+)
 @click.pass_context
-def config_pull(ctx, cluster_name, capture, viewer):
+def config_pull(ctx, cluster_name, capture, viewer, previous):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_config_pull(profile, region, cluster_name, capture, viewer)
+    cmd_config_pull(profile, region, cluster_name, capture, viewer, previous)
 cli.add_command(config_pull)
 
 def main():
