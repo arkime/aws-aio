@@ -7,76 +7,104 @@ import commands.config_pull as cp
 import core.constants as constants
 
 
+@mock.patch("commands.config_pull._get_specific_config")
 @mock.patch("commands.config_pull._get_previous_config")
 @mock.patch("commands.config_pull._get_current_config")
 @mock.patch("commands.config_pull.sys.exit")
-def test_WHEN_cmd_config_pull_called_AND_dont_specify_which_THEN_exits(mock_exit, mock_get_current, mock_get_previous):
+def test_WHEN_cmd_config_pull_called_AND_dont_specify_which_THEN_exits(mock_exit, mock_get_current, mock_get_previous, 
+                                                                       mock_get_specific):
     # Run our test
-    cp.cmd_config_pull("profile", "region", "MyCluster", False, False, False)
+    cp.cmd_config_pull("profile", "region", "MyCluster", False, False, False, None)
 
     # Check our results
     assert mock_exit.called_once_with(1)
     assert not mock_get_current.called
     assert not mock_get_previous.called
+    assert not mock_get_specific.called
 
+@mock.patch("commands.config_pull._get_specific_config")
 @mock.patch("commands.config_pull._get_previous_config")
 @mock.patch("commands.config_pull._get_current_config")
 @mock.patch("commands.config_pull.sys.exit")
-def test_WHEN_cmd_config_pull_called_AND_specify_both_which_THEN_exits(mock_exit, mock_get_current, mock_get_previous):
+def test_WHEN_cmd_config_pull_called_AND_specify_both_which_THEN_exits(mock_exit, mock_get_current, mock_get_previous, 
+                                                                       mock_get_specific):
     # Run our test
-    cp.cmd_config_pull("profile", "region", "MyCluster", True, True, False)
+    cp.cmd_config_pull("profile", "region", "MyCluster", True, True, False, None)
 
     # Check our results
     assert mock_exit.called_once_with(1)
     assert not mock_get_current.called
     assert not mock_get_previous.called
+    assert not mock_get_specific.called
 
+@mock.patch("commands.config_pull._get_specific_config")
 @mock.patch("commands.config_pull._get_previous_config")
 @mock.patch("commands.config_pull._get_current_config")
-def test_WHEN_cmd_config_pull_called_AND_default_THEN_as_expected(mock_get_current, mock_get_previous):
+@mock.patch("commands.config_pull.sys.exit")
+def test_WHEN_cmd_config_pull_called_AND_too_many_flags_THEN_exits(mock_exit, mock_get_current, mock_get_previous, 
+                                                                       mock_get_specific):
     # Run our test
-    cp.cmd_config_pull("profile", "region", "MyCluster", True, False, False)
+    cp.cmd_config_pull("profile", "region", "MyCluster", True, False, True, "3")
+
+    # Check our results
+    assert mock_exit.called_once_with(1)
+    assert not mock_get_current.called
+    assert not mock_get_previous.called
+    assert not mock_get_specific.called
+
+@mock.patch("commands.config_pull._get_previous_config", mock.Mock())
+@mock.patch("commands.config_pull._get_current_config")
+@mock.patch("commands.config_pull.sys.exit")
+def test_WHEN_cmd_config_pull_called_AND_expected_exception_THEN_handles_gracefully(mock_exit, mock_get_current):
+    # Set up our mock
+    exception_list = [
+        s3.CantWriteFileAlreadyExists(""),
+        s3.CantWriteFileDirDoesntExist(""),
+        s3.CantWriteFileLackPermission(""),
+        s3.S3ObjectDoesntExist("", ""),
+    ]
+    mock_get_current.side_effect = exception_list
+
+    # Run our test
+    for _ in range(len(exception_list)):
+        cp.cmd_config_pull("profile", "region", "MyCluster", True, False, False, None)
+
+    # Check our results
+    expected_calls = [mock.call(1) for _ in range(len(exception_list))]
+    assert expected_calls == mock_exit.call_args_list
+
+@mock.patch("commands.config_pull._get_current_config")
+def test_WHEN_cmd_config_pull_called_AND_default_THEN_as_expected(mock_get_current):
+    # Run our test
+    cp.cmd_config_pull("profile", "region", "MyCluster", True, False, False, None)
 
     # Check our results
     expected_get_current_config_calls = [
         mock.call("MyCluster", True, False, mock.ANY)
     ]
     assert expected_get_current_config_calls == mock_get_current.call_args_list
-    assert not mock_get_previous.called
-
-@mock.patch("commands.config_pull._get_previous_config", mock.Mock())
-@mock.patch("commands.config_pull._get_current_config")
-@mock.patch("commands.config_pull.sys.exit")
-def test_WHEN_cmd_config_pull_called_AND_exception_THEN_handles_gracefully(mock_exit, mock_get_current):
-    # Set up our mock
-    exception_list = [
-        s3.CantWriteFileAlreadyExists(""),
-        s3.CantWriteFileDirDoesntExist(""),
-        s3.CantWriteFileLackPermission(""),
-    ]
-    mock_get_current.side_effect = exception_list
-
-    # Run our test
-    for _ in range(len(exception_list)):
-        cp.cmd_config_pull("profile", "region", "MyCluster", True, False, False)
-
-    # Check our results
-    expected_calls = [mock.call(1) for _ in range(len(exception_list))]
-    assert expected_calls == mock_exit.call_args_list
 
 @mock.patch("commands.config_pull._get_previous_config")
-@mock.patch("commands.config_pull._get_current_config")
-def test_WHEN_cmd_config_pull_called_AND_previous_THEN_as_expected(mock_get_current, mock_get_previous):
+def test_WHEN_cmd_config_pull_called_AND_previous_THEN_as_expected(mock_get_previous):
     # Run our test
-    cp.cmd_config_pull("profile", "region", "MyCluster", True, False, True)
+    cp.cmd_config_pull("profile", "region", "MyCluster", True, False, True, None)
 
     # Check our results
-    assert not mock_get_current.called
-
     expected_get_previous_config_calls = [
         mock.call("MyCluster", True, False, mock.ANY)
     ]
     assert expected_get_previous_config_calls == mock_get_previous.call_args_list
+
+@mock.patch("commands.config_pull._get_specific_config")
+def test_WHEN_cmd_config_pull_called_AND_specific_THEN_as_expected(mock_get_specific):
+    # Run our test
+    cp.cmd_config_pull("profile", "region", "MyCluster", True, False, False, 3)
+
+    # Check our results
+    expected_get_specific_config_calls = [
+        mock.call("MyCluster", True, False, 3, mock.ANY)
+    ]
+    assert expected_get_specific_config_calls == mock_get_specific.call_args_list
 
 @mock.patch("commands.config_pull.s3.get_object")
 @mock.patch("commands.config_pull.ssm_ops.get_ssm_param_value")
@@ -161,4 +189,40 @@ def test_WHEN_get_previous_config_called_AND_capture_THEN_as_expected(mock_get_v
         mock.call(constants.get_capture_config_details_ssm_param_name("MyCluster"), mock_aws)
     ]
     assert expected_get_ssm_calls == mock_get_val.call_args_list
+
+@mock.patch("commands.config_pull.s3.get_object")
+def test_WHEN_get_specific_config_called_AND_capture_THEN_as_expected(mock_get_obj):
+    # Set up our mock
+    mock_aws_env = mock.Mock(aws_account = "XXXXXXXXXXXX", aws_region = "us-fake-1")
+    mock_aws = mock.Mock()
+    mock_aws.get_aws_env.return_value = mock_aws_env
+
+    test_bucket = constants.get_config_bucket_name(mock_aws_env.aws_account, mock_aws_env.aws_region, "MyCluster")
+    test_key = constants.get_capture_config_s3_key("3")
+    local_path = config_wrangling.get_capture_config_copy_path("MyCluster", mock_aws_env, "3")
+    mock_s3_file = s3.S3File(
+        s3.PlainFile(local_path),
+        metadata = {
+            "s3": {"bucket": test_bucket, "key": test_key},
+            "version": {"aws_aio_version": "1","config_version": "3","md5_version": "3333","source_version": "v0.1.1","time_utc": "now"}
+        }
+    )
+    mock_get_obj.return_value = mock_s3_file    
+
+    # Run our test
+    result = cp._get_specific_config("MyCluster", True, False, 3, mock_aws)
+
+    # Check our results
+    expected_value = local_path
+    assert expected_value == result
+
+    expected_s3_get_calls = [
+        mock.call(
+            test_bucket,
+            test_key,
+            local_path,
+            mock_aws
+        )
+    ]
+    assert expected_s3_get_calls == mock_get_obj.call_args_list
 

@@ -50,6 +50,12 @@ class CantWriteFileLackPermission(Exception):
         self.local_path = local_path
         super().__init__(f"Could not write to the location {local_path} because you lack permission to do so")
 
+class S3ObjectDoesntExist(Exception):
+    def __init__(self, bucket: str, key: str):
+        self.bucket = bucket
+        self.key = key
+        super().__init__(f"The S3 object requested does not appear to exist: Bucket '{bucket}', Key '{key}'")
+
 def get_bucket_status(bucket_name: str, aws_provider: AwsClientProvider) -> BucketStatus:
     s3_client = aws_provider.get_s3()
     try:
@@ -209,7 +215,11 @@ def get_object(bucket_name: str, s3_key: str, local_path: str, aws_provider: Aws
     if not os.path.exists(os.path.dirname(local_path)):
         raise CantWriteFileDirDoesntExist(local_path)
     
-    response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+    except ClientError as ex:
+        if ex.response['Error']['Code'] == 'NoSuchKey':
+            raise S3ObjectDoesntExist(bucket_name, s3_key)
 
     try:
         with open(local_path, 'wb') as file:

@@ -325,6 +325,20 @@ def test_WHEN_get_object_called_AND_lack_perms_THEN_raises(mock_aws_provider, mo
     with pytest.raises(s3.CantWriteFileLackPermission):
         s3.get_object("test_bucket", "test_key", "test_local_path", mock_aws_provider)
 
+@mock.patch("aws_interactions.s3_interactions.open")
+@mock.patch("aws_interactions.s3_interactions.os.path.exists")
+@mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
+def test_WHEN_get_object_called_AND_s3_obj_doesnt_exist_THEN_raises(mock_aws_provider, mock_exists, mock_open):
+    # Set up our mock
+    mock_exists.side_effect = [False, True]
+    mock_s3_client = mock.Mock()
+    mock_s3_client.get_object.side_effect = ClientError(error_response={"Error": {"Code": "NoSuchKey", "Message": "blah"}}, operation_name="")
+    mock_aws_provider.get_s3.return_value = mock_s3_client
+
+    # Run our test
+    with pytest.raises(s3.S3ObjectDoesntExist):
+        s3.get_object("test_bucket", "test_key", "test_local_path", mock_aws_provider)
+
 @mock.patch("aws_interactions.s3_interactions.os.path.exists")
 @mock.patch("aws_interactions.s3_interactions.open", new_callable=mock.mock_open)
 @mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
@@ -352,3 +366,4 @@ def test_WHEN_get_object_called_AND_happy_path_THEN_as_expected(mock_aws_provide
         metadata={'key1': 'value1'}
     )
     assert expected_result == result
+

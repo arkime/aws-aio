@@ -298,7 +298,7 @@ def config_list(ctx, cluster_name, capture, viewer, deployed):
     cmd_config_list(profile, region, cluster_name, capture, viewer, deployed)
 cli.add_command(config_list)
 
-@click.command(help=("Retrieves the config deployed to the Arkime Cluster's Capture or Viewer Nodes."
+@click.command(help=("Retrieves the config deployed to the Arkime Cluster's Capture or Viewer Nodes to your machine."
                      + "  Pulls the currently config deployed by default."))
 @click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
 @click.option("--capture",
@@ -316,11 +316,16 @@ cli.add_command(config_list)
     is_flag=True,
     default=False
 )
+@click.option("--config-version",
+    help="Pulls the specified version of the config (if it exists); should be an integer number",
+    type=click.INT,
+    default=None,
+)
 @click.pass_context
-def config_pull(ctx, cluster_name, capture, viewer, previous):
+def config_pull(ctx, cluster_name, capture, viewer, previous, config_version):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_config_pull(profile, region, cluster_name, capture, viewer, previous)
+    cmd_config_pull(profile, region, cluster_name, capture, viewer, previous, config_version)
 cli.add_command(config_pull)
 
 def main():

@@ -1,7 +1,6 @@
 import json
 import logging
 import sys
-from typing import Dict, List
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
