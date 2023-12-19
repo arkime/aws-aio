@@ -5,6 +5,7 @@ import click
 
 from commands.vpc_add import cmd_vpc_add
 from commands.config_list import cmd_config_list
+from commands.config_pull import cmd_config_pull
 from commands.config_update import cmd_config_update
 from commands.cluster_create import cmd_cluster_create
 from commands.cluster_deregister_vpc import cmd_cluster_deregister_vpc
@@ -296,6 +297,36 @@ def config_list(ctx, cluster_name, capture, viewer, deployed):
     region = ctx.obj.get("region")
     cmd_config_list(profile, region, cluster_name, capture, viewer, deployed)
 cli.add_command(config_list)
+
+@click.command(help=("Retrieves the config deployed to the Arkime Cluster's Capture or Viewer Nodes to your machine."
+                     + "  Pulls the currently config deployed by default."))
+@click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
+@click.option("--capture",
+    help="Performs the operation for the Capture Nodes' configuration",
+    is_flag=True,
+    default=False
+)
+@click.option("--viewer",
+    help="Performs the operation for the Viewer Nodes' configuration",
+    is_flag=True,
+    default=False
+)
+@click.option("--previous",
+    help="Pulls the most recent, previously deployed config rather than the current (if there is one)",
+    is_flag=True,
+    default=False
+)
+@click.option("--config-version",
+    help="Pulls the specified version of the config (if it exists); should be an integer number",
+    type=click.INT,
+    default=None,
+)
+@click.pass_context
+def config_pull(ctx, cluster_name, capture, viewer, previous, config_version):
+    profile = ctx.obj.get("profile")
+    region = ctx.obj.get("region")
+    cmd_config_pull(profile, region, cluster_name, capture, viewer, previous, config_version)
+cli.add_command(config_pull)
 
 def main():
     logging_wrangler = LoggingWrangler()

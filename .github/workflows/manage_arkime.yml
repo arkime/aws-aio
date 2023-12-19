@@ -40,5 +40,20 @@ jobs:
         run: |
           source .venv/bin/activate
           ./manage_arkime.py --region us-east-1 cluster-create --replicas 0 --name test --spi-days 1 --expected-traffic 0.01 --history-days 7 --pcap-days 1 --preconfirm-usage
+      - name: Run config-list
+        run: |
+          source .venv/bin/activate
+          ./manage_arkime.py --region us-east-1 config-list --cluster-name test --capture
+          ./manage_arkime.py --region us-east-1 config-list --cluster-name test --capture --deployed
+          ./manage_arkime.py --region us-east-1 config-list --cluster-name test --viewer
+          ./manage_arkime.py --region us-east-1 config-list --cluster-name test --viewer --deployed
+      - name: Run config-pull
+        run: |
+          source .venv/bin/activate
+          ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --capture
+          ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --capture --previous
+          ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --viewer
+          ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --viewer --previous
+    
 
 

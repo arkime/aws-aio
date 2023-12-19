@@ -1,7 +1,6 @@
 import json
 import logging
 import sys
-from typing import Dict, List
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_client_provider import AwsClientProvider
@@ -11,8 +10,7 @@ import core.constants as constants
 
 logger = logging.getLogger(__name__)
 
-def cmd_config_list(profile: str, region: str, cluster_name: str, capture: bool, viewer: bool, deployed: bool
-                    ) -> List[Dict[str, str]]:
+def cmd_config_list(profile: str, region: str, cluster_name: str, capture: bool, viewer: bool, deployed: bool):
     logger.debug(f"Invoking config-list with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)

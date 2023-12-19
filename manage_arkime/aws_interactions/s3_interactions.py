@@ -1,11 +1,12 @@
 from enum import Enum
 import logging
+import os
 from typing import Dict, List
 
 from botocore.exceptions import ClientError
 
 from aws_interactions.aws_client_provider import AwsClientProvider
-from core.local_file import S3File
+from core.local_file import PlainFile, S3File
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,28 @@ class BucketNameNotAvailable(Exception):
 class CouldntEnsureBucketExists(Exception):
     def __init__(self, bucket_name: str):
         self.bucket_name = bucket_name
-        super().__init__(f"We could not ensure that the S3 bucket name {bucket_name} exists and is accessible")
+        super().__init__(f"Could not ensure that the S3 bucket name {bucket_name} exists and is accessible")
+
+class CantWriteFileDirDoesntExist(Exception):
+    def __init__(self, local_path: str):
+        self.local_path = local_path
+        super().__init__(f"Could not write to the location {local_path} because its directory doesn't exist")
+
+class CantWriteFileAlreadyExists(Exception):
+    def __init__(self, local_path: str):
+        self.local_path = local_path
+        super().__init__(f"Could not write to the location {local_path} because a file already exists there")
+
+class CantWriteFileLackPermission(Exception):
+    def __init__(self, local_path: str):
+        self.local_path = local_path
+        super().__init__(f"Could not write to the location {local_path} because you lack permission to do so")
+
+class S3ObjectDoesntExist(Exception):
+    def __init__(self, bucket: str, key: str):
+        self.bucket = bucket
+        self.key = key
+        super().__init__(f"The S3 object requested does not appear to exist: Bucket '{bucket}', Key '{key}'")
 
 def get_bucket_status(bucket_name: str, aws_provider: AwsClientProvider) -> BucketStatus:
     s3_client = aws_provider.get_s3()
@@ -179,3 +201,34 @@ def get_object_user_metadata(bucket_name: str, s3_key: str, aws_provider: AwsCli
     )
     object_metadata = response.get("Metadata", None)
     return object_metadata
+
+def get_object(bucket_name: str, s3_key: str, local_path: str, aws_provider: AwsClientProvider) -> S3File:
+    """
+    Gets the object from S3 and places it at the defined local_path, raising an error if a file already exists at that
+    location on disk.
+    """
+    s3_client = aws_provider.get_s3()
+
+    if os.path.exists(local_path):
+        raise CantWriteFileAlreadyExists(local_path)
+    
+    if not os.path.exists(os.path.dirname(local_path)):
+        raise CantWriteFileDirDoesntExist(local_path)
+    
+    try:
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+    except ClientError as ex:
+        if ex.response['Error']['Code'] == 'NoSuchKey':
+            raise S3ObjectDoesntExist(bucket_name, s3_key)
+
+    try:
+        with open(local_path, 'wb') as file:
+            file.write(response['Body'].read())
+    except PermissionError:
+        raise CantWriteFileLackPermission(local_path)
+
+    return S3File(
+        PlainFile(local_path),
+        metadata=response.get("Metadata", None)
+    )
+

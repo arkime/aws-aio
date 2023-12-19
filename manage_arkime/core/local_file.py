@@ -103,6 +103,19 @@ class ZipDirectory(LocalFile):
 
         return self._archive_path
 
-    
+class PlainFile(LocalFile):
+    """
+    Provides an abstraction for a generic file on disk.
+    """
+    def __init__(self, local_path: str):
+        self._local_path = local_path
+
+    def __eq__(self, other):
+        return self.local_path == other.local_path
+
+    @property
+    def local_path(self) -> str:
+        return self._local_path
+
 
     
