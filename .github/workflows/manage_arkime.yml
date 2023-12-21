@@ -54,6 +54,10 @@ jobs:
           ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --capture --previous
           ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --viewer
           ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --viewer --previous
+      - name: Run config-update
+        run: |
+          source .venv/bin/activate
+          ./manage_arkime.py --region us-east-1 config-update --cluster-name test --force-bounce
     
 
 
