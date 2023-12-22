@@ -54,6 +54,3 @@ jobs:
           ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --capture --previous
           ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --viewer
           ./manage_arkime.py --region us-east-1 config-pull --cluster-name test --viewer --previous
-    
-
-

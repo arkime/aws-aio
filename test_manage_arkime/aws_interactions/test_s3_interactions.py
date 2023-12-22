@@ -292,6 +292,17 @@ def test_WHEN_get_object_user_metadata_called_THEN_as_expected():
 
     assert None == result
 
+@mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
+def test_WHEN_get_object_user_metadata_called_AND_s3_obj_doesnt_exist_THEN_raises(mock_aws_provider):
+    # Set up our mock
+    mock_s3_client = mock.Mock()
+    mock_s3_client.head_object.side_effect = ClientError(error_response={"Error": {"Code": "404", "Message": "Not found"}}, operation_name="")
+    mock_aws_provider.get_s3.return_value = mock_s3_client
+
+    # Run our test
+    with pytest.raises(s3.S3ObjectDoesntExist):
+        s3.get_object_user_metadata("my-bucket", "key", mock_aws_provider)
+
 @mock.patch("aws_interactions.s3_interactions.os.path.exists")
 @mock.patch("aws_interactions.s3_interactions.AwsClientProvider")
 def test_WHEN_get_object_called_AND_file_exists_THEN_raises(mock_aws_provider, mock_exists):

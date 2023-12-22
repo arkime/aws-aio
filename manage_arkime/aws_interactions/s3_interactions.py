@@ -195,10 +195,13 @@ def get_object_user_metadata(bucket_name: str, s3_key: str, aws_provider: AwsCli
     """
     s3_client = aws_provider.get_s3()
 
-    response = s3_client.head_object(
-        Bucket=bucket_name,
-        Key=s3_key,
-    )
+    try:
+        response = s3_client.head_object(Bucket=bucket_name, Key=s3_key)
+    except ClientError as ex:
+        if ex.response['Error']['Code'] == '404':
+            raise S3ObjectDoesntExist(bucket_name, s3_key)
+        raise ex
+    
     object_metadata = response.get("Metadata", None)
     return object_metadata
 
@@ -220,6 +223,7 @@ def get_object(bucket_name: str, s3_key: str, local_path: str, aws_provider: Aws
     except ClientError as ex:
         if ex.response['Error']['Code'] == 'NoSuchKey':
             raise S3ObjectDoesntExist(bucket_name, s3_key)
+        raise ex
 
     try:
         with open(local_path, 'wb') as file:

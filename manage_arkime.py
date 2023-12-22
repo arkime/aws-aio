@@ -200,24 +200,36 @@ def vpc_remove(ctx, cluster_name, vpc_id):
 cli.add_command(vpc_remove)
 
 @click.command(help="Updates specified Arkime Cluster's Capture/Viewer configuration")
-@click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
-@click.option("--force-bounce-capture",
-    help="Forces a bounce of the Capture Nodes, regardless of whether there is new config.",
+@click.option("--cluster-name", help="The name of the Arkime Cluster to operate on", required=True)
+@click.option("--capture",
+    help="Performs the operation for the Capture Nodes' configuration",
+    is_flag=True,
+    default=False
+)
+@click.option("--viewer",
+    help="Performs the operation for the Viewer Nodes' configuration",
+    is_flag=True,
+    default=False
+)
+@click.option("--force-bounce",
+    help=("Forces a bounce of the Arkime Nodes' compute, regardless of whether there is new config."
+          + "  Can be used to re-start/re-load the Nodes' configuration and Docker containers.  Useful as"
+          + " an ops fallback if things get wonky."),
     is_flag=True,
     show_default=True,
     default=False
 )
-@click.option("--force-bounce-viewer",
-    help="Forces a bounce of the Viewer Nodes, regardless of whether there is new config.",
-    is_flag=True,
-    show_default=True,
-    default=False
+@click.option("--config-version",
+    help=("Deploys the specified version of the config (if it exists) to either the Capture or Viewer Nodes (but not"
+          + " both).  You must specify which of the two components to deploy to."),
+    type=click.INT,
+    default=None,
 )
 @click.pass_context
-def config_update(ctx, cluster_name, force_bounce_capture, force_bounce_viewer):
+def config_update(ctx, cluster_name, capture, viewer, force_bounce, config_version):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_config_update(profile, region, cluster_name, force_bounce_capture, force_bounce_viewer)
+    cmd_config_update(profile, region, cluster_name, capture, viewer, force_bounce, config_version)
 cli.add_command(config_update)
 
 @click.command(help="Registers a VPC in another AWS Account so it can be captured by the Cluster.  Not needed for VPCs"
@@ -275,7 +287,7 @@ def vpc_deregister_cluster(ctx, cluster_name, vpc_id):
 cli.add_command(vpc_deregister_cluster)
 
 @click.command(help="Retrieves metadata about the Arkime Cluster's config deployed to the Capture or Viewer Nodes")
-@click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
+@click.option("--cluster-name", help="The name of the Arkime Cluster to operate on", required=True)
 @click.option("--capture",
     help="Performs the operation for the Capture Nodes' configuration",
     is_flag=True,
@@ -300,7 +312,7 @@ cli.add_command(config_list)
 
 @click.command(help=("Retrieves the config deployed to the Arkime Cluster's Capture or Viewer Nodes to your machine."
                      + "  Pulls the currently config deployed by default."))
-@click.option("--cluster-name", help="The name of the Arkime Cluster to update", required=True)
+@click.option("--cluster-name", help="The name of the Arkime Cluster to operate on", required=True)
 @click.option("--capture",
     help="Performs the operation for the Capture Nodes' configuration",
     is_flag=True,
