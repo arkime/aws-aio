@@ -70,7 +70,7 @@ Resources of those types should have capture configured for them when they are b
 ### Pre-requisites
 
 * REQUIRED: A copy of the aws-aio repo
-* REQUIRED: A properly installed/configured copy of Node ([see instructions here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
+* REQUIRED: A properly installed/configured copy of Node 18 ([see instructions here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
 * REQUIRED: A properly installed/configured copy of Python 3.9+ and venv ([see instructions here](https://realpython.com/installing-python/))
 * REQUIRED: A properly installed/configured copy of Docker (instructions vary by platform/organization)
 * REQUIRED: A properly installed/configured copy of the CDK CLI ([see instructions here](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html))
@@ -387,6 +387,33 @@ Here are some account limits you'll want to watch out for:
 * Number of EIPs per region is small, and we spin up several for each Arkime Cluster
 * There's a max of 10,000 Traffic Mirroring Sessions.  We use one per traffic source.
 * There's a max of 10,000 Standard SSM Parameters per account/region.  We use at least one for each User ENI, several for each Subnet in a User VPC, and several for each User VPC and Cluster.
+
+## Troubleshooting
+
+### "This CDK CLI is not compatible with the CDK library"
+This error is caused by having a mismatch between the Node packages `aws-cdk` (the CLI) and `aws-cdk-lib` (the CDK library), which can occaisionally result if one package is upgraded without the other package package.  You'll see an error message like the following in the manage_arkime.log file:
+
+```
+2024-01-05 18:36:27.743662 - core.shell_interactions - This CDK CLI is not compatible with the CDK library used by your application. Please upgrade the CLI to the latest version.
+2024-01-05 18:36:27.743906 - core.shell_interactions - (Cloud assembly schema version mismatch: Maximum schema version supported is 30.0.0, but found 36.0.0)
+2024-01-05 18:36:27.890073 - cdk_interactions.cdk_client - Deployment failed
+```
+
+In that case, it can be solved by upgrading the versions of those packages using the command:
+
+```
+npm install aws-cdk && npm install aws-cdk-lib
+```
+
+I can also be caused by using the wrong version of Node.  Currently the CDK expects Node 18 and using Node 20 (the latest) can cause issues.  You can ensure you're using Node 18 by using `nvm`:
+
+```
+nvm install 18
+nvm use 18
+node --version
+```
+
+If you encounter this issue, please cut the Arkime AWS AIO team [a bug report](https://github.com/arkime/aws-aio/issues/new) so we can address it for everyone.
 
 ## Generally useful NPM/CDK commands
 
