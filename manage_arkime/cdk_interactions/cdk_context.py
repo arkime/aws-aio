@@ -59,12 +59,12 @@ def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames, 
     fake_arn = "N/A"
     fake_cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, ["us-fake-1"], DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
         ViewerNodesPlan(4, 2),
-        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK) if has_viewer_vpc else None,
+        VpcPlan(DEFAULT_VPC_CIDR, ["us-fake-1"], DEFAULT_CAPTURE_PUBLIC_MASK) if has_viewer_vpc else None,
     )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
     fake_bucket_name = ""

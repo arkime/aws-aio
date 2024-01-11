@@ -2,9 +2,6 @@ import pytest
 
 import core.capacity_planning as cap
 
-INSTANCE_TYPE_CAPTURE_NODE = "m5.xlarge";
-
-
 T3_SMALL_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "t3.small.search" == instance.type))
 T3_MEDIUM_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "t3.medium.search" == instance.type))
 R6G_LARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.large.search" == instance.type))
@@ -12,43 +9,45 @@ R6G_4XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "r6g.4
 OR1_8XLARGE_SEARCH = next((instance for instance in cap.DATA_INSTANCES if "or1.8xlarge.search" == instance.type))
 
 def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
+    azs = ["az1", "az2", "az3", "az4"]
+
     # TEST 1: No expected traffic number
 
-    actual_value = cap.get_capture_node_capacity_plan(None)
-    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0].instanceType, 1, 2, 1)
+    actual_value = cap.get_capture_node_capacity_plan(None, azs)
+    expected_value = cap.CaptureNodesPlan(cap.T3_MEDIUM.instanceType, 4, 5, 4)
 
     assert expected_value == actual_value
 
     # TEST 2: Small expected traffic number
 
-    actual_value = cap.get_capture_node_capacity_plan(0.001)
-    expected_value = cap.CaptureNodesPlan(cap.CAPTURE_INSTANCES[0].instanceType, 1, 2, 1)
+    actual_value = cap.get_capture_node_capacity_plan(0.001, azs)
+    expected_value = cap.CaptureNodesPlan(cap.T3_MEDIUM.instanceType, 4, 5, 4)
 
     assert expected_value == actual_value
 
     # TEST 3: Mid-range expected traffic number
 
-    actual_value = cap.get_capture_node_capacity_plan(20)
-    expected_value = cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 10, 13, 1)
+    actual_value = cap.get_capture_node_capacity_plan(20, azs)
+    expected_value = cap.CaptureNodesPlan(cap.M5_XLARGE.instanceType, 10, 13, 4)
 
     assert expected_value == actual_value
 
     # TEST 4: Max expected traffic number
 
-    actual_value = cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC)
-    expected_value = cap.CaptureNodesPlan(INSTANCE_TYPE_CAPTURE_NODE, 50, 63, 1)
+    actual_value = cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC, azs)
+    expected_value = cap.CaptureNodesPlan(cap.M5_XLARGE.instanceType, 50, 63, 4)
 
     assert expected_value == actual_value
 
     # TEST 5: Excessive expected traffic number
 
     with pytest.raises(cap.TooMuchTraffic):
-        cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC + 10)
+        cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC + 10, azs)
 
 
 def test_WHEN_get_ecs_sys_resource_plan_called_THEN_as_expected():
     # TEST 1: Get an m5.xlarge instance
-    actual_value = cap.get_ecs_sys_resource_plan(INSTANCE_TYPE_CAPTURE_NODE)
+    actual_value = cap.get_ecs_sys_resource_plan(cap.M5_XLARGE.instanceType)
     expected_value = cap.EcsSysResourcePlan(3584, 15360)
 
     assert expected_value == actual_value
@@ -202,61 +201,71 @@ def test_WHEN_cidr_created_THEN_as_expected():
         cap.Cidr("1.2.3.4/33")
 
 def test_WHEN_get_capture_vpc_plan_called_THEN_as_expected():
+    azs = ["az1", "az2", "az3", "az4"]
+
     # TEST: There's an existing plan, return it
-    previous_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 2, cap.DEFAULT_CAPTURE_PUBLIC_MASK)
-    actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16")
+    previous_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), azs, cap.DEFAULT_CAPTURE_PUBLIC_MASK)
+    actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16", azs)
 
     assert previous_plan == actual_value
 
     # TEST: There's not an existing plan, use defaults
     previous_plan = cap.VpcPlan(None, None, None)
-    actual_value = cap.get_capture_vpc_plan(previous_plan, None)
+    actual_value = cap.get_capture_vpc_plan(previous_plan, None, azs)
 
-    assert cap.VpcPlan(cap.DEFAULT_VPC_CIDR, cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
+    assert cap.VpcPlan(cap.DEFAULT_VPC_CIDR, azs, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
 
     # TEST: There's not an existing plan, use specified CIDR
     previous_plan = cap.VpcPlan(None, None, None)
-    actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16")
+    actual_value = cap.get_capture_vpc_plan(previous_plan, "5.5.5.5/16", azs)
 
-    assert cap.VpcPlan(cap.Cidr("5.5.5.5/16"), cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
+    assert cap.VpcPlan(cap.Cidr("5.5.5.5/16"), azs, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
 
 def test_WHEN_get_viewer_vpc_plan_called_THEN_as_expected():
+    azs = ["az1", "az2", "az3", "az4"]
+    azs2 = ["az1", "az2"]
+
     # TEST: There's an existing plan, return it
-    previous_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 2, cap.DEFAULT_VIEWER_PUBLIC_MASK)
-    actual_value = cap.get_viewer_vpc_plan(previous_plan, "5.5.5.5/16")
+    previous_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), azs2, cap.DEFAULT_VIEWER_PUBLIC_MASK)
+    actual_value = cap.get_viewer_vpc_plan(previous_plan, "5.5.5.5/16", azs)
 
     assert previous_plan == actual_value
 
     # TEST: There's not an existing plan, return None
     previous_plan = None
-    actual_value = cap.get_viewer_vpc_plan(previous_plan, None)
+    actual_value = cap.get_viewer_vpc_plan(previous_plan, None, azs)
 
     assert None == actual_value
 
     # TEST: There's not an existing plan, use specified CIDR
     previous_plan = None
-    actual_value = cap.get_viewer_vpc_plan(previous_plan, "5.5.5.5/16")
+    actual_value = cap.get_viewer_vpc_plan(previous_plan, "5.5.5.5/16", azs)
 
-    assert cap.VpcPlan(cap.Cidr("5.5.5.5/16"), cap.DEFAULT_NUM_AZS, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
+    assert cap.VpcPlan(cap.Cidr("5.5.5.5/16"), azs2, cap.DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value
 
 def test_WHEN_get_usable_ips_called_THEN_as_expected():
+    azs = ["az1", "az2"]
+
     # TEST: Example 1
-    test_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/26"), 2, 28)
+    test_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/26"), azs, 28)
     actual_value = test_plan.get_usable_ips()
 
     assert 28 == actual_value
 
     # TEST: Example 2
-    test_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 2, 28)
+    test_plan = cap.VpcPlan(cap.Cidr("1.2.3.4/24"), azs, 28)
     actual_value = test_plan.get_usable_ips()
 
     assert 220 == actual_value
 
 def test_WHEN_will_capture_plan_fit_called_THEN_as_expected():
+    azs3 = ["az1", "az2", "az3"]
+    azs2 = ["az1", "az2"]
+
     # TEST: The plan fits - single VPC
     test_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan("m5.xlarge", 10, 15, 10),
-        cap.VpcPlan(cap.Cidr("1.2.3.4/24"), 3, 28),
+        cap.VpcPlan(cap.Cidr("1.2.3.4/24"), azs3, 28),
         cap.EcsSysResourcePlan(3584, 15360),
         cap.OSDomainPlan(cap.DataNodesPlan(10, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
@@ -270,7 +279,7 @@ def test_WHEN_will_capture_plan_fit_called_THEN_as_expected():
     # TEST: The plan doesn't fit - single VPC
     test_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan("m5.xlarge", 3, 5, 3),
-        cap.VpcPlan(cap.Cidr("1.2.3.4/25"), 3, 28),
+        cap.VpcPlan(cap.Cidr("1.2.3.4/25"), azs3, 28),
         cap.EcsSysResourcePlan(3584, 15360),
         cap.OSDomainPlan(cap.DataNodesPlan(64, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
@@ -284,12 +293,12 @@ def test_WHEN_will_capture_plan_fit_called_THEN_as_expected():
     # TEST: The plan fits - dual VPC
     test_plan = cap.ClusterPlan(
         cap.CaptureNodesPlan("m5.xlarge", 3, 5, 3),
-        cap.VpcPlan(cap.Cidr("1.2.3.4/25"), 3, 28),
+        cap.VpcPlan(cap.Cidr("1.2.3.4/25"), azs3, 28),
         cap.EcsSysResourcePlan(3584, 15360),
         cap.OSDomainPlan(cap.DataNodesPlan(62, "r6g.large.search", 1024), cap.MasterNodesPlan(3, "m6g.large.search")),
         cap.S3Plan(cap.DEFAULT_S3_STORAGE_CLASS, 30),
         cap.ViewerNodesPlan(4, 2),
-        cap.VpcPlan(cap.Cidr("2.3.4.5/26"), 2, 28),
+        cap.VpcPlan(cap.Cidr("2.3.4.5/26"), azs2, 28),
     )
     actual_value = test_plan.will_capture_plan_fit()
 

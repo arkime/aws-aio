@@ -3,7 +3,7 @@ import math
 import logging
 import re
 import sys
-from typing import Dict, Type, TypeVar
+from typing import Dict, List, Type, TypeVar
 
 
 logger = logging.getLogger(__name__)
@@ -21,17 +21,18 @@ DEFAULT_NUM_AZS = 2 # How many AWS Availability zones to utilize
 @dataclass
 class CaptureInstance:
     instanceType: str
-    maxTraffic: float
     trafficPer: float
     ecsCPU: int
     ecsMemory: int
 
-# These are the possible instances types we assign for capture nodes based on maxTraffic
-CAPTURE_INSTANCES = [
-    CaptureInstance("t3.medium", 0.5, 0.25, 1536, 3072),
-    CaptureInstance("m5.xlarge", MAX_TRAFFIC, 2.0, 3584, 15360)
-]
+# These are the possible instances types we assign for capture nodes
+T3_MEDIUM = CaptureInstance("t3.medium", 0.25, 1536, 3072)
+M5_XLARGE = CaptureInstance("m5.xlarge", 2.0, 3584, 15360)
 
+CAPTURE_INSTANCES = [
+    T3_MEDIUM,
+    M5_XLARGE
+]
 
 @dataclass
 class MasterInstance:
@@ -95,9 +96,11 @@ class CaptureNodesPlan:
             "minCount": self.minCount,
         }
 
-def get_capture_node_capacity_plan(expected_traffic: float) -> CaptureNodesPlan:
+def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> CaptureNodesPlan:
     """
-    Creates a capacity plan for the indicated traffic load.
+    Creates a capacity plan for the indicated traffic load.  We expect that we will have at least one node in each AZ
+    in order to support having a VPC Endpoint in each AZ.
+
     expected_traffic: The expected traffic volume for the Arkime cluster, in Gigabits Per Second (Gbps)
     """
 
@@ -106,16 +109,24 @@ def get_capture_node_capacity_plan(expected_traffic: float) -> CaptureNodesPlan:
 
     if expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
+    
+    chosen_instance = (
+        T3_MEDIUM
+        if expected_traffic <= T3_MEDIUM.trafficPer * len(azs) # No more than one of these per AZ
+        else M5_XLARGE
+    )
 
-    chosen_instance = next(instance for instance in CAPTURE_INSTANCES if expected_traffic <= instance.maxTraffic)
-
-    desired_instances = math.ceil(expected_traffic/chosen_instance.trafficPer)
-
+    min_instances = len(azs)
+    desired_instances = max(
+        min_instances,
+        math.ceil(expected_traffic/chosen_instance.trafficPer)
+    )
+    
     return CaptureNodesPlan(
         chosen_instance.instanceType,
         desired_instances,
         math.ceil(desired_instances * CAPACITY_BUFFER_FACTOR),
-        MINIMUM_NODES
+        min_instances
     )
 
 @dataclass
@@ -397,22 +408,22 @@ DEFAULT_VIEWER_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the
 T_VpcPlan = TypeVar('T_VpcPlan', bound='VpcPlan')
 
 @dataclass
-class VpcPlan:    
+class VpcPlan:
     cidr: Cidr
-    numAzs: int
+    azs: List[str]
     publicSubnetMask: int
 
     def __eq__(self, other) -> bool:
         if other is None:
             return True if self is None else False
 
-        return (self.cidr == other.cidr and self.numAzs == other.numAzs
+        return (self.cidr == other.cidr and self.azs == other.azs
                 and self.publicSubnetMask == other.publicSubnetMask)
 
     def to_dict(self) -> Dict[str, any]:
         return {
             "cidr": self.cidr.to_dict(),
-            "numAzs": self.numAzs,
+            "azs": self.azs,
             "publicSubnetMask": self.publicSubnetMask,
         }
 
@@ -422,34 +433,34 @@ class VpcPlan:
             return None
 
         cidr = Cidr(input['cidr']['block'])
-        numAzs = input["numAzs"]
+        azs = input["azs"]
         publicSubnetMask = input["publicSubnetMask"]
 
-        return cls(cidr, numAzs, publicSubnetMask)
+        return cls(cidr, azs, publicSubnetMask)
     
     def get_usable_ips(self) -> int:
         total_ips = 2 ** (32 - int(self.cidr.mask))
-        public_ips = 2 ** (32 - int(self.publicSubnetMask)) * self.numAzs
+        public_ips = 2 ** (32 - int(self.publicSubnetMask)) * len(self.azs)
         reserved_ips_per_subnet = 2 # The first (local gateway) and last (broadcast) IP are often reserved
-        reserved_private_ips = reserved_ips_per_subnet * self.numAzs
+        reserved_private_ips = reserved_ips_per_subnet * len(self.azs)
 
         return total_ips - public_ips - reserved_private_ips
     
-def get_capture_vpc_plan(previous_plan: VpcPlan, capture_cidr_block: str) -> VpcPlan:
+def get_capture_vpc_plan(previous_plan: VpcPlan, capture_cidr_block: str, azs: List[str]) -> VpcPlan:
     if previous_plan and all(value is not None for value in vars(previous_plan).values()):
         return previous_plan
     elif not capture_cidr_block:
-        return VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+        return VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK)
     else:
-        return VpcPlan(Cidr(capture_cidr_block), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
+        return VpcPlan(Cidr(capture_cidr_block), azs, DEFAULT_CAPTURE_PUBLIC_MASK)
     
-def get_viewer_vpc_plan(previous_plan: VpcPlan, viewer_cidr_block: str) -> VpcPlan:
+def get_viewer_vpc_plan(previous_plan: VpcPlan, viewer_cidr_block: str, azs: List[str]) -> VpcPlan:
     if previous_plan and all(value is not None for value in vars(previous_plan).values()):
         return previous_plan
     elif not viewer_cidr_block:
         return None
     else:
-        return VpcPlan(Cidr(viewer_cidr_block), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK)
+        return VpcPlan(Cidr(viewer_cidr_block), azs[0:DEFAULT_NUM_AZS], DEFAULT_VIEWER_PUBLIC_MASK)
 
 DEFAULT_S3_STORAGE_CLASS = "STANDARD"
 DEFAULT_S3_STORAGE_DAYS = 30

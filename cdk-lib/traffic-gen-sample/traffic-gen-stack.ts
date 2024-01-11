@@ -22,7 +22,7 @@ export class TrafficGenStack extends cdk.Stack {
         // to the private subnet.
         const vpc = new ec2.Vpc(this, 'VPC', {
             ipAddresses: ec2.IpAddresses.cidr(props.cidr),
-            maxAzs: 1
+            maxAzs: 99,  // 99 AZs means "use all AZs"
         });
 
         /**
@@ -77,7 +77,7 @@ export class TrafficGenStack extends cdk.Stack {
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
             desiredCapacity: 3,
             minCapacity: 3,
-            maxCapacity: 10 // Arbitrarily chosen
+            maxCapacity: 20 // Arbitrarily chosen
         });
 
         const ecsCluster = new ecs.Cluster(this, 'EcsCluster', {
