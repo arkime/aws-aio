@@ -307,8 +307,8 @@ def test_WHEN_get_azs_in_region_called_THEN_returns_them():
     mock_ec2_client = mock.Mock()
     mock_ec2_client.describe_availability_zones.return_value = {
         "AvailabilityZones": [
+            { "ZoneName": "us-fake-1b" }, # Intentionally out of order to ensure sorting
             { "ZoneName": "us-fake-1a" },
-            { "ZoneName": "us-fake-1b" },
             { "ZoneName": "us-fake-1c" },
         ]
     }

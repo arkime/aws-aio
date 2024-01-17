@@ -14,28 +14,28 @@ def test_WHEN_get_capture_node_capacity_plan_called_THEN_as_expected():
     # TEST 1: No expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(None, azs)
-    expected_value = cap.CaptureNodesPlan(cap.T3_MEDIUM.instanceType, 4, 5, 4)
+    expected_value = cap.CaptureNodesPlan(cap.T3_MEDIUM.instanceType, 2, 3, 2)
 
     assert expected_value == actual_value
 
     # TEST 2: Small expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(0.001, azs)
-    expected_value = cap.CaptureNodesPlan(cap.T3_MEDIUM.instanceType, 4, 5, 4)
+    expected_value = cap.CaptureNodesPlan(cap.T3_MEDIUM.instanceType, 2, 3, 2)
 
     assert expected_value == actual_value
 
     # TEST 3: Mid-range expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(20, azs)
-    expected_value = cap.CaptureNodesPlan(cap.M5_XLARGE.instanceType, 10, 13, 4)
+    expected_value = cap.CaptureNodesPlan(cap.M5_XLARGE.instanceType, 10, 13, 2)
 
     assert expected_value == actual_value
 
     # TEST 4: Max expected traffic number
 
     actual_value = cap.get_capture_node_capacity_plan(cap.MAX_TRAFFIC, azs)
-    expected_value = cap.CaptureNodesPlan(cap.M5_XLARGE.instanceType, 50, 63, 4)
+    expected_value = cap.CaptureNodesPlan(cap.M5_XLARGE.instanceType, 50, 63, 2)
 
     assert expected_value == actual_value
 

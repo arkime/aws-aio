@@ -9,7 +9,7 @@ from typing import Dict, List, Type, TypeVar
 logger = logging.getLogger(__name__)
 
 MAX_TRAFFIC = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
-MINIMUM_NODES = 1 # We'll always have at least one capture node
+MINIMUM_NODES = 2 # We'll always have at least two capture node for redundancy
 MINIMUM_TRAFFIC = 0.01 # Gbps; arbitrarily chosen, but will yield a minimal cluster
 CAPACITY_BUFFER_FACTOR = 1.25 # Arbitrarily chosen
 MASTER_NODE_COUNT = 3 # Recommended number in docs
@@ -98,10 +98,10 @@ class CaptureNodesPlan:
 
 def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> CaptureNodesPlan:
     """
-    Creates a capacity plan for the indicated traffic load.  We expect that we will have at least one node in each AZ
-    in order to support having a VPC Endpoint in each AZ.
+    Creates a capacity plan for the indicated traffic load.
 
     expected_traffic: The expected traffic volume for the Arkime cluster, in Gigabits Per Second (Gbps)
+    azs: The AZs to deploy the cluster into
     """
 
     if not expected_traffic or expected_traffic < MINIMUM_TRAFFIC:
@@ -112,13 +112,12 @@ def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> C
     
     chosen_instance = (
         T3_MEDIUM
-        if expected_traffic <= T3_MEDIUM.trafficPer * len(azs) # No more than one of these per AZ
+        if expected_traffic <= T3_MEDIUM.trafficPer * MINIMUM_NODES
         else M5_XLARGE
     )
 
-    min_instances = len(azs)
     desired_instances = max(
-        min_instances,
+        MINIMUM_NODES,
         math.ceil(expected_traffic/chosen_instance.trafficPer)
     )
     
@@ -126,7 +125,7 @@ def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> C
         chosen_instance.instanceType,
         desired_instances,
         math.ceil(desired_instances * CAPACITY_BUFFER_FACTOR),
-        min_instances
+        MINIMUM_NODES
     )
 
 @dataclass

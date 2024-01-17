@@ -118,6 +118,7 @@ case 'MirrorMgmtParams':
         vpcSsmParamName: params.nameVpcSsmParam,
         vpceServiceId: params.idVpceService,
         mirrorVni: params.idVni,
+        env: env,
     });
     break;
 case 'DeployDemoTrafficParams':

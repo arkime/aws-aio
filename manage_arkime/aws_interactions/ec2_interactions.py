@@ -189,5 +189,6 @@ def get_azs_in_region(aws_provider: AwsClientProvider) -> List[str]:
 
     response = ec2_client.describe_availability_zones()
     azs = [az["ZoneName"] for az in response["AvailabilityZones"]]
+    azs.sort() # Ensure stable ordering
 
     return azs

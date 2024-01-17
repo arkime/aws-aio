@@ -49,7 +49,7 @@ export class CaptureNodesStack extends cdk.Stack {
             loadBalancerAttributes: [
                 {
                     key: 'load_balancing.cross_zone.enabled',
-                    value: 'true', // IMO, resilience is more important than latency here
+                    value: 'true', // IMO, resilience & efficient utilization is more important than latency/AZ independence
                 }
             ],
         });
@@ -64,6 +64,12 @@ export class CaptureNodesStack extends cdk.Stack {
             targetType: 'instance',
             healthCheckProtocol: 'TCP',
             healthCheckPort: healthCheckPort.toString(),
+            targetGroupAttributes: [
+                {
+                    key: 'stickiness.enabled',
+                    value: 'true', // On by default, but let's be explicit
+                }
+            ]
         });
 
         const gwlbListener = new elbv2.CfnListener(this, 'GWLBListener', {
@@ -88,7 +94,6 @@ export class CaptureNodesStack extends cdk.Stack {
             vpc: props.captureVpc,
             instanceType: new ec2.InstanceType(props.planCluster.captureNodes.instanceType),
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
-            desiredCapacity: props.planCluster.captureNodes.desiredCount,
             minCapacity: props.planCluster.captureNodes.minCount,
             maxCapacity: props.planCluster.captureNodes.maxCount
         });
@@ -125,6 +130,7 @@ export class CaptureNodesStack extends cdk.Stack {
 
         const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
             autoScalingGroup: autoScalingGroup,
+            enableManagedScaling: true,
             enableManagedTerminationProtection: false
         });
         cluster.addAsgCapacityProvider(capacityProvider);
@@ -192,15 +198,15 @@ export class CaptureNodesStack extends cdk.Stack {
         const service = new ecs.Ec2Service(this, 'Service', {
             cluster,
             taskDefinition,
-            desiredCount: 1,
+            desiredCount: props.planCluster.captureNodes.desiredCount,
             minHealthyPercent: 0, // TODO: Speeds up test deployments but need to change to something safer
             enableExecuteCommand: true
         });
 
-        // TODO: Fix autoscaling.  We need our ECS Tasks to scale together with our EC2 fleet since we are only placing
-        // a single container on each instance due to using the HOST network mode.
-        // See: https://stackoverflow.com/questions/72839842/aws-ecs-auto-scaling-an-ec2-auto-scaling-group-with-single-container-hosts
-        const scaling = service.autoScaleTaskCount({ maxCapacity: 10 });
+        const scaling = service.autoScaleTaskCount({
+            minCapacity: props.planCluster.captureNodes.minCount,
+            maxCapacity: props.planCluster.captureNodes.maxCount,
+        });
         scaling.scaleOnCpuUtilization('CpuScaling', {
             targetUtilizationPercent: 60,
         });
