@@ -11,7 +11,6 @@ The CDK is used to perform infrastructure specification, setup, management, and 
 - [Quick Start Guide](#quick-start-guide)
 - [Architecture and Design](#architecture-and-design)
 - [How to Run the AWS All-in-One CLI](#how-to-run-the-aws-all-in-one-cli)
-  - [Performing CDK Bootstrap](#performing-cdk-bootstrap)
   - [Setting up your Arkime Cluster](#setting-up-your-arkime-cluster)
   - [Setting up capture for a VPC in the Cluster account](#setting-up-capture-for-a-vpc-in-the-cluster-account)
   - [Setting up capture for a VPC in another account](#setting-up-capture-for-a-vpc-in-another-account)
@@ -85,19 +84,6 @@ Why each of these needed:
 * The AWS CLI is recommended (but not strictly required) as a way to set up your AWS Credentials and default region, etc.  The CDK CLI needs these to be configured, but technically you can configure these manually without using the AWS CLI (see [the CDK setup guide](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html#getting_started_prerequisites) for details)
 
 NOTE: By default, the CDK CLI will use the AWS Region specified as default in your AWS Configuration file; you can set this using the `aws configure` command.  It will also use the AWS Account your credentials are associated with.
-
-
-### Performing CDK Bootstrap
-
-Before deploying AWS Resources to your account using the CDK, you must first perform a bootstrapping step.  The management CLI should take care of this for you, but the following is provided in case you want/need to do this manually.
-
-At a high level the CDK needs some existing resources in your AWS account before it deploys your target infrastructure, which you can [learn more about here](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html).  Examples include an AWS S3 bucket to stage deployment resources and an AWS ECR repo to receive/house locally-defined Docker images.
-
-You can bootstrap your AWS Account/Region like so:
-
-```
-cdk bootstrap
-```
 
 ### Setting up your Arkime Cluster
 
