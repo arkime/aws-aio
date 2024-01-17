@@ -10,6 +10,7 @@ from aws_interactions.acm_interactions import upload_default_elb_cert
 from aws_interactions.aws_client_provider import AwsClientProvider
 from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.events_interactions as events
+import aws_interactions.ec2_interactions as ec2
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
@@ -41,7 +42,7 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
     previous_user_config = _get_previous_user_config(name, aws_provider)
     next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
     previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
-    next_capacity_plan = _get_next_capacity_plan(next_user_config, previous_capacity_plan, capture_cidr, viewer_cidr)
+    next_capacity_plan = _get_next_capacity_plan(next_user_config, previous_capacity_plan, capture_cidr, viewer_cidr, aws_provider)
 
     is_initial_invocation = _is_initial_invocation(name, aws_provider)
 
@@ -201,14 +202,17 @@ def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvid
             None
         )
 
-def _get_next_capacity_plan(user_config: UserConfig, previous_capacity_plan: ClusterPlan, next_capture_cidr: str, next_viewer_cidr: str) -> ClusterPlan:
-    capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic)
-    capture_vpc_plan = get_capture_vpc_plan(previous_capacity_plan.captureVpc, next_capture_cidr)
-    os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, capture_vpc_plan.numAzs)
+def _get_next_capacity_plan(user_config: UserConfig, previous_capacity_plan: ClusterPlan, next_capture_cidr: str,
+                            next_viewer_cidr: str, aws_provider: AwsClientProvider) -> ClusterPlan:
+    az_in_region = ec2.get_azs_in_region(aws_provider)
+
+    capture_plan = get_capture_node_capacity_plan(user_config.expectedTraffic, az_in_region)
+    capture_vpc_plan = get_capture_vpc_plan(previous_capacity_plan.captureVpc, next_capture_cidr, az_in_region)
+    os_domain_plan = get_os_domain_plan(user_config.expectedTraffic, user_config.spiDays, user_config.replicas, len(capture_vpc_plan.azs))
     ecs_resource_plan = get_ecs_sys_resource_plan(capture_plan.instanceType)
     s3_plan = S3Plan(DEFAULT_S3_STORAGE_CLASS, user_config.pcapDays)
     viewer_plan = get_viewer_node_capacity_plan(user_config.expectedTraffic)
-    viewer_vpc_plan = get_viewer_vpc_plan(previous_capacity_plan.viewerVpc, next_viewer_cidr)
+    viewer_vpc_plan = get_viewer_vpc_plan(previous_capacity_plan.viewerVpc, next_viewer_cidr, az_in_region)
 
     return ClusterPlan(capture_plan, capture_vpc_plan, ecs_resource_plan, os_domain_plan, s3_plan, viewer_plan, viewer_vpc_plan)
 

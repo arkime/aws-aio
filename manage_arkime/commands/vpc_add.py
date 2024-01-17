@@ -35,7 +35,7 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
         vpc_acct_provider = aws_provider
     if not association:
         cluster_acct_provider = vpc_acct_provider = aws_provider
-
+    
     vpc_aws_env = vpc_acct_provider.get_aws_env()
     cdk_client = CdkClient(vpc_aws_env)
     vni_provider = SsmVniProvider(cluster_name, cluster_acct_provider)

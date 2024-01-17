@@ -183,3 +183,12 @@ def get_vpc_details(vpc_id: str, aws_provider: AwsClientProvider) -> VpcDetails:
         cidr_blocks=cidr_blocks,
         tenancy=vpc_details["InstanceTenancy"]
     )
+
+def get_azs_in_region(aws_provider: AwsClientProvider) -> List[str]:
+    ec2_client = aws_provider.get_ec2()
+
+    response = ec2_client.describe_availability_zones()
+    azs = [az["ZoneName"] for az in response["AvailabilityZones"]]
+    azs.sort() # Ensure stable ordering
+
+    return azs

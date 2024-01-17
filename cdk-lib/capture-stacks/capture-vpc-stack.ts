@@ -16,7 +16,7 @@ export class CaptureVpcStack extends Stack {
 
         this.vpc = new ec2.Vpc(this, 'VPC', {
             ipAddresses: ec2.IpAddresses.cidr(props.planCluster.captureVpc.cidr.block),
-            maxAzs: props.planCluster.captureVpc.numAzs,
+            availabilityZones: props.planCluster.captureVpc.azs,
             subnetConfiguration: [
                 {
                     subnetType: ec2.SubnetType.PUBLIC,

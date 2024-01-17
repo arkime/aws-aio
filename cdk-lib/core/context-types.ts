@@ -71,7 +71,7 @@ export interface ViewerNodesPlan {
  */
 export interface VpcPlan {
     cidr: Cidr;
-    numAzs: number;
+    azs: string[];
     publicSubnetMask: number;
 }
 

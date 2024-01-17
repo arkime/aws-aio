@@ -9,7 +9,7 @@ from core.shell_interactions import call_shell_command
 """
 Manually updated/managed version number.  Increment if/when a backwards incompatible change is made.
 """
-AWS_AIO_VERSION=1
+AWS_AIO_VERSION=2
 
 class CouldntReadSourceVersion(Exception):
     def __init__(self):

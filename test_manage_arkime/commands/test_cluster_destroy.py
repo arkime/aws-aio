@@ -384,16 +384,17 @@ def test_WHEN_get_stacks_to_destroy_called_THEN_as_expected():
     assert expected_value == actual_value
 
 def test_WHEN_get_cdk_context_called_AND_viewer_vpc_THEN_as_expected():
+    azs = ["us-fake-1"]
     cluster_name = "MyCluster"
 
     default_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
         ViewerNodesPlan(4, 2),
-        VpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
     )
 
     stack_names = context.ClusterStackNames(
@@ -430,11 +431,12 @@ def test_WHEN_get_cdk_context_called_AND_viewer_vpc_THEN_as_expected():
     assert expected_value == actual_value
 
 def test_WHEN_get_cdk_context_called_AND_no_viewer_vpc_THEN_as_expected():
+    azs = ["us-fake-1"]
     cluster_name = "MyCluster"
 
     default_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, 2, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(1, 1),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),

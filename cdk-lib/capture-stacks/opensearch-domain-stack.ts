@@ -17,6 +17,7 @@ export interface OpenSearchDomainStackProps extends StackProps {
 }
 
 export class OpenSearchDomainStack extends Stack {
+    public readonly azCount: number = 2;
     public readonly domainKey: kms.Key;
     public readonly domain: Domain;
     public readonly osSg: ec2.SecurityGroup;
@@ -81,7 +82,8 @@ export class OpenSearchDomainStack extends Stack {
                 kmsKey: this.domainKey,
             },
             zoneAwareness: {
-                availabilityZoneCount: props.planCluster.captureVpc.numAzs,
+                enabled: true,
+                availabilityZoneCount: this.azCount,
             },
             logging: {
                 slowSearchLogEnabled: true,
@@ -90,6 +92,9 @@ export class OpenSearchDomainStack extends Stack {
             },
             vpc: props.captureVpc,
             vpcSubnets: [{
+                // The AZ list should be stable as it's pulling from the beginning of a sorted list and AZs are rarely
+                // (never?) deprecated
+                availabilityZones: props.captureVpc.availabilityZones.slice(0, this.azCount),
                 subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
             }],
             tlsSecurityPolicy: TLSSecurityPolicy.TLS_1_2,

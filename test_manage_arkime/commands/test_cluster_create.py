@@ -278,11 +278,12 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
 @mock.patch("commands.cluster_create._confirm_usage")
 def test_WHEN_should_proceed_with_operation_AND_happy_path_THEN_as_expected(mock_confirm):
     # Set up our mock
+    azs = ["az1", "az2"]
     user_config = UserConfig(1, 30, 365, 2, 30)   
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
@@ -307,11 +308,12 @@ def test_WHEN_should_proceed_with_operation_AND_happy_path_THEN_as_expected(mock
 @mock.patch("commands.cluster_create._confirm_usage")
 def test_WHEN_should_proceed_with_operation_AND_change_capture_cidr_THEN_as_expected(mock_confirm):
     # Set up our mock
+    azs = ["az1", "az2"]
     user_config = UserConfig(1, 30, 365, 2, 30)  
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
@@ -333,11 +335,12 @@ def test_WHEN_should_proceed_with_operation_AND_change_capture_cidr_THEN_as_expe
 @mock.patch("commands.cluster_create._confirm_usage")
 def test_WHEN_should_proceed_with_operation_AND_change_viewer_cidr_THEN_as_expected(mock_confirm):
     # Set up our mock
+    azs = ["az1", "az2"]
     user_config = UserConfig(1, 30, 365, 2, 30)  
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
@@ -358,18 +361,19 @@ def test_WHEN_should_proceed_with_operation_AND_change_viewer_cidr_THEN_as_expec
 
 @mock.patch("commands.cluster_create._confirm_usage")
 def test_WHEN_should_proceed_with_operation_AND_check_overlapping_cidrs_THEN_as_expected(mock_confirm):
+    azs = ["az1", "az2"]
     user_config = UserConfig(1, 30, 365, 2, 30)
     mock_confirm.return_value = True
 
     # TEST: Both specified, and don't overlap
     cluster_plan =  ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("1.2.3.4/24"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
         ViewerNodesPlan(20, 5),
-        VpcPlan(Cidr("2.3.4.5/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("2.3.4.5/24"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
     )    
 
     actual_value = _should_proceed_with_operation(False, cluster_plan, cluster_plan, user_config, user_config, True, None, None)
@@ -380,12 +384,12 @@ def test_WHEN_should_proceed_with_operation_AND_check_overlapping_cidrs_THEN_as_
     # TEST: Both specified, and do overlap
     cluster_plan =  ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
-        VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("1.2.3.4/24"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
         ViewerNodesPlan(20, 5),
-        VpcPlan(Cidr("1.2.3.48/26"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("1.2.3.48/26"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
     )
     user_config = UserConfig(1, 30, 365, 2, 30)
 
@@ -395,11 +399,12 @@ def test_WHEN_should_proceed_with_operation_AND_check_overlapping_cidrs_THEN_as_
 @mock.patch("commands.cluster_create._confirm_usage")
 def test_WHEN_should_proceed_with_operation_AND_abort_usage_THEN_as_expected(mock_confirm):
     # Set up our mock
+    azs = ["az1", "az2"]
     user_config = UserConfig(1, 30, 365, 2, 30) 
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
@@ -423,11 +428,12 @@ def test_WHEN_should_proceed_with_operation_AND_abort_usage_THEN_as_expected(moc
 @mock.patch("commands.cluster_create._confirm_usage")
 def test_WHEN_should_proceed_with_operation_AND_doesnt_fit_THEN_as_expected(mock_confirm):
     # Set up our mock
+    azs = ["az1", "az2"]
     user_config = UserConfig(1, 30, 365, 2, 30) 
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 100, 200, 100),
-        VpcPlan(Cidr("1.2.3.4/28"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("1.2.3.4/28"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(100, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
@@ -587,6 +593,8 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
     # Set up our mock
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
 
+    azs = ["az1", "az2"]
+
     mock_ssm_ops.get_ssm_param_json_value.return_value = {
         "captureNodes": {
             "instanceType": "m5.xlarge",
@@ -600,7 +608,7 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
                 "prefix": "1.2.3.4",
                 "mask": "24",
             },
-            "numAzs": 2,
+            "azs": azs,
             "publicSubnetMask": 28,
         },
         "ecsResources": {
@@ -632,7 +640,7 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
                 "prefix": "2.3.4.5",
                 "mask": "26",
             },
-            "numAzs": 2,
+            "azs": azs,
             "publicSubnetMask": 28,
         },
     }
@@ -645,12 +653,12 @@ def test_WHEN_get_previous_capacity_plan_called_AND_exists_THEN_as_expected(mock
     # Check our results
     expected_value = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK),
+        VpcPlan(Cidr("1.2.3.4/24"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
         EcsSysResourcePlan(3584, 15360),
         OSDomainPlan(DataNodesPlan(2, "r6g.large.search", 1024), MasterNodesPlan(3, "m6g.large.search")),
         S3Plan(DEFAULT_S3_STORAGE_CLASS, 30),
         ViewerNodesPlan(4, 2),
-        VpcPlan(Cidr("2.3.4.5/26"), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK),
+        VpcPlan(Cidr("2.3.4.5/26"), azs, DEFAULT_VIEWER_PUBLIC_MASK),
     )
     assert expected_value == actual_value
 
@@ -689,20 +697,26 @@ def test_WHEN_get_previous_capacity_plan_called_AND_doesnt_exist_THEN_as_expecte
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
 
 
+@mock.patch("commands.cluster_create.ec2")
 @mock.patch("commands.cluster_create.get_viewer_vpc_plan")
 @mock.patch("commands.cluster_create.get_capture_vpc_plan")
 @mock.patch("commands.cluster_create.get_os_domain_plan")
 @mock.patch("commands.cluster_create.get_capture_node_capacity_plan")
 @mock.patch("commands.cluster_create.ssm_ops")
-def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os, mock_get_capture, mock_get_viewer):
+def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_get_cap, mock_get_os, mock_get_capture, mock_get_viewer,
+                                                             mock_ec2):
     # Set up our mock
+    azs = ["az1", "az2", "az3", "az4", "az5"]
+
     mock_ssm_ops.ParamDoesNotExist = ssm_ops.ParamDoesNotExist
     mock_ssm_ops.get_ssm_param_json_value.side_effect = ssm_ops.ParamDoesNotExist("")
 
     mock_get_cap.return_value = CaptureNodesPlan("m5.xlarge", 1, 2, 1)
     mock_get_os.return_value = OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search"))
-    mock_get_capture.return_value = VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK)
-    mock_get_viewer.return_value = VpcPlan(Cidr("2.3.4.5/26"), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK)
+    mock_get_capture.return_value = VpcPlan(Cidr("1.2.3.4/20"), azs, DEFAULT_CAPTURE_PUBLIC_MASK)
+    mock_get_viewer.return_value = VpcPlan(Cidr("2.3.4.5/26"), azs, DEFAULT_VIEWER_PUBLIC_MASK)
+
+    mock_ec2.get_azs_in_region.return_value = azs
 
     previous_cluster_plan = ClusterPlan(
         CaptureNodesPlan(None, None, None, None),
@@ -717,33 +731,35 @@ def test_WHEN_get_next_capacity_plan_called_THEN_as_expected(mock_ssm_ops, mock_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_capacity_plan(UserConfig(1, 40, 120, 2, 35), previous_cluster_plan, "1.2.3.4/24", "2.3.4.5/26")
+    actual_value = _get_next_capacity_plan(UserConfig(1, 40, 120, 2, 35), previous_cluster_plan, "1.2.3.4/24", "2.3.4.5/26", mock_provider)
 
     # Check our results
+    assert mock_ec2.get_azs_in_region.called
+
     assert mock_get_cap.return_value == actual_value.captureNodes
-    assert VpcPlan(Cidr("1.2.3.4/24"), DEFAULT_NUM_AZS, DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value.captureVpc
+    assert VpcPlan(Cidr("1.2.3.4/20"), azs, DEFAULT_CAPTURE_PUBLIC_MASK) == actual_value.captureVpc
     assert mock_get_os.return_value == actual_value.osDomain
     assert EcsSysResourcePlan(3584, 15360) == actual_value.ecsResources
     assert S3Plan(DEFAULT_S3_STORAGE_CLASS, 35) == actual_value.s3
-    assert VpcPlan(Cidr("2.3.4.5/26"), DEFAULT_NUM_AZS, DEFAULT_VIEWER_PUBLIC_MASK) == actual_value.viewerVpc
+    assert VpcPlan(Cidr("2.3.4.5/26"), azs, DEFAULT_VIEWER_PUBLIC_MASK) == actual_value.viewerVpc
 
     expected_get_cap_calls = [
-        mock.call(1)
+        mock.call(1, azs)
     ]
     assert expected_get_cap_calls == mock_get_cap.call_args_list
 
     expected_get_os_calls = [
-        mock.call(1, 40, 2, DEFAULT_NUM_AZS)
+        mock.call(1, 40, 2, len(azs))
     ]
     assert expected_get_os_calls == mock_get_os.call_args_list
 
     expected_get_capture_vpc_calls = [
-        mock.call(VpcPlan(None, None, None), "1.2.3.4/24")
+        mock.call(VpcPlan(None, None, None), "1.2.3.4/24", azs)
     ]
     assert expected_get_capture_vpc_calls == mock_get_capture.call_args_list
 
     expected_get_viewer_vpc_calls = [
-        mock.call(None, "2.3.4.5/26")
+        mock.call(None, "2.3.4.5/26", azs)
     ]
     assert expected_get_viewer_vpc_calls == mock_get_viewer.call_args_list
 

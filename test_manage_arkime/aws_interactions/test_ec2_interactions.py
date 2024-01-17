@@ -301,3 +301,24 @@ def test_WHEN_get_vpc_details_called_AND_doesnt_exist_THEN_raises():
     # Run our test
     with pytest.raises(ec2i.VpcDoesNotExist):
         ec2i.get_vpc_details("vpc-1234", mock_aws_provider)
+
+def test_WHEN_get_azs_in_region_called_THEN_returns_them():
+    # Set up our mock
+    mock_ec2_client = mock.Mock()
+    mock_ec2_client.describe_availability_zones.return_value = {
+        "AvailabilityZones": [
+            { "ZoneName": "us-fake-1b" }, # Intentionally out of order to ensure sorting
+            { "ZoneName": "us-fake-1a" },
+            { "ZoneName": "us-fake-1c" },
+        ]
+    }
+
+    mock_aws_provider = mock.Mock()
+    mock_aws_provider.get_ec2.return_value = mock_ec2_client
+
+    # Run our test
+    result = ec2i.get_azs_in_region(mock_aws_provider)
+
+    # Check our results
+    expected_result = ["us-fake-1a", "us-fake-1b", "us-fake-1c"]
+    assert expected_result == result
