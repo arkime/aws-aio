@@ -12,7 +12,7 @@ def test_WHEN_get_command_prefix_called_AND_no_args_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix()
 
     # Check our results
-    expected_value = "node_modules/.bin/cdk"
+    expected_value = constants.get_repo_root_dir() + "/node_modules/.bin/cdk"
     assert expected_value == actual_value
 
 def test_WHEN_get_command_prefix_called_AND_profile_THEN_gens_correctly():
@@ -20,7 +20,7 @@ def test_WHEN_get_command_prefix_called_AND_profile_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix(aws_profile="my_profile")
 
     # Check our results
-    expected_value = "node_modules/.bin/cdk --profile my_profile"
+    expected_value = constants.get_repo_root_dir() + "/node_modules/.bin/cdk --profile my_profile"
     assert expected_value == actual_value
 
 def test_WHEN_get_command_prefix_called_AND_region_THEN_gens_correctly():
@@ -28,7 +28,7 @@ def test_WHEN_get_command_prefix_called_AND_region_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix(aws_region="mars-north-1")
 
     # Check our results
-    expected_value = f"node_modules/.bin/cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1"
+    expected_value = constants.get_repo_root_dir() + f"/node_modules/.bin/cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1"
     assert expected_value == actual_value
 
 def test_WHEN_get_command_prefix_called_AND_context_THEN_gens_correctly():
@@ -42,7 +42,7 @@ def test_WHEN_get_command_prefix_called_AND_context_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix(aws_region="mars-north-1", context=test_context)
 
     # Check our results
-    expected_value = f"node_modules/.bin/cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1 --context k1=v1 --context k2=v2"
+    expected_value = constants.get_repo_root_dir() + f"/node_modules/.bin/cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1 --context k1=v1 --context k2=v2"
     assert expected_value == actual_value
 
 @mock.patch('cdk_interactions.cdk_client.shell')

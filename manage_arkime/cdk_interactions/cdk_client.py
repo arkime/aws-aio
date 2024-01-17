@@ -9,7 +9,7 @@ import core.constants as constants
 logger = logging.getLogger(__name__)
 
 def get_command_prefix(aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> str:
-    prefix_sections = ["node_modules/.bin/cdk"]
+    prefix_sections = [constants.get_repo_root_dir() + "/node_modules/.bin/cdk"]
 
     if aws_profile:
         prefix_sections.append(f"--profile {aws_profile}")
