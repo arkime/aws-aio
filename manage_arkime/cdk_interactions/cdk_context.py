@@ -5,8 +5,8 @@ from typing import Dict, List
 
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, VpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
-                                    MasterNodesPlan, OSDomainPlan, DEFAULT_NUM_AZS, S3Plan, DEFAULT_S3_STORAGE_CLASS,
-                                    DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK)
+                                    MasterNodesPlan, OSDomainPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_VPC_CIDR,
+                                    DEFAULT_CAPTURE_PUBLIC_MASK)
 from core.user_config import UserConfig
 
 @dataclass

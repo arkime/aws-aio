@@ -54,7 +54,7 @@ def test_WHEN_get_version_info_called_THEN_as_expected(mock_get_md5, mock_get_so
     actual_versions = ver.get_version_info(mock_file)
 
     expected_versions = ver.VersionInfo(
-        "1",
+        "2",
         "1",
         "86d3f3a95c324c9479bd8986968f4327",
         "v0.1.1-1-gd8e1200",
@@ -66,7 +66,7 @@ def test_WHEN_get_version_info_called_THEN_as_expected(mock_get_md5, mock_get_so
     actual_versions = ver.get_version_info(mock_file, config_version="3")
 
     expected_versions = ver.VersionInfo(
-        "1",
+        "2",
         "3",
         "86d3f3a95c324c9479bd8986968f4327",
         "v0.1.1-1-gd8e1200",
