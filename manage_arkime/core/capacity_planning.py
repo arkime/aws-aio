@@ -9,7 +9,7 @@ from typing import Dict, List, Type, TypeVar
 logger = logging.getLogger(__name__)
 
 MAX_TRAFFIC = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
-MINIMUM_NODES = 2 # We'll always have at least two capture node for redundancy
+MINIMUM_NODES = 1 # We'll always have at least one capture node
 MINIMUM_TRAFFIC = 0.01 # Gbps; arbitrarily chosen, but will yield a minimal cluster
 CAPACITY_BUFFER_FACTOR = 1.25 # Arbitrarily chosen
 MASTER_NODE_COUNT = 3 # Recommended number in docs
@@ -110,11 +110,11 @@ def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> C
     if expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
     
-    chosen_instance = (
-        T3_MEDIUM
-        if expected_traffic <= T3_MEDIUM.trafficPer * MINIMUM_NODES
-        else M5_XLARGE
-    )
+    instance_traffic_limits = [
+        (T3_MEDIUM, T3_MEDIUM.trafficPer * MINIMUM_NODES),
+        (M5_XLARGE, MAX_TRAFFIC),
+    ]
+    chosen_instance = next(instance[0] for instance in instance_traffic_limits if expected_traffic <= instance[1])
 
     desired_instances = max(
         MINIMUM_NODES,
