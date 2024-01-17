@@ -9,7 +9,7 @@ import core.constants as constants
 logger = logging.getLogger(__name__)
 
 def get_command_prefix(aws_profile: str = None, aws_region: str = None, context: Dict[str, str] = None) -> str:
-    prefix_sections = ["cdk"]
+    prefix_sections = ["node_modules/.bin/cdk"]
 
     if aws_profile:
         prefix_sections.append(f"--profile {aws_profile}")
@@ -31,12 +31,12 @@ class CdkClient:
 
     def __init__(self, aws_env: AwsEnvironment):
         self._aws_env = aws_env
-    
+
     def bootstrap(self, context: Dict[str, str] = None) -> None:
         command_prefix = get_command_prefix(aws_profile=self._aws_env.aws_profile, aws_region=self._aws_env.aws_region, context=context)
         command_suffix = f"bootstrap {str(self._aws_env)}"
         command = f"{command_prefix} {command_suffix}"
-        
+
         logger.info(f"Executing command: {command_suffix}")
         logger.warning("NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
         exit_code, stdout = shell.call_shell_command(command=command)
@@ -122,7 +122,7 @@ class CdkClient:
         command_suffix = f"synthesize --quiet {' '.join(stack_names)}"
         command = f"{command_prefix} {command_suffix}"
 
-        # Execute the command.  
+        # Execute the command.
         logger.info(f"Executing command: {command_suffix}")
         logger.warning("NOTE: This operation can take a while.  You can 'tail -f' the logfile to track the status.")
         exit_code, stdout = shell.call_shell_command(command=command)
@@ -133,4 +133,4 @@ class CdkClient:
             raise exceptions.CdkSynthesizeFailedUnknown()
 
         logger.info(f"Synthesize succeeded")
-        
+
