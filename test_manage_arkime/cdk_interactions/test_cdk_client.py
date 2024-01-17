@@ -12,7 +12,7 @@ def test_WHEN_get_command_prefix_called_AND_no_args_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix()
 
     # Check our results
-    expected_value = "cdk"
+    expected_value = "node_modules/.bin/cdk"
     assert expected_value == actual_value
 
 def test_WHEN_get_command_prefix_called_AND_profile_THEN_gens_correctly():
@@ -20,7 +20,7 @@ def test_WHEN_get_command_prefix_called_AND_profile_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix(aws_profile="my_profile")
 
     # Check our results
-    expected_value = "cdk --profile my_profile"
+    expected_value = "node_modules/.bin/cdk --profile my_profile"
     assert expected_value == actual_value
 
 def test_WHEN_get_command_prefix_called_AND_region_THEN_gens_correctly():
@@ -28,7 +28,7 @@ def test_WHEN_get_command_prefix_called_AND_region_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix(aws_region="mars-north-1")
 
     # Check our results
-    expected_value = f"cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1"
+    expected_value = f"node_modules/.bin/cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1"
     assert expected_value == actual_value
 
 def test_WHEN_get_command_prefix_called_AND_context_THEN_gens_correctly():
@@ -42,7 +42,7 @@ def test_WHEN_get_command_prefix_called_AND_context_THEN_gens_correctly():
     actual_value = cdk.get_command_prefix(aws_region="mars-north-1", context=test_context)
 
     # Check our results
-    expected_value = f"cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1 --context k1=v1 --context k2=v2"
+    expected_value = f"node_modules/.bin/cdk --context {constants.CDK_CONTEXT_REGION_VAR}=mars-north-1 --context k1=v1 --context k2=v2"
     assert expected_value == actual_value
 
 @mock.patch('cdk_interactions.cdk_client.shell')
@@ -145,7 +145,7 @@ def test_WHEN_deploy_called_AND_cant_bootstrap_THEN_raises(mock_shell):
     client = cdk.CdkClient(test_env)
     with pytest.raises(exceptions.CdkBootstrapFailedUnknown):
         client.deploy(["MyStack"])
-    
+
     # Check our results
     expected_calls = [
         mock.call(command=f"{cmd_prefix} deploy MyStack", request_response_pairs=mock.ANY),
@@ -168,7 +168,7 @@ def test_WHEN_deploy_called_AND_fails_THEN_raises(mock_shell):
     client = cdk.CdkClient(test_env)
     with pytest.raises(exceptions.CdkDeployFailedUnknown):
         client.deploy(["MyStack"])
-    
+
     # Check our results
     expected_calls = [mock.call(command=f"{cmd_prefix} deploy MyStack", request_response_pairs=mock.ANY)]
     assert expected_calls == mock_shell.call_shell_command.call_args_list
