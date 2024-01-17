@@ -94,7 +94,8 @@ export class CaptureNodesStack extends cdk.Stack {
             vpc: props.captureVpc,
             instanceType: new ec2.InstanceType(props.planCluster.captureNodes.instanceType),
             machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
-            minCapacity: props.planCluster.captureNodes.desiredCount,
+            desiredCapacity: props.planCluster.captureNodes.desiredCount,
+            minCapacity: props.planCluster.captureNodes.minCount,
             maxCapacity: props.planCluster.captureNodes.maxCount
         });
 

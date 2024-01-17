@@ -9,7 +9,6 @@ from typing import Dict, List, Type, TypeVar
 logger = logging.getLogger(__name__)
 
 MAX_TRAFFIC = 100 # Gbps, scaling limit of a single User Subnet VPC Endpoint
-MINIMUM_NODES = 1 # We'll always have at least one capture node
 MINIMUM_TRAFFIC = 0.01 # Gbps; arbitrarily chosen, but will yield a minimal cluster
 CAPACITY_BUFFER_FACTOR = 1.25 # Arbitrarily chosen
 MASTER_NODE_COUNT = 3 # Recommended number in docs
@@ -21,13 +20,15 @@ DEFAULT_NUM_AZS = 2 # How many AWS Availability zones to utilize
 @dataclass
 class CaptureInstance:
     instanceType: str
-    trafficPer: float
+    trafficPer: float # The traffic in Gbps each instance of this type can handle
+    maxTraffic: float # The max traffic in Gbps a cluster of this type should handle
+    minNodes: int # The minimum number of nodes we should have of this type
     ecsCPU: int
     ecsMemory: int
 
 # These are the possible instances types we assign for capture nodes
-T3_MEDIUM = CaptureInstance("t3.medium", 0.25, 1536, 3072)
-M5_XLARGE = CaptureInstance("m5.xlarge", 2.0, 3584, 15360)
+T3_MEDIUM = CaptureInstance("t3.medium", 0.25, 2 * 0.25, 1, 1536, 3072)
+M5_XLARGE = CaptureInstance("m5.xlarge", 2.0, MAX_TRAFFIC, 2, 3584, 15360)
 
 CAPTURE_INSTANCES = [
     T3_MEDIUM,
@@ -110,14 +111,10 @@ def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> C
     if expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
     
-    instance_traffic_limits = [
-        (T3_MEDIUM, T3_MEDIUM.trafficPer * MINIMUM_NODES),
-        (M5_XLARGE, MAX_TRAFFIC),
-    ]
-    chosen_instance = next(instance[0] for instance in instance_traffic_limits if expected_traffic <= instance[1])
+    chosen_instance = next(instance for instance in CAPTURE_INSTANCES if expected_traffic <= instance.maxTraffic)
 
     desired_instances = max(
-        MINIMUM_NODES,
+        chosen_instance.minNodes,
         math.ceil(expected_traffic/chosen_instance.trafficPer)
     )
     
@@ -125,7 +122,7 @@ def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> C
         chosen_instance.instanceType,
         desired_instances,
         math.ceil(desired_instances * CAPACITY_BUFFER_FACTOR),
-        MINIMUM_NODES
+        chosen_instance.minNodes
     )
 
 @dataclass
