@@ -64,6 +64,9 @@ To implement something new, please create an issue first so we can discuss it to
 * When creating a Pull Request please follow [best practices](https://github.com/trein/dev-best-practices/wiki/Git-Commit-Best-Practices) for creating git commits.
 * When your code is ready to be submitted, submit a Pull Request to begin the code review process.
 
+**Versioning:**
+We use [a GitHub workflow](https://github.com/anothrNick/github-tag-action) to automatically tag merges to `main` using [semver rules](https://semver.org/).  By default, it increments the minor version number.  If you need to increment the major version or patch version, include #major or #patch somewhere in your merge commit's message.
+
 #### How to run the unit tests & lint
 
 We require that the ruff linter and unit tests pass before merging PRs.
