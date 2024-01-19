@@ -142,11 +142,19 @@ cli.add_command(cluster_create)
     show_default=True,
     default=False
 )
+@click.option(
+    "--retain-traffic-data",
+    help=("Keeps the OpenSearch Domain and S3 Bucket containing your traffic data intact, along with associated CloudFormation"
+          + " stacks." ),
+    is_flag=True,
+    show_default=True,
+    default=False
+)
 @click.pass_context
-def cluster_destroy(ctx, name, destroy_everything):
+def cluster_destroy(ctx, name, destroy_everything, retain_traffic_data):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
-    cmd_cluster_destroy(profile, region, name, destroy_everything)
+    cmd_cluster_destroy(profile, region, name, destroy_everything, retain_traffic_data)
 cli.add_command(cluster_destroy)
 
 @click.command(help="Retrieves the login details of a cluster's the Arkime Viewer(s)")

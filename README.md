@@ -108,7 +108,7 @@ You can see your created cluster and the VPCs it is currently monitoring using t
 By default, you will be given the minimum-size Capture Cluster.  You can provision a Cluster that will serve your expected usage using a set of optional command-line parameters, which will ensure the EC2 Capture Nodes and OpenSearch Domain are suitably provisioned (plus a little extra for safety):
 
 ```
-./manage_arkime.py cluster-create --name MyCluster --expected-traffic 1 --spi-days 30 --replicas 1
+./manage_arkime.py cluster-create --name MyCluster --expected-traffic 0.01 --spi-days 30 --replicas 1
 ```
 
 ### Setting up capture for a VPC in the Cluster account

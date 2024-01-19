@@ -55,7 +55,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
     mock_get_json.return_value = test_plan.to_dict()
 
     # Run our test
-    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False, True)
 
     # Check our results
     mock_destroy_bucket.assert_not_called()
@@ -132,7 +132,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     mock_get_context.return_value = {"key": "value"}
 
     # Run our test
-    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, True)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, True, False)
 
     # Check our results
     expected_destroy_domain_calls = [
@@ -206,7 +206,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_existing_captures_THEN_abort(mock_c
     mock_get_ssm_json.side_effect = [test_plan.to_dict(), "arkime-domain"]
 
     # Run our test
-    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False, True)
 
     # Check our results
     mock_destroy_bucket.assert_not_called()
@@ -230,9 +230,31 @@ def test_WHEN_cmd_cluster_destroy_called_AND_doesnt_exist_THEN_abort(mock_cdk_cl
     mock_get_ssm_json.side_effect = ParamDoesNotExist("")
 
     # Run our test
-    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False)
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False, True)
 
     # Check our results
+    mock_destroy_bucket.assert_not_called()
+    mock_destroy_domain.assert_not_called()
+    mock_client.destroy.assert_not_called()
+
+@mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
+@mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
+@mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
+@mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.CdkClient")
+def test_WHEN_cmd_cluster_destroy_called_AND_dont_supply_tags_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain,
+                                                                          mock_ssm_names, mock_get_ssm_json):
+    # Set up our mock
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    # Run our test
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False, False)
+
+    # Check our results
+    mock_ssm_names.assert_not_called()
+    mock_get_ssm_json.assert_not_called()
     mock_destroy_bucket.assert_not_called()
     mock_destroy_domain.assert_not_called()
     mock_client.destroy.assert_not_called()
