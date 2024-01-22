@@ -13,8 +13,13 @@ import cdk_interactions.cdk_context as context
 
 logger = logging.getLogger(__name__)
 
-def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything: bool):
+def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything: bool, retain_traffic_data: bool):
     logger.debug(f"Invoking cluster-destroy with profile '{profile}' and region '{region}'")
+
+    if not (destroy_everything or retain_traffic_data):
+        logger.error("You must specify either --destroy-everything or --retain-traffic-data")
+        logger.warning("Aborting...")
+        return
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     cdk_client = CdkClient(aws_provider.get_aws_env())
