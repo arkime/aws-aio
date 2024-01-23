@@ -20,7 +20,7 @@ from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysRes
                                     DEFAULT_VIEWER_PUBLIC_MASK)
 import core.local_file as local_file
 from core.user_config import UserConfig
-from core.versioning import VersionInfo
+from core.versioning import VersionInfo, CliClusterVersionMismatch
 
 
 @mock.patch("commands.cluster_create.AwsClientProvider")
@@ -108,6 +108,63 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
         mock.call("my-cluster",mock.ANY)
     ]
     assert expected_tag_calls == mock_tag.call_args_list
+
+@mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_create.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_create._is_initial_invocation")
+@mock.patch("commands.cluster_create._tag_domain")
+@mock.patch("commands.cluster_create._set_up_arkime_config")
+@mock.patch("commands.cluster_create._configure_ism")
+@mock.patch("commands.cluster_create._get_previous_user_config")
+@mock.patch("commands.cluster_create._get_previous_capacity_plan")
+@mock.patch("commands.cluster_create._should_proceed_with_operation")
+@mock.patch("commands.cluster_create._get_next_user_config")
+@mock.patch("commands.cluster_create._get_next_capacity_plan")
+@mock.patch("commands.cluster_create._set_up_viewer_cert")
+@mock.patch("commands.cluster_create.CdkClient")
+def test_WHEN_cmd_cluster_create_called_AND_ver_mismatch_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
+                                                                         mock_proceed, mock_get_prev_plan, mock_get_prev_config, mock_configure,
+                                                                         mock_set_up_arkime_conf, mock_tag, mock_initial, mock_confirm_ver):
+    # Set up our mock
+    mock_set_up.return_value = "arn"
+
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    user_config = mock.Mock()
+    mock_get_config.return_value = user_config
+    mock_get_prev_config.return_value = user_config
+
+    cluster_plan = mock.Mock()
+    mock_get_plans.return_value = cluster_plan
+    mock_get_prev_plan.return_value = cluster_plan
+
+    mock_initial.return_value = False
+    mock_proceed.return_value = True
+
+    mock_confirm_ver.side_effect = CliClusterVersionMismatch(2, 1)
+
+    # Run our test
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26")
+
+    # Check our results
+    expected_proceed_calls = []
+    assert expected_proceed_calls == mock_proceed.call_args_list
+
+    expected_calls = []
+    assert expected_calls == mock_client.deploy.call_args_list
+
+    expected_set_up_calls = []
+    assert expected_set_up_calls == mock_set_up.call_args_list
+
+    expected_configure_calls = []
+    assert expected_configure_calls == mock_configure.call_args_list
+
+    expected_tag_calls = []
+    assert expected_tag_calls == mock_tag.call_args_list
+
+    expected_set_up_arkime_conf_calls = []
+    assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
 @mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_create._is_initial_invocation")
@@ -898,7 +955,7 @@ def test_WHEN_configure_ism_called_THEN_as_expected(mock_events, mock_ssm):
 
 @mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.cluster_create.ssm_ops.put_ssm_param")
-@mock.patch("commands.cluster_create.get_version_info")
+@mock.patch("commands.cluster_create.ver.get_version_info")
 @mock.patch("commands.cluster_create.config_wrangling.get_viewer_config_archive")
 @mock.patch("commands.cluster_create.config_wrangling.get_capture_config_archive")
 @mock.patch("commands.cluster_create.s3.put_file_to_bucket")
@@ -989,7 +1046,7 @@ def test_WHEN_set_up_arkime_config_called_AND_happy_path_THEN_as_expected(mock_s
 
 @mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.cluster_create.ssm_ops.put_ssm_param")
-@mock.patch("commands.cluster_create.get_version_info")
+@mock.patch("commands.cluster_create.ver.get_version_info")
 @mock.patch("commands.cluster_create.config_wrangling.get_viewer_config_archive")
 @mock.patch("commands.cluster_create.config_wrangling.get_capture_config_archive")
 @mock.patch("commands.cluster_create.s3.put_file_to_bucket")

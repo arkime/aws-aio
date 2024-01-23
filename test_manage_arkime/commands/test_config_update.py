@@ -11,9 +11,10 @@ from commands.config_update import (cmd_config_update, _update_config_if_necessa
                                     NoPreviousConfig, _bounce_ecs_service)
 import core.constants as constants
 import core.local_file as local_file
-from core.versioning import VersionInfo
+from core.versioning import VersionInfo, CliClusterVersionMismatch
 
 
+@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.config_update._update_config_if_necessary")
@@ -91,6 +92,7 @@ def test_WHEN_cmd_config_update_called_AND_happy_path_THEN_as_expected(mock_prov
     ]
     assert expected_bounce_calls == mock_bounce.call_args_list
 
+@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.config_update._update_config_if_necessary")
@@ -141,6 +143,7 @@ def test_WHEN_cmd_config_update_called_AND_shouldnt_bounce_THEN_as_expected(mock
     expected_bounce_calls = []
     assert expected_bounce_calls == mock_bounce.call_args_list
 
+@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.config_update._update_config_if_necessary")
@@ -222,6 +225,7 @@ def test_WHEN_cmd_config_update_called_AND_force_bounce_THEN_as_expected(mock_pr
 class ExpectedExit(Exception):
     pass
 
+@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update.exit")
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
@@ -239,6 +243,31 @@ def test_WHEN_cmd_config_update_called_AND_config_ver_no_component_THEN_as_expec
     # Check our results
     mock_exit.assert_called_with(1)
 
+    expected_update_config_calls = []
+    assert expected_update_config_calls == mock_update_config.call_args_list
+
+    expected_get_param_calls = []
+    assert expected_get_param_calls == mock_get_param.call_args_list
+
+    expected_bounce_calls = []
+    assert expected_bounce_calls == mock_bounce.call_args_list
+
+
+@mock.patch("commands.config_update.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.config_update.exit")
+@mock.patch("commands.config_update._bounce_ecs_service")
+@mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
+@mock.patch("commands.config_update._update_config_if_necessary")
+def test_WHEN_cmd_config_update_called_AND_cli_version_THEN_as_expected(mock_update_config, mock_get_param, mock_bounce, 
+                                                                        mock_exit, mock_confirm_ver):
+    # Set up our mock
+    mock_confirm_ver.side_effect = CliClusterVersionMismatch(2, 1)
+
+    # Run our test
+    cmd_config_update("profile", "region", "MyCluster", True, False, False, 3)
+
+    # Check our results
     expected_update_config_calls = []
     assert expected_update_config_calls == mock_update_config.call_args_list
 
@@ -312,7 +341,7 @@ def test_WHEN_revert_arkime_config_called_AND_no_previous_THEN_as_expected(mock_
 @mock.patch("commands.config_update.ssm_ops.put_ssm_param")
 @mock.patch("commands.config_update.s3.put_file_to_bucket")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
-@mock.patch("commands.config_update.get_version_info")
+@mock.patch("commands.config_update.ver.get_version_info")
 def test_WHEN_update_config_if_necessary_called_AND_happy_path_THEN_as_expected(mock_get_version, mock_get_ssm_param,
                                                                                 mock_put_file, mock_put_ssm_param):
     # Set up our mock
@@ -386,7 +415,7 @@ def test_WHEN_update_config_if_necessary_called_AND_happy_path_THEN_as_expected(
 @mock.patch("commands.config_update.ssm_ops.put_ssm_param")
 @mock.patch("commands.config_update.s3.put_file_to_bucket")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
-@mock.patch("commands.config_update.get_version_info")
+@mock.patch("commands.config_update.ver.get_version_info")
 def test_WHEN_update_config_if_necessary_called_AND_same_config_THEN_as_expected(mock_get_version, mock_get_ssm_param,
                                                                                  mock_put_file, mock_put_ssm_param):
     # Set up our mock
@@ -439,7 +468,7 @@ def test_WHEN_update_config_if_necessary_called_AND_same_config_THEN_as_expected
 @mock.patch("commands.config_update.ssm_ops.put_ssm_param")
 @mock.patch("commands.config_update.s3.put_file_to_bucket")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
-@mock.patch("commands.config_update.get_version_info")
+@mock.patch("commands.config_update.ver.get_version_info")
 def test_WHEN_update_config_if_necessary_called_AND_switch_to_version_THEN_as_expected(
         mock_get_version, mock_get_ssm_param, mock_put_file, mock_put_ssm_param, mock_get_metadata):
     # Set up our mock
@@ -506,7 +535,7 @@ def test_WHEN_update_config_if_necessary_called_AND_switch_to_version_THEN_as_ex
 @mock.patch("commands.config_update.ssm_ops.put_ssm_param")
 @mock.patch("commands.config_update.s3.put_file_to_bucket")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
-@mock.patch("commands.config_update.get_version_info")
+@mock.patch("commands.config_update.ver.get_version_info")
 def test_WHEN_update_config_if_necessary_called_AND_switch_ver_doesnt_exist_THEN_as_expected(
         mock_get_version, mock_get_ssm_param, mock_put_file, mock_put_ssm_param, mock_get_metadata):
     # Set up our mock

@@ -9,6 +9,7 @@ from aws_interactions.ssm_operations import get_ssm_param_json_value, get_ssm_pa
 from cdk_interactions.cdk_client import CdkClient
 from core.capacity_planning import ClusterPlan
 import core.constants as constants
+import core.versioning as ver
 import cdk_interactions.cdk_context as context
 
 logger = logging.getLogger(__name__)
@@ -25,11 +26,14 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
     cdk_client = CdkClient(aws_provider.get_aws_env())
 
     try:
-        cluster_plan_str = get_ssm_param_json_value(constants.get_cluster_ssm_param_name(name), "capacityPlan", aws_provider)
-        cluster_plan = ClusterPlan.from_dict(cluster_plan_str)
-    except ParamDoesNotExist:
-        logger.warning(f"The Cluster {name} does not appear to exist; aborting...")
+        ver.confirm_aws_aio_version_compatibility(name, aws_provider)
+    except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+        logger.error(e)
+        logger.warning("Aborting...")
         return
+
+    cluster_plan_str = get_ssm_param_json_value(constants.get_cluster_ssm_param_name(name), "capacityPlan", aws_provider)
+    cluster_plan = ClusterPlan.from_dict(cluster_plan_str)
 
     vpcs_search_path = f"{constants.get_cluster_ssm_param_name(name)}/vpcs"
     monitored_vpcs = get_ssm_names_by_path(vpcs_search_path, aws_provider)

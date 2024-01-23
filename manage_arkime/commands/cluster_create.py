@@ -25,7 +25,7 @@ from core.capacity_planning import (get_capture_node_capacity_plan, get_viewer_n
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS,
                                     CaptureNodesPlan, ViewerNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan,
                                     get_viewer_vpc_plan)
-from core.versioning import get_version_info
+import core.versioning as ver
 from core.user_config import UserConfig
 
 logger = logging.getLogger(__name__)
@@ -38,13 +38,21 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
     aws_env = aws_provider.get_aws_env()
     cdk_client = CdkClient(aws_env)
 
+    # Confirm the CLI and Cluster versions are compatible
+    is_initial_invocation = _is_initial_invocation(name, aws_provider)
+    if not is_initial_invocation:
+        try:
+            ver.confirm_aws_aio_version_compatibility(name, aws_provider)
+        except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+            logger.error(e)
+            logger.warning("Aborting...")
+            return
+
     # Generate our capacity plan, then confirm it's what the user expected and it's safe to proceed with the operation
     previous_user_config = _get_previous_user_config(name, aws_provider)
     next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
     previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
     next_capacity_plan = _get_next_capacity_plan(next_user_config, previous_capacity_plan, capture_cidr, viewer_cidr, aws_provider)
-
-    is_initial_invocation = _is_initial_invocation(name, aws_provider)
 
     if not _should_proceed_with_operation(is_initial_invocation, previous_capacity_plan, next_capacity_plan, previous_user_config,
                                           next_user_config, preconfirm_usage, capture_cidr, viewer_cidr):
@@ -250,7 +258,7 @@ def _upload_arkime_config_if_necessary(cluster_name: str, bucket_name: str, s3_k
     # Generate its metadata
     next_metadata = config_wrangling.ConfigDetails(
         s3=config_wrangling.S3Details(bucket_name, s3_key),
-        version=get_version_info(archive)
+        version=ver.get_version_info(archive)
     )
 
     # Upload the archive to S3
