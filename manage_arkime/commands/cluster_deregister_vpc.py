@@ -4,9 +4,9 @@ import logging
 from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.iam_interactions as iami
 import aws_interactions.ssm_operations as ssm_ops
+import core.compatibility as compat
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation, remove_vpce_permissions
-import core.versioning as ver
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,8 @@ def cmd_cluster_deregister_vpc(profile: str, region: str, cluster_name: str, vpc
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
 
     try:
-        ver.confirm_aws_aio_version_compatibility(cluster_name, aws_provider)
-    except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+        compat.confirm_aws_aio_version_compatibility(cluster_name, aws_provider)
+    except (compat.CliClusterVersionMismatch, compat.CaptureViewerVersionMismatch, compat.UnableToRetrieveClusterVersion) as e:
         logger.error(e)
         logger.warning("Aborting...")
         return

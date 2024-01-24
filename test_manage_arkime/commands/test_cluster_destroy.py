@@ -12,11 +12,11 @@ from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysRes
                                     ClusterPlan, VpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK,
                                     DEFAULT_NUM_AZS, DEFAULT_S3_STORAGE_DAYS)
 from core.user_config import UserConfig
-from core.versioning import CliClusterVersionMismatch, UnableToRetrieveClusterVersion
+from core.compatibility import CliClusterVersionMismatch, UnableToRetrieveClusterVersion
 
 TEST_CLUSTER = "my-cluster"
 
-@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_destroy.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy._get_cdk_context")
 @mock.patch("commands.cluster_destroy._get_stacks_to_destroy")
@@ -92,7 +92,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
     ]
     assert expected_delete_arkime_calls == mock_delete_arkime.call_args_list
 
-@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_destroy.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy._get_cdk_context")
 @mock.patch("commands.cluster_destroy._get_stacks_to_destroy")
 @mock.patch("commands.cluster_destroy.AwsClientProvider")
@@ -183,7 +183,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     ]
     assert expected_delete_arkime_calls == mock_delete_arkime.call_args_list
 
-@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_destroy.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
@@ -218,7 +218,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_existing_captures_THEN_abort(mock_c
     mock_client.destroy.assert_not_called()
 
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_destroy.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
 @mock.patch("commands.cluster_destroy.destroy_bucket")
 @mock.patch("commands.cluster_destroy.CdkClient")
@@ -239,7 +239,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_doesnt_exist_THEN_abort(mock_cdk_cl
     mock_client.destroy.assert_not_called()
     
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_destroy.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
 @mock.patch("commands.cluster_destroy.destroy_bucket")
 @mock.patch("commands.cluster_destroy.CdkClient")
@@ -259,7 +259,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_cli_version_THEN_abort(mock_cdk_cli
     mock_destroy_domain.assert_not_called()
     mock_client.destroy.assert_not_called()
 
-@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_destroy.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy.get_ssm_names_by_path")

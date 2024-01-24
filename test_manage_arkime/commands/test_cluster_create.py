@@ -13,6 +13,7 @@ import cdk_interactions.cdk_context as context
 from commands.cluster_create import (cmd_cluster_create, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config,
                                      _tag_domain, _should_proceed_with_operation, _is_initial_invocation, _get_stacks_to_deploy, _get_cdk_context)
+from core.compatibility import CliClusterVersionMismatch
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
                                     VpcPlan, ClusterPlan, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, DEFAULT_NUM_AZS, S3Plan,
@@ -20,7 +21,7 @@ from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysRes
                                     DEFAULT_VIEWER_PUBLIC_MASK)
 import core.local_file as local_file
 from core.user_config import UserConfig
-from core.versioning import VersionInfo, CliClusterVersionMismatch
+from core.versioning import VersionInfo
 
 
 @mock.patch("commands.cluster_create.AwsClientProvider")
@@ -110,7 +111,7 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
     assert expected_tag_calls == mock_tag.call_args_list
 
 @mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_create.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_create.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_create._is_initial_invocation")
 @mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create._set_up_arkime_config")

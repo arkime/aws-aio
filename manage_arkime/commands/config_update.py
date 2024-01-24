@@ -9,6 +9,7 @@ from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ecs_interactions as ecs
 import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
+import core.compatibility as compat
 import core.constants as constants
 from core.local_file import LocalFile, S3File
 import core.versioning as ver
@@ -31,8 +32,8 @@ def cmd_config_update(profile: str, region: str, cluster_name: str, capture: boo
     aws_env = aws_provider.get_aws_env()
 
     try:
-        ver.confirm_aws_aio_version_compatibility(cluster_name, aws_provider)
-    except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+        compat.confirm_aws_aio_version_compatibility(cluster_name, aws_provider)
+    except (compat.CliClusterVersionMismatch, compat.CaptureViewerVersionMismatch, compat.UnableToRetrieveClusterVersion) as e:
         logger.error(e)
         logger.warning("Aborting...")
         return

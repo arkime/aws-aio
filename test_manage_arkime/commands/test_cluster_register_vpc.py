@@ -5,10 +5,10 @@ from aws_interactions.aws_environment import AwsEnvironment
 import commands.cluster_register_vpc as crv
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation
-from core.versioning import UnableToRetrieveClusterVersion, CliClusterVersionMismatch
+from core.compatibility import UnableToRetrieveClusterVersion, CliClusterVersionMismatch
 
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_register_vpc.add_vpce_permissions")
 @mock.patch("commands.cluster_register_vpc.ensure_cross_account_role_exists")
 @mock.patch("commands.cluster_register_vpc.ssm_ops.put_ssm_param")
@@ -62,7 +62,7 @@ def test_WHEN_cmd_cluster_register_vpc_called_THEN_as_expected(mock_provider_cls
     ]
     assert expected_put_ssm_calls == mock_put_ssm.call_args_list
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_register_vpc.add_vpce_permissions")
 @mock.patch("commands.cluster_register_vpc.ensure_cross_account_role_exists")
 @mock.patch("commands.cluster_register_vpc.ssm_ops.put_ssm_param")
@@ -95,7 +95,7 @@ def test_WHEN_cmd_cluster_register_vpc_called_AND_doesnt_exist_THEN_as_expected(
     expected_put_ssm_calls = []
     assert expected_put_ssm_calls == mock_put_ssm.call_args_list
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_register_vpc.add_vpce_permissions")
 @mock.patch("commands.cluster_register_vpc.ensure_cross_account_role_exists")
 @mock.patch("commands.cluster_register_vpc.ssm_ops.put_ssm_param")

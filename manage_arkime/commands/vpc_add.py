@@ -9,6 +9,7 @@ import aws_interactions.ssm_operations as ssm_ops
 import cdk_interactions.cdk_context as context
 from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cfn_wrangling as cfn
+import core.compatibility as compat
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation
 from core.vni_provider import SsmVniProvider, VniAlreadyUsed, VniOutsideRange, VniPoolExhausted
@@ -68,11 +69,11 @@ def cmd_vpc_add(profile: str, region: str, cluster_name: str, vpc_id: str, user_
             logger.warning("Aborting...")
             return
 
-    # Confirm the Cluster exists before proceeding
+    # Confirm the Cluster exists and is compatible before proceeding
     try:
-        ssm_ops.get_ssm_param_value(constants.get_cluster_ssm_param_name(cluster_name), cluster_acct_provider)
-    except ssm_ops.ParamDoesNotExist:
-        logger.error(f"The cluster {cluster_name} does not exist; try using the clusters-list command to see the clusters you have created.")
+        compat.confirm_aws_aio_version_compatibility(cluster_name, cluster_acct_provider)
+    except (compat.CliClusterVersionMismatch, compat.CaptureViewerVersionMismatch, compat.UnableToRetrieveClusterVersion) as e:
+        logger.error(e)
         logger.warning("Aborting...")
         return
 
