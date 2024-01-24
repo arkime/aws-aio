@@ -5,6 +5,7 @@ from aws_interactions.aws_client_provider import AwsClientProvider
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation, ensure_cross_account_role_exists, add_vpce_permissions
+import core.versioning as ver
 
 logger = logging.getLogger(__name__)
 
@@ -15,17 +16,18 @@ def cmd_cluster_register_vpc(profile: str, region: str, cluster_name: str, vpc_a
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     aws_env = aws_provider.get_aws_env()
 
-    # Confirm the cluster exists
     try:
-        vpce_service_id = ssm_ops.get_ssm_param_json_value(
-            constants.get_cluster_ssm_param_name(cluster_name),
-            "vpceServiceId",
-            aws_provider
-        )
-    except ssm_ops.ParamDoesNotExist:
-        logger.error(f"The cluster {cluster_name} does not exist; try using the clusters-list command to see the clusters you have created.")
+        ver.confirm_aws_aio_version_compatibility(cluster_name, aws_provider)
+    except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+        logger.error(e)
         logger.warning("Aborting...")
         return
+
+    vpce_service_id = ssm_ops.get_ssm_param_json_value(
+        constants.get_cluster_ssm_param_name(cluster_name),
+        "vpceServiceId",
+        aws_provider
+    )
 
     # Create the cross account IAM role for the VPC account to access the Cluster account
     role_name = ensure_cross_account_role_exists(cluster_name, vpc_account_id, vpc_id, aws_provider, aws_env)

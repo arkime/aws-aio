@@ -12,9 +12,11 @@ from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysRes
                                     ClusterPlan, VpcPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_VPC_CIDR, DEFAULT_CAPTURE_PUBLIC_MASK,
                                     DEFAULT_NUM_AZS, DEFAULT_S3_STORAGE_DAYS)
 from core.user_config import UserConfig
+from core.versioning import CliClusterVersionMismatch, UnableToRetrieveClusterVersion
 
 TEST_CLUSTER = "my-cluster"
 
+@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy._get_cdk_context")
 @mock.patch("commands.cluster_destroy._get_stacks_to_destroy")
@@ -64,7 +66,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
     expected_stacks_calls = [mock.call(TEST_CLUSTER, False, False)]
     assert expected_stacks_calls == mock_get_stacks.call_args_list
 
-    expected_cdk_calls = [mock.call(TEST_CLUSTER, False)]
+    expected_cdk_calls = [mock.call(TEST_CLUSTER, test_plan)]
     assert expected_cdk_calls == mock_get_context.call_args_list
 
     expected_calls = [
@@ -90,6 +92,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
     ]
     assert expected_delete_arkime_calls == mock_delete_arkime.call_args_list
 
+@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy._get_cdk_context")
 @mock.patch("commands.cluster_destroy._get_stacks_to_destroy")
 @mock.patch("commands.cluster_destroy.AwsClientProvider")
@@ -154,7 +157,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     expected_stacks_calls = [mock.call(TEST_CLUSTER, True, True)]
     assert expected_stacks_calls == mock_get_stacks.call_args_list
 
-    expected_cdk_calls = [mock.call(TEST_CLUSTER, True)]
+    expected_cdk_calls = [mock.call(TEST_CLUSTER, test_plan)]
     assert expected_cdk_calls == mock_get_context.call_args_list
 
     expected_cdk_calls = [
@@ -180,6 +183,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     ]
     assert expected_delete_arkime_calls == mock_delete_arkime.call_args_list
 
+@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
@@ -214,20 +218,38 @@ def test_WHEN_cmd_cluster_destroy_called_AND_existing_captures_THEN_abort(mock_c
     mock_client.destroy.assert_not_called()
 
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
-@mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
+@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
 @mock.patch("commands.cluster_destroy.destroy_bucket")
 @mock.patch("commands.cluster_destroy.CdkClient")
 def test_WHEN_cmd_cluster_destroy_called_AND_doesnt_exist_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain,
-                                                                          mock_ssm_names, mock_get_ssm_json):
+                                                                          mock_confirm_ver):
     # Set up our mock
-    mock_ssm_names.return_value = ["vpc-1", "vpc-2"]
-
     mock_client = mock.Mock()
     mock_cdk_client_cls.return_value = mock_client
 
-    mock_get_ssm_json.side_effect = ParamDoesNotExist("")
+    mock_confirm_ver.side_effect = UnableToRetrieveClusterVersion("cluster", 1)
+
+    # Run our test
+    cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False, True)
+
+    # Check our results
+    mock_destroy_bucket.assert_not_called()
+    mock_destroy_domain.assert_not_called()
+    mock_client.destroy.assert_not_called()
+    
+@mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
+@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_destroy.destroy_os_domain_and_wait")
+@mock.patch("commands.cluster_destroy.destroy_bucket")
+@mock.patch("commands.cluster_destroy.CdkClient")
+def test_WHEN_cmd_cluster_destroy_called_AND_cli_version_THEN_abort(mock_cdk_client_cls, mock_destroy_bucket, mock_destroy_domain,
+                                                                          mock_confirm_ver):
+    # Set up our mock
+    mock_client = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_client
+
+    mock_confirm_ver.side_effect = CliClusterVersionMismatch(2, 1)
 
     # Run our test
     cmd_cluster_destroy("profile", "region", TEST_CLUSTER, False, True)
@@ -237,6 +259,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_doesnt_exist_THEN_abort(mock_cdk_cl
     mock_destroy_domain.assert_not_called()
     mock_client.destroy.assert_not_called()
 
+@mock.patch("commands.cluster_destroy.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_destroy.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_destroy.get_ssm_param_json_value")
 @mock.patch("commands.cluster_destroy.get_ssm_names_by_path")
@@ -429,7 +452,7 @@ def test_WHEN_get_cdk_context_called_AND_viewer_vpc_THEN_as_expected():
         viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
     )
 
-    actual_value = _get_cdk_context(cluster_name, True)
+    actual_value = _get_cdk_context(cluster_name, default_plan)
 
     expected_value = {
         constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,
@@ -476,7 +499,7 @@ def test_WHEN_get_cdk_context_called_AND_no_viewer_vpc_THEN_as_expected():
         viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
     )
 
-    actual_value = _get_cdk_context(cluster_name, False)
+    actual_value = _get_cdk_context(cluster_name, default_plan)
 
     expected_value = {
         constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,

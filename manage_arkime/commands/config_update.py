@@ -11,7 +11,7 @@ import aws_interactions.s3_interactions as s3
 import aws_interactions.ssm_operations as ssm_ops
 import core.constants as constants
 from core.local_file import LocalFile, S3File
-from core.versioning import get_version_info
+import core.versioning as ver
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +23,22 @@ def cmd_config_update(profile: str, region: str, cluster_name: str, capture: boo
     no_component_specified = not (capture or viewer)
     if config_version and (not one_component_specified):
         logger.error("If you specify a specific config version to deploy, you must indicate whether to deploy it to"
-                     + " either the Capture or Viewer nodes.  Aborting...")
+                     + " either the Capture or Viewer nodes.")
+        logger.warning("Aborting...")
         exit(1)
 
-    # Update Capture/Viewer config in the cloud, if there's a new version locally.  Bounce the associated ECS Tasks
-    # if we updated the configuration so that they pick it up.
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
     aws_env = aws_provider.get_aws_env()
+
+    try:
+        ver.confirm_aws_aio_version_compatibility(cluster_name, aws_provider)
+    except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+        logger.error(e)
+        logger.warning("Aborting...")
+        return
+
+    # Update Capture/Viewer config in the cloud, if there's a new version locally.  Bounce the associated ECS Tasks
+    # if we updated the configuration so that they pick it up.    
     bucket_name = constants.get_config_bucket_name(aws_env.aws_account, aws_env.aws_region, cluster_name)
 
     logger.info("Updating Arkime config for Capture Nodes, if necessary...")
@@ -92,7 +101,7 @@ def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_prov
     # Create the local config archive and its metadata
     aws_env = aws_provider.get_aws_env()
     archive = archive_provider(cluster_name, aws_env)
-    archive_md5 = get_version_info(archive).md5_version
+    archive_md5 = ver.get_version_info(archive).md5_version
 
     # Confirm the requested version exists, if specified
     if switch_to_version:
@@ -149,7 +158,7 @@ def _update_config_if_necessary(cluster_name: str, bucket_name: str, s3_key_prov
         if switch_to_version
         else config_wrangling.ConfigDetails(
             s3=config_wrangling.S3Details(bucket_name, s3_key_provider(next_config_version)),
-            version=get_version_info(archive, config_version=next_config_version),
+            version=ver.get_version_info(archive, config_version=next_config_version),
             previous=cloud_config_details
         )        
     )   

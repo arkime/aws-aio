@@ -5,7 +5,9 @@ from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.ssm_operations as ssm_ops
 import commands.cluster_deregister_vpc as cdv
 import core.constants as constants
+import core.versioning as ver
 
+@mock.patch("commands.cluster_deregister_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_deregister_vpc.remove_vpce_permissions")
 @mock.patch("commands.cluster_deregister_vpc.ssm_ops.delete_ssm_param")
 @mock.patch("commands.cluster_deregister_vpc.iami.delete_iam_role")
@@ -50,6 +52,7 @@ def test_WHEN_cmd_cluster_deregister_vpc_called_THEN_as_expected(mock_provider_c
     ]
     assert expected_delete_ssm_calls == mock_delete_ssm.call_args_list
 
+@mock.patch("commands.cluster_deregister_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_deregister_vpc.remove_vpce_permissions")
 @mock.patch("commands.cluster_deregister_vpc.ssm_ops.delete_ssm_param")
 @mock.patch("commands.cluster_deregister_vpc.iami.delete_iam_role")
@@ -78,6 +81,7 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_AND_not_associated_THEN_as_expec
     expected_delete_ssm_calls = []
     assert expected_delete_ssm_calls == mock_delete_ssm.call_args_list
 
+@mock.patch("commands.cluster_deregister_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.cluster_deregister_vpc.remove_vpce_permissions")
 @mock.patch("commands.cluster_deregister_vpc.ssm_ops.delete_ssm_param")
 @mock.patch("commands.cluster_deregister_vpc.iami.delete_iam_role")
@@ -99,6 +103,32 @@ def test_WHEN_cmd_vpc_deregister_cluster_called_AND_wrong_account_THEN_as_expect
         "vpcId": "vpc",
         "vpceServiceId": "vpce_id",
     })
+
+    # Run our test
+    cdv.cmd_cluster_deregister_vpc("profile", "region", "my_cluster", "vpc")
+
+    # Check our results
+    expected_delete_role_calls = []
+    assert expected_delete_role_calls == mock_delete_role.call_args_list
+    
+    expected_remove_perms_calls = []
+    assert expected_remove_perms_calls == mock_remove_perms.call_args_list
+
+    expected_delete_ssm_calls = []
+    assert expected_delete_ssm_calls == mock_delete_ssm.call_args_list
+
+@mock.patch("commands.cluster_deregister_vpc.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_deregister_vpc.remove_vpce_permissions")
+@mock.patch("commands.cluster_deregister_vpc.ssm_ops.delete_ssm_param")
+@mock.patch("commands.cluster_deregister_vpc.iami.delete_iam_role")
+@mock.patch("commands.cluster_deregister_vpc.AwsClientProvider")
+def test_WHEN_cmd_vpc_deregister_cluster_called_AND_cli_version_THEN_as_expected(mock_provider_cls, mock_delete_role, mock_delete_ssm,
+                                                                                   mock_remove_perms, mock_confirm_ver):
+    # Set up our mock
+    mock_provider = mock.Mock()
+    mock_provider_cls.return_value = mock_provider
+
+    mock_confirm_ver.side_effect = ver.CliClusterVersionMismatch(2, 1)
 
     # Run our test
     cdv.cmd_cluster_deregister_vpc("profile", "region", "my_cluster", "vpc")
