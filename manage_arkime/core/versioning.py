@@ -91,19 +91,21 @@ class UnableToRetrieveClusterVersion(Exception):
 
 class CaptureViewerVersionMismatch(Exception):
     def __init__(self, capture_version: int, viewer_version: int):
-        super().__init__(f"The AWS AIO versions of your Capture ({capture_version}) and Viewer ({viewer_version}) components"
-                         + " do not match.  This is unexpected and should not happen.  Please cut us a ticket at:"
-                         + " https://github.com/arkime/aws-aio/issues/new")
+        super().__init__(f"The AWS AIO versions of your Capture ({capture_version}) and Viewer ({viewer_version})"
+                         + " components do not match.  This is unexpected and should not happen.  Please cut us a"
+                         + " ticket at: https://github.com/arkime/aws-aio/issues/new")
 
 class CliClusterVersionMismatch(Exception):
     def __init__(self, cli_version: int, cluster_version: int):
         super().__init__(f"The AWS AIO versions of your CLI ({cli_version}) and Cluster ({cluster_version}) do not"
-                         + " match.  This is likely to result in unexpected behavior.  Please revert your CLI to the latest"
-                         + f" minor version under the major version ({cluster_version}).  You can see a version listing of"
-                         + " the CLI using the command: git ls-remote --tags git@github.com:arkime/aws-aio.git")
+                         + " match.  This is likely to result in unexpected behavior.  Please change your CLI to the"
+                         + f" latest minor version under the major version ({cluster_version}).  Check out the"
+                         + " following README section for more details:"
+                         + " https://github.com/arkime/aws-aio#aws-aio-version-mismatch")
 
-def confirm_aws_aio_version_compatibility(cluster_name: str, aws_provider: AwsClientProvider, cli_version: int = AWS_AIO_VERSION):
-    # Unfortunately, it appears currently impossible to distinguish between the scenarios where the cluster doesn't
+def confirm_aws_aio_version_compatibility(cluster_name: str, aws_provider: AwsClientProvider,
+                                          cli_version: int = AWS_AIO_VERSION):
+    # Unfortunately, it currently appears impossible to distinguish between the scenarios where the cluster doesn't
     # exist and the cluster exists but is a different version.  In either case, we could get the ParamDoesNotExist
     # exception.
     try:

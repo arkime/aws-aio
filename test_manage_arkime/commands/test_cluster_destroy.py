@@ -66,7 +66,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_dont_destroy_everything_THEN_expect
     expected_stacks_calls = [mock.call(TEST_CLUSTER, False, False)]
     assert expected_stacks_calls == mock_get_stacks.call_args_list
 
-    expected_cdk_calls = [mock.call(TEST_CLUSTER, False)]
+    expected_cdk_calls = [mock.call(TEST_CLUSTER, test_plan)]
     assert expected_cdk_calls == mock_get_context.call_args_list
 
     expected_calls = [
@@ -157,7 +157,7 @@ def test_WHEN_cmd_cluster_destroy_called_AND_destroy_everything_THEN_expected_cm
     expected_stacks_calls = [mock.call(TEST_CLUSTER, True, True)]
     assert expected_stacks_calls == mock_get_stacks.call_args_list
 
-    expected_cdk_calls = [mock.call(TEST_CLUSTER, True)]
+    expected_cdk_calls = [mock.call(TEST_CLUSTER, test_plan)]
     assert expected_cdk_calls == mock_get_context.call_args_list
 
     expected_cdk_calls = [
@@ -452,7 +452,7 @@ def test_WHEN_get_cdk_context_called_AND_viewer_vpc_THEN_as_expected():
         viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
     )
 
-    actual_value = _get_cdk_context(cluster_name, True)
+    actual_value = _get_cdk_context(cluster_name, default_plan)
 
     expected_value = {
         constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,
@@ -499,7 +499,7 @@ def test_WHEN_get_cdk_context_called_AND_no_viewer_vpc_THEN_as_expected():
         viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
     )
 
-    actual_value = _get_cdk_context(cluster_name, False)
+    actual_value = _get_cdk_context(cluster_name, default_plan)
 
     expected_value = {
         constants.CDK_CONTEXT_CMD_VAR: constants.CMD_cluster_destroy,

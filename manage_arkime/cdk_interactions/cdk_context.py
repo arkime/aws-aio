@@ -4,9 +4,7 @@ import shlex
 from typing import Dict, List
 
 import core.constants as constants
-from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, VpcPlan, ClusterPlan, DataNodesPlan, EcsSysResourcePlan,
-                                    MasterNodesPlan, OSDomainPlan, S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_VPC_CIDR,
-                                    DEFAULT_CAPTURE_PUBLIC_MASK)
+from core.capacity_planning import ClusterPlan
 from core.user_config import UserConfig
 
 @dataclass
@@ -52,27 +50,20 @@ def generate_cluster_create_context(name: str, viewer_cert_arn: str, cluster_pla
     create_context[constants.CDK_CONTEXT_CMD_VAR] = constants.CMD_cluster_create
     return create_context
 
-def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames, has_viewer_vpc: bool) -> Dict[str, str]:
-    # Hardcode these value because it saves us some implementation headaches and it doesn't matter what it is. Since
-    # we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are irrelevant
-    # or it fails/rolls back they are irrelevant.
+def generate_cluster_destroy_context(name: str, stack_names: ClusterStackNames, cluster_plan: ClusterPlan) -> Dict[str, str]:
+    # Hardcode most of these value because it saves us some implementation headaches and it doesn't matter what it is.
+    # Since we're tearing down the Cfn stack in which it would be used, the operation either succeeds they are
+    # irrelevant or it fails/rolls back they are irrelevant.
+    # 
+    # We have to pass the Cluster Plan or else the CDK will fail to start up properly
     fake_arn = "N/A"
-    fake_cluster_plan = ClusterPlan(
-        CaptureNodesPlan("m5.xlarge", 1, 2, 1),
-        VpcPlan(DEFAULT_VPC_CIDR, ["us-fake-1"], DEFAULT_CAPTURE_PUBLIC_MASK),
-        EcsSysResourcePlan(1, 1),
-        OSDomainPlan(DataNodesPlan(2, "t3.small.search", 100), MasterNodesPlan(3, "m6g.large.search")),
-        S3Plan(DEFAULT_S3_STORAGE_CLASS, 1),
-        ViewerNodesPlan(4, 2),
-        VpcPlan(DEFAULT_VPC_CIDR, ["us-fake-1"], DEFAULT_CAPTURE_PUBLIC_MASK) if has_viewer_vpc else None,
-    )
     fake_user_config = UserConfig(1, 1, 1, 1, 1)
     fake_bucket_name = ""
 
     destroy_context = _generate_cluster_context(
         name,
         fake_arn,
-        fake_cluster_plan,
+        cluster_plan,
         fake_user_config,
         fake_bucket_name,
         stack_names

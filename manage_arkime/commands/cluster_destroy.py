@@ -57,7 +57,7 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
 
     has_viewer_vpc = cluster_plan.viewerVpc is not None
     stacks_to_destroy = _get_stacks_to_destroy(name, destroy_everything, has_viewer_vpc)
-    destroy_context = _get_cdk_context(name, has_viewer_vpc)
+    destroy_context = _get_cdk_context(name, cluster_plan)
 
     cdk_client.destroy(stacks_to_destroy, context=destroy_context)
 
@@ -135,7 +135,7 @@ def _get_stacks_to_destroy(cluster_name: str, destroy_everything: bool, has_view
 
     return stacks
 
-def _get_cdk_context(cluster_name: str, has_viewer_vpc: bool) -> Dict[str, any]:
+def _get_cdk_context(cluster_name: str, cluster_plan: ClusterPlan) -> Dict[str, any]:
     stack_names = context.ClusterStackNames(
         captureBucket=constants.get_capture_bucket_stack_name(cluster_name),
         captureNodes=constants.get_capture_nodes_stack_name(cluster_name),
@@ -145,4 +145,4 @@ def _get_cdk_context(cluster_name: str, has_viewer_vpc: bool) -> Dict[str, any]:
         viewerNodes=constants.get_viewer_nodes_stack_name(cluster_name),
         viewerVpc=constants.get_viewer_vpc_stack_name(cluster_name),
     )
-    return context.generate_cluster_destroy_context(cluster_name, stack_names, has_viewer_vpc)
+    return context.generate_cluster_destroy_context(cluster_name, stack_names, cluster_plan)

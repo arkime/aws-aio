@@ -21,6 +21,7 @@ The CDK is used to perform infrastructure specification, setup, management, and 
 - [How to shell into the ECS containers](#how-to-shell-into-the-ecs-containers)
 - [Setting Up Demo Traffic Generation](#setting-up-demo-traffic-generation)
 - [Account Limits, Scaling, and Other Concerns](#account-limits-scaling-and-other-concerns)
+- [Troubleshooting](#troubleshooting)
 - [Generally useful NPM/CDK commands](#generally-useful-npmcdk-commands)
 - [Contribute](#contribute)
 - [Maintainers](#maintainers)
@@ -375,6 +376,36 @@ Here are some account limits you'll want to watch out for:
 * There's a max of 10,000 Standard SSM Parameters per account/region.  We use at least one for each User ENI, several for each Subnet in a User VPC, and several for each User VPC and Cluster.
 
 ## Troubleshooting
+
+### AWS AIO version mismatch
+
+The AWS AIO project contains many components that must operate together, and these components have embedded assumptions of how the other components will behave.  We use a concept called the "AWS AIO Version" to determine whether the various components of the solution should be able to operate together successfully.
+
+Most importantly, the version of the CLI currently installed must be compatible with the version of the Arkime Cluster it is operating against.  If the CLI and Arkime Cluster are both on the same AWS AIO major version (e.g. v7.x.x), then they should be interoperable.  If they are not on the same major version, then it is possible (or even likely) that performing CLI operations against the Arkime Cluster is unsafe and should be avoided.  To help protect deployed Arkime Clusters, the CLI compares the AWS AIO version of the CLI and the Arkime Cluster before sensitive operations and aborts if there is a detected mismatch, or it can't figure out if there is one (which itself is likely a sign of a mismatch).
+
+In the event you discover your installed CLI is not compatible with your Arkime Cluster, you should check out the latest version of the CLI whose major version matches the AWS AIO version of your Arkime Cluster.  You can find the version of your installed CLI using git tags like so:
+
+```
+git describe --tags
+```
+
+You can retrieve a listing of CLI versions using git tags as well:
+
+```
+git ls-remote --tags git@github.com:arkime/aws-aio.git
+```
+
+If the CLI detects a version mismatch, it should inform you of the AWS AIO version of the Arkime Cluster you tried to operate against.  However, you can also find the AWS AIO version of deployed Arkime Clusters in your account/region using the `clusters-list` command:
+
+```
+./manage_arkime.py clusters-list
+```
+
+Once you determine the correct major version to you with your Arkime Cluster, you can then check out the latest minor/patch version using git and operate against your Arkime Cluster as planned:
+
+```
+git checkout v2.2.0
+```
 
 ### "This CDK CLI is not compatible with the CDK library"
 This error is caused by having a mismatch between the Node packages `aws-cdk` (the CLI) and `aws-cdk-lib` (the CDK library), which can occaisionally result if one package is upgraded without the other package package.  You'll see an error message like the following in the manage_arkime.log file:
