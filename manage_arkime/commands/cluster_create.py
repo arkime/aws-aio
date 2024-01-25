@@ -20,6 +20,7 @@ import core.constants as constants
 from core.local_file import LocalFile, S3File
 from core.usage_report import UsageReport
 from core.price_report import PriceReport
+import core.compatibility as compat
 from core.capacity_planning import (get_capture_node_capacity_plan, get_viewer_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan,
                                     ClusterPlan, VpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, get_capture_vpc_plan,
                                     S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS,
@@ -42,8 +43,8 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
     is_initial_invocation = _is_initial_invocation(name, aws_provider)
     if not is_initial_invocation:
         try:
-            ver.confirm_aws_aio_version_compatibility(name, aws_provider)
-        except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+            compat.confirm_aws_aio_version_compatibility(name, aws_provider)
+        except (compat.CliClusterVersionMismatch, compat.CaptureViewerVersionMismatch, compat.UnableToRetrieveClusterVersion) as e:
             logger.error(e)
             logger.warning("Aborting...")
             return

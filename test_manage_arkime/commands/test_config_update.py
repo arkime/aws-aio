@@ -4,17 +4,16 @@ import unittest.mock as mock
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.aws_environment import AwsEnvironment
-from aws_interactions.events_interactions import ConfigureIsmEvent
 import aws_interactions.s3_interactions as s3
-import aws_interactions.ssm_operations as ssm_ops
 from commands.config_update import (cmd_config_update, _update_config_if_necessary, _revert_arkime_config, 
                                     NoPreviousConfig, _bounce_ecs_service)
+from core.compatibility import CliClusterVersionMismatch
 import core.constants as constants
 import core.local_file as local_file
-from core.versioning import VersionInfo, CliClusterVersionMismatch
+from core.versioning import VersionInfo
 
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.config_update._update_config_if_necessary")
@@ -92,7 +91,7 @@ def test_WHEN_cmd_config_update_called_AND_happy_path_THEN_as_expected(mock_prov
     ]
     assert expected_bounce_calls == mock_bounce.call_args_list
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.config_update._update_config_if_necessary")
@@ -143,7 +142,7 @@ def test_WHEN_cmd_config_update_called_AND_shouldnt_bounce_THEN_as_expected(mock
     expected_bounce_calls = []
     assert expected_bounce_calls == mock_bounce.call_args_list
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
 @mock.patch("commands.config_update._update_config_if_necessary")
@@ -225,7 +224,7 @@ def test_WHEN_cmd_config_update_called_AND_force_bounce_THEN_as_expected(mock_pr
 class ExpectedExit(Exception):
     pass
 
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility", mock.Mock())
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.config_update.exit")
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")
@@ -254,7 +253,7 @@ def test_WHEN_cmd_config_update_called_AND_config_ver_no_component_THEN_as_expec
 
 
 @mock.patch("commands.config_update.AwsClientProvider", mock.Mock())
-@mock.patch("commands.cluster_register_vpc.ver.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.cluster_register_vpc.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.config_update.exit")
 @mock.patch("commands.config_update._bounce_ecs_service")
 @mock.patch("commands.config_update.ssm_ops.get_ssm_param_value")

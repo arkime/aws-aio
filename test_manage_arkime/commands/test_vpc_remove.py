@@ -6,9 +6,11 @@ from commands.vpc_remove import cmd_vpc_remove
 from aws_interactions.aws_environment import AwsEnvironment
 import aws_interactions.events_interactions as events
 from aws_interactions.ssm_operations import ParamDoesNotExist
+import core.compatibility as compat
 import core.constants as constants
 
 
+@mock.patch("commands.vpc_remove.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.vpc_remove.AwsClientProvider")
 @mock.patch("commands.vpc_remove.SsmVniProvider")
 @mock.patch("commands.vpc_remove.ssm_ops")
@@ -81,21 +83,24 @@ def test_WHEN_cmd_vpc_remove_called_THEN_removes_mirroring(mock_cdk_client_cls, 
     assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
 
 @mock.patch("commands.vpc_remove.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_remove.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.vpc_remove.SsmVniProvider")
 @mock.patch("commands.vpc_remove.ssm_ops")
 @mock.patch("commands.vpc_remove.events")
 @mock.patch("commands.vpc_remove.CdkClient")
-def test_WHEN_cmd_vpc_remove_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_events, mock_ssm, mock_vni_provider_cls):
+def test_WHEN_cmd_vpc_remove_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cdk_client_cls, mock_events, mock_ssm,
+                                                                         mock_vni_provider_cls, mock_confirm_ver):
     # Set up our mock
     mock_vni_provider = mock.Mock()
     mock_vni_provider_cls.return_value = mock_vni_provider
 
     mock_ssm.ParamDoesNotExist = ParamDoesNotExist
     mock_ssm.get_ssm_param_value.side_effect = ParamDoesNotExist("")
-    mock_ssm.get_ssm_param_json_value.side_effect = ParamDoesNotExist("param-1")
 
     mock_cdk = mock.Mock()
     mock_cdk_client_cls.return_value = mock_cdk
+
+    mock_confirm_ver.side_effect = compat.UnableToRetrieveClusterVersion("cluster-1", 1)
 
     # Run our test
     cmd_vpc_remove("profile", "region", "cluster-1", "vpc-1")
@@ -110,6 +115,40 @@ def test_WHEN_cmd_vpc_remove_called_AND_cluster_doesnt_exist_THEN_aborts(mock_cd
     expected_vni_calls = []
     assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
 
+@mock.patch("commands.vpc_remove.AwsClientProvider", mock.Mock())
+@mock.patch("commands.vpc_remove.compat.confirm_aws_aio_version_compatibility")
+@mock.patch("commands.vpc_remove.SsmVniProvider")
+@mock.patch("commands.vpc_remove.ssm_ops")
+@mock.patch("commands.vpc_remove.events")
+@mock.patch("commands.vpc_remove.CdkClient")
+def test_WHEN_cmd_vpc_remove_called_AND_cli_version_THEN_aborts(mock_cdk_client_cls, mock_events, mock_ssm,
+                                                                         mock_vni_provider_cls, mock_confirm_ver):
+    # Set up our mock
+    mock_vni_provider = mock.Mock()
+    mock_vni_provider_cls.return_value = mock_vni_provider
+
+    mock_ssm.ParamDoesNotExist = ParamDoesNotExist
+    mock_ssm.get_ssm_param_value.side_effect = ParamDoesNotExist("")
+
+    mock_cdk = mock.Mock()
+    mock_cdk_client_cls.return_value = mock_cdk
+
+    mock_confirm_ver.side_effect = compat.CliClusterVersionMismatch(2, 1)
+
+    # Run our test
+    cmd_vpc_remove("profile", "region", "cluster-1", "vpc-1")
+
+    # Check our results
+    expected_cdk_calls = []
+    assert expected_cdk_calls == mock_cdk.destroy.call_args_list
+
+    expected_put_event_calls = []
+    assert expected_put_event_calls == mock_events.put_events.call_args_list
+
+    expected_vni_calls = []
+    assert expected_vni_calls == mock_vni_provider.relinquish_vni.call_args_list
+
+@mock.patch("commands.vpc_remove.compat.confirm_aws_aio_version_compatibility", mock.Mock())
 @mock.patch("commands.vpc_remove.AwsClientProvider")
 @mock.patch("commands.vpc_remove.SsmVniProvider")
 @mock.patch("commands.vpc_remove.ssm_ops")

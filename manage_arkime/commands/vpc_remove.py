@@ -6,6 +6,7 @@ import aws_interactions.events_interactions as events
 import aws_interactions.ssm_operations as ssm_ops
 from cdk_interactions.cdk_client import CdkClient
 import cdk_interactions.cdk_context as context
+import core.compatibility as compat
 import core.constants as constants
 from core.cross_account_wrangling import CrossAccountAssociation
 from core.vni_provider import SsmVniProvider
@@ -44,15 +45,20 @@ def cmd_vpc_remove(profile: str, region: str, cluster_name: str, vpc_id: str):
                      + " Aborting...")
         return
 
-    # Confirm the Cluster exists before proceeding
+    # Confirm the Cluster exists and is compatible before proceeding
     try:
-        vpce_service_id = ssm_ops.get_ssm_param_json_value(constants.get_cluster_ssm_param_name(cluster_name), "vpceServiceId", cluster_acct_provider)
-    except ssm_ops.ParamDoesNotExist:
-        logger.error(f"The cluster {cluster_name} does not exist; try using the clusters-list command to see the clusters you have created.")
+        compat.confirm_aws_aio_version_compatibility(cluster_name, cluster_acct_provider)
+    except (compat.CliClusterVersionMismatch, compat.CaptureViewerVersionMismatch, compat.UnableToRetrieveClusterVersion) as e:
+        logger.error(e)
         logger.warning("Aborting...")
         return
 
     # Pull all our deployed configuration from SSM and tear down the ENI-specific resources
+    vpce_service_id = ssm_ops.get_ssm_param_json_value(
+        constants.get_cluster_ssm_param_name(cluster_name),
+        "vpceServiceId",
+        cluster_acct_provider
+    )
     vpc_ssm_param = constants.get_vpc_ssm_param_name(cluster_name, vpc_id)
     event_bus_arn = ssm_ops.get_ssm_param_json_value(vpc_ssm_param, "busArn", vpc_acct_provider)
     subnet_search_path = f"{vpc_ssm_param}/subnets"

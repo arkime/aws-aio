@@ -8,8 +8,8 @@ from aws_interactions.s3_interactions import destroy_bucket
 from aws_interactions.ssm_operations import get_ssm_param_json_value, get_ssm_param_value, get_ssm_names_by_path, delete_ssm_param, ParamDoesNotExist
 from cdk_interactions.cdk_client import CdkClient
 from core.capacity_planning import ClusterPlan
+import core.compatibility as compat
 import core.constants as constants
-import core.versioning as ver
 import cdk_interactions.cdk_context as context
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ def cmd_cluster_destroy(profile: str, region: str, name: str, destroy_everything
     cdk_client = CdkClient(aws_provider.get_aws_env())
 
     try:
-        ver.confirm_aws_aio_version_compatibility(name, aws_provider)
-    except (ver.CliClusterVersionMismatch, ver.CaptureViewerVersionMismatch, ver.UnableToRetrieveClusterVersion) as e:
+        compat.confirm_aws_aio_version_compatibility(name, aws_provider)
+    except (compat.CliClusterVersionMismatch, compat.CaptureViewerVersionMismatch, compat.UnableToRetrieveClusterVersion) as e:
         logger.error(e)
         logger.warning("Aborting...")
         return
