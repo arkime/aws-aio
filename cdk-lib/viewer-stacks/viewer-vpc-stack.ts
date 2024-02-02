@@ -19,6 +19,7 @@ export class ViewerVpcStack extends Stack {
         // The VPC the Viewer Nodes will live in
         this.vpc = new ec2.Vpc(this, 'VPC', {
             ipAddresses: ec2.IpAddresses.cidr(props.viewerVpcPlan.cidr.block),
+            natGateways: 0,
             availabilityZones: props.viewerVpcPlan.azs,
             subnetConfiguration: [
                 {
