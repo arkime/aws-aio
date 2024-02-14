@@ -69,6 +69,8 @@ Resources of those types should have capture configured for them when they are b
 
 ### Pre-requisites
 
+#### Software and Configuration
+
 * REQUIRED: A copy of the aws-aio repo
 * REQUIRED: A properly installed/configured copy of Node 18 ([see instructions here](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm))
 * REQUIRED: A properly installed/configured copy of Python 3.9+ and venv ([see instructions here](https://realpython.com/installing-python/))
@@ -86,7 +88,36 @@ Why each of these needed:
 
 NOTE: By default, the CDK CLI will use the AWS Region specified as default in your AWS Configuration file; you can set this using the `aws configure` command.  It will also use the AWS Account your credentials are associated with.
 
+#### Python Virtual Environment
+
+The project uses a Python Virtual Environment to manage dependencies.  You can learn more about venv and Python Virtual Environments [here](https://docs.python.org/3/library/venv.html).  This ensures that when you run the CLI, it's using an instance of Python with all the correct dependencies installed rather than your system version of Python.  To set up your Python Virtual Environment, run the following commands in the repo's root directory:
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+(cd manage_arkime ; pip install -r requirements.txt)
+```
+
+If the Virtual Environment is set up correclty, you should see the name of your environment prefixed in your terminal's prompt headers.  The commands above name the Virtual Environment `.venv`, which you can see in this example terminal prompt:
+
+```
+(.venv) chelma@3c22fba4e266 aws-aio %
+```
+
+#### AWS Credentials
+
+As mentioned in the [prequisites intro](#software-and-configuration), you need AWS Credentials in order to run the Arkime AWS AIO CLI.  The CLI needs the credentials to gather information about your AWS Account, store/update/read state, and perform CloudFormation deployments.  It is advised to run the CLI with Admin-level permissions in the account.  This is both necessary and reflects the fact that the CloudFormation operations manipulate IAM Resources in the account.
+
+The Arkime AIO CLI pulls credentials from the same places as the AWS CLI, so you should be able to set up your credentials in the standard way.  You can easily check what AWS Identity is in your keyring using the AWS CLI:
+
+```
+aws sts get-caller-identity
+```
+
 ### Setting up your Arkime Cluster
+
+**NOTE:** If you haven't already, be sure to [install the prerequisite software](#software-and-configuration), be in your [Python Virtual Environment](#python-virtual-environment), and have [the required AWS Credentials](#aws-credentials).
+
 
 You can deploy the Arkime Cluster into your AWS account like so:
 
