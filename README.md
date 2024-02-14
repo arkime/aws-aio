@@ -108,9 +108,16 @@ If the Virtual Environment is set up correclty, you should see the name of your 
 
 As mentioned in the [prequisites intro](#software-and-configuration), you need AWS Credentials in order to run the Arkime AWS AIO CLI.  The CLI needs the credentials to gather information about your AWS Account, store/update/read state, and perform CloudFormation deployments.  It is advised to run the CLI with Admin-level permissions in the account.  This is both necessary and reflects the fact that the CloudFormation operations manipulate IAM Resources in the account.
 
-The Arkime AIO CLI pulls credentials from the same places as the AWS CLI, so you should be able to set up your credentials in the standard way.
+The Arkime AIO CLI pulls credentials from the same places as the AWS CLI, so you should be able to set up your credentials in the standard way.  You can easily check what AWS Identity is in your keyring using the AWS CLI:
+
+```
+aws sts get-caller-identity
+```
 
 ### Setting up your Arkime Cluster
+
+**NOTE:** If you haven't already, be sure to [install the prerequisite software](#software-and-configuration), be in your [Python Virtual Environment](#python-virtual-environment), and have [the required AWS Credentials](#aws-credentials).
+
 
 You can deploy the Arkime Cluster into your AWS account like so:
 
