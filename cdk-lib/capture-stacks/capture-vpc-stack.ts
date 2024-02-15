@@ -16,7 +16,7 @@ export class CaptureVpcStack extends Stack {
 
         this.vpc = new ec2.Vpc(this, 'VPC', {
             ipAddresses: ec2.IpAddresses.cidr(props.planCluster.captureVpc.cidr.block),
-            natGateways: 0,
+            // natGateways: 0, // ECS on EC2 need NatGateways, there might be another way?
             availabilityZones: props.planCluster.captureVpc.azs,
             subnetConfiguration: [
                 {
