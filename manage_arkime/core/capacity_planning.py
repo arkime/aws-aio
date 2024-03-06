@@ -110,14 +110,14 @@ def get_capture_node_capacity_plan(expected_traffic: float, azs: List[str]) -> C
 
     if expected_traffic > MAX_TRAFFIC:
         raise TooMuchTraffic(expected_traffic)
-    
+
     chosen_instance = next(instance for instance in CAPTURE_INSTANCES if expected_traffic <= instance.maxTraffic)
 
     desired_instances = max(
         chosen_instance.minNodes,
         math.ceil(expected_traffic/chosen_instance.trafficPer)
     )
-    
+
     return CaptureNodesPlan(
         chosen_instance.instanceType,
         desired_instances,
@@ -373,20 +373,20 @@ class Cidr:
         overall_form = re.compile("^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}/[0-9]{1,2}$")
         if not overall_form.match(cidr_str):
             raise InvalidCidr(cidr_str)
-        
+
         prefix_portion = cidr_str.split("/")[0]
         prefix_portions_correct = list(map(lambda x: int(x) >=0 and int(x) <= 255, prefix_portion.split(".")))
         if not all(prefix_portions_correct):
             raise InvalidCidr(cidr_str)
-        
+
         mask_portion = cidr_str.split("/")[1]
         mask_portion_correct = int(mask_portion) >= 0 and int(mask_portion) <= 32
         if not mask_portion_correct:
             raise InvalidCidr(cidr_str)
-        
+
     def __eq__(self, other) -> bool:
         return (self.block == other.block and self.prefix == other.prefix and self.mask == other.mask)
-    
+
     def __str__(self) -> str:
         return self.block
 
@@ -396,7 +396,7 @@ class Cidr:
             "prefix": self.prefix,
             "mask": self.mask,
         }
-    
+
 DEFAULT_VPC_CIDR = Cidr("10.0.0.0/16") # What AWS VPC gives by default
 DEFAULT_CAPTURE_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the Capture VPC public subnets
 DEFAULT_VIEWER_PUBLIC_MASK = 28 # minimum subnet size; we don't need much in the Viewer VPC public subnets either
@@ -433,7 +433,7 @@ class VpcPlan:
         publicSubnetMask = input["publicSubnetMask"]
 
         return cls(cidr, azs, publicSubnetMask)
-    
+
     def get_usable_ips(self) -> int:
         total_ips = 2 ** (32 - int(self.cidr.mask))
         public_ips = 2 ** (32 - int(self.publicSubnetMask)) * len(self.azs)
@@ -441,7 +441,7 @@ class VpcPlan:
         reserved_private_ips = reserved_ips_per_subnet * len(self.azs)
 
         return total_ips - public_ips - reserved_private_ips
-    
+
 def get_capture_vpc_plan(previous_plan: VpcPlan, capture_cidr_block: str, azs: List[str]) -> VpcPlan:
     if previous_plan and all(value is not None for value in vars(previous_plan).values()):
         return previous_plan
@@ -449,7 +449,7 @@ def get_capture_vpc_plan(previous_plan: VpcPlan, capture_cidr_block: str, azs: L
         return VpcPlan(DEFAULT_VPC_CIDR, azs, DEFAULT_CAPTURE_PUBLIC_MASK)
     else:
         return VpcPlan(Cidr(capture_cidr_block), azs, DEFAULT_CAPTURE_PUBLIC_MASK)
-    
+
 def get_viewer_vpc_plan(previous_plan: VpcPlan, viewer_cidr_block: str, azs: List[str]) -> VpcPlan:
     if previous_plan and all(value is not None for value in vars(previous_plan).values()):
         return previous_plan
@@ -488,7 +488,7 @@ class ClusterPlan:
     viewerVpc: VpcPlan
 
     def __eq__(self, other) -> bool:
-        return (self.captureNodes == other.captureNodes and self.captureVpc == other.captureVpc                
+        return (self.captureNodes == other.captureNodes and self.captureVpc == other.captureVpc
                 and self.ecsResources == other.ecsResources and self.osDomain == other.osDomain and self.s3 == other.s3
                 and self.viewerNodes == other.viewerNodes and self.viewerVpc == other.viewerVpc)
 
@@ -522,15 +522,15 @@ class ClusterPlan:
             viewer_vpc = None
 
         return cls(capture_nodes, capture_vpc, ecs_resources, os_domain, s3, viewer_nodes, viewer_vpc)
-    
+
     def get_required_capture_ips(self) -> int:
         required_capture_ips = self.captureNodes.maxCount + self.osDomain.dataNodes.count + self.osDomain.masterNodes.count
         required_viewer_ips = self.viewerNodes.maxCount if not self.viewerVpc else 0
 
         return required_capture_ips + required_viewer_ips
-    
+
     def will_capture_plan_fit(self) -> bool:
         usable_ips = self.captureVpc.get_usable_ips()
-        required_ips = self.get_required_capture_ips()    
+        required_ips = self.get_required_capture_ips()
 
         return usable_ips >= required_ips

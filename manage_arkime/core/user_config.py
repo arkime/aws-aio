@@ -11,6 +11,7 @@ class UserConfig:
     historyDays: int
     replicas: int
     pcapDays: int
+    viewerPrefixList: str = None
 
     """ Only process fields we still need, this allows us to ignore config no longer used """
     @classmethod
@@ -29,6 +30,7 @@ class UserConfig:
             'spiDays': self.spiDays,
             'replicas': self.replicas,
             'pcapDays': self.pcapDays,
-            'historyDays': self.historyDays
+            'historyDays': self.historyDays,
+            'viewerPrefixList': self.viewerPrefixList,
         }
 
