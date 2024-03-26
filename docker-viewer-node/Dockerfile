@@ -12,8 +12,8 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
     ./aws/install && \
     rm -rf aws awscliv2.zip
 
-# Install/configure Arkime.  WARNING - this uses the development tip and therefore version floats
-RUN wget -O arkime.deb https://s3.amazonaws.com/files.molo.ch/arkime-main_ubuntu20_amd64.deb && \
+# Install/configure Arkime.
+RUN wget -O arkime.deb https://github.com/arkime/arkime/releases/download/v5.0.1/arkime_5.0.1-1.ubuntu2004_amd64.deb && \
     apt-get install -y ./arkime.deb && \
     rm -rf ./arkime.deb
 
