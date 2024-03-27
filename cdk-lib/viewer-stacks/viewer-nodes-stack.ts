@@ -125,12 +125,6 @@ export class ViewerNodesStack extends cdk.Stack {
             lb.addSecurityGroup(sg);
         }
 
-        const listener = lb.addListener('Listener', {
-            protocol: elbv2.ApplicationProtocol.HTTP,
-            port: 80,
-            open: true
-        });
-
         // Our Arkime Capture container
         const container = taskDefinition.addContainer('ViewerContainer', {
             image: ecs.ContainerImage.fromAsset(path.resolve(__dirname, '..', '..', 'docker-viewer-node')),
@@ -153,6 +147,13 @@ export class ViewerNodesStack extends cdk.Stack {
             hostPort: viewerPort
         });
 
+        /*
+        const listener = lb.addListener('Listener', {
+            protocol: elbv2.ApplicationProtocol.HTTP,
+            port: 80,
+            open: true
+        });
+
         listener.addTargets('TargetGroup', {
             protocol: elbv2.ApplicationProtocol.HTTP,
             port: viewerPort,
@@ -168,6 +169,7 @@ export class ViewerNodesStack extends cdk.Stack {
                 interval: cdk.Duration.seconds(30),
             },
         });
+        */
 
         const certificate = acm.Certificate.fromCertificateArn(this, 'ViewerCert', props.arnViewerCert);
         const httpsListener = lb.addListener('HttpsListener', {
