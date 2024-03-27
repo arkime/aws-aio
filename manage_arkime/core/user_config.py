@@ -21,8 +21,12 @@ class UserConfig:
         return cls(**valid_kwargs)
 
     def __eq__(self, other):
-        return (self.expectedTraffic == other.expectedTraffic and self.spiDays == other.spiDays
-                and self.replicas == other.replicas and self.pcapDays == other.pcapDays and self.historyDays == other.historyDays)
+        return (self.expectedTraffic == other.expectedTraffic and
+                self.spiDays == other.spiDays and
+                self.historyDays == other.historyDays and
+                self.replicas == other.replicas and
+                self.pcapDays == other.pcapDays and
+                self.viewerPrefixList == other.viewerPrefixList)
 
     def to_dict(self) -> Dict[str, any]:
         return {
