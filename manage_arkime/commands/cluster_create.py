@@ -189,7 +189,7 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
             return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, None)
     # All of the parameters defined
     else:
-        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days)
+        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
 
 def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvider) -> ClusterPlan:
     # Pull the existing plan, if possible
