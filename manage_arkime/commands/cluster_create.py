@@ -32,7 +32,7 @@ from core.user_config import UserConfig
 logger = logging.getLogger(__name__)
 
 def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool, capture_cidr: str, viewer_cidr: str):
+                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool, capture_cidr: str, viewer_cidr: str, viewer_prefix_list: str):
     logger.debug(f"Invoking cluster-create with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
@@ -51,7 +51,7 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
 
     # Generate our capacity plan, then confirm it's what the user expected and it's safe to proceed with the operation
     previous_user_config = _get_previous_user_config(name, aws_provider)
-    next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, aws_provider)
+    next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list,  aws_provider)
     previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
     next_capacity_plan = _get_next_capacity_plan(next_user_config, previous_capacity_plan, capture_cidr, viewer_cidr, aws_provider)
 
@@ -111,19 +111,19 @@ def _is_initial_invocation(cluster_name: str, aws_provider: AwsClientProvider) -
 def _should_proceed_with_operation(initial_invocation: bool, previous_capacity_plan: ClusterPlan, next_capacity_plan: ClusterPlan,
                                    previous_user_config: UserConfig, next_user_config: UserConfig, preconfirm_usage: bool,
                                    capture_cidr_block: str, viewer_cidr_block: str) -> bool:
-    
+
     if (not initial_invocation) and (capture_cidr_block or viewer_cidr_block):
         # We can't change the CIDR without tearing down the VPC, which effectively means tearing down the entire
         # Cluster and re-creating it.  Instead of attempting to do that, we make the CIDR only set-able on creation.
         logger.error("You can only specify the VPC CIDR(s) when you initially create the Cluster, as changing it"
                      " requires tearing down the entire Cluster.  Aborting...")
         return False
-    
+
     if next_capacity_plan.viewerVpc:
         # Ensure the Viewer VPC's CIDR, if it exists, doesn't overlap with the Capture VPC's CIDR
         viewer_network = ipaddress.ip_network(next_capacity_plan.viewerVpc.cidr.block, strict=False)
-        capture_network = ipaddress.ip_network(next_capacity_plan.captureVpc.cidr.block, strict=False)            
-            
+        capture_network = ipaddress.ip_network(next_capacity_plan.captureVpc.cidr.block, strict=False)
+
         if viewer_network.overlaps(capture_network):
             logger.error(f"Your specified Viewer VPC CIDR ({str(viewer_network)}) overlaps with your Capture VPC"
                          f" CIDR ({str(capture_network)}).  Please ensure these two CIDRs do not overlap.")
@@ -139,7 +139,7 @@ def _should_proceed_with_operation(initial_invocation: bool, previous_capacity_p
         logger.error(f"Your specified Capture capacity plan does not fit in the VPC; there are {available_ips} usable IPs in your VPC"
                      f" and your plan requires {required_ips} IPs.  Aborting...")
         return False
-    
+
     return True
 
 def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider) -> UserConfig:
@@ -157,9 +157,9 @@ def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider
         return UserConfig(None, None, None, None, None)
 
 def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                     pcap_days: int, aws_provider: AwsClientProvider) -> UserConfig:
+                          pcap_days: int, viewer_prefix_list: str, aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
-    if None in [expected_traffic, spi_days, replicas, pcap_days, history_days]:
+    if None in [expected_traffic, spi_days, replicas, pcap_days, history_days, viewer_prefix_list]:
         # Re-use the existing configuration if it exists
         try:
             stored_config_json = ssm_ops.get_ssm_param_json_value(
@@ -179,15 +179,17 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
                 user_config.replicas = replicas
             if pcap_days is not None:
                 user_config.pcapDays = pcap_days
+            if viewer_prefix_list is not None:
+                user_config.viewerPrefixList = viewer_prefix_list
 
             return user_config
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS)
+            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, None)
     # All of the parameters defined
     else:
-        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days)
+        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
 
 def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvider) -> ClusterPlan:
     # Pull the existing plan, if possible
@@ -361,7 +363,7 @@ def _tag_domain(cluster_name: str, aws_provider: AwsClientProvider):
         "domainArn",
         aws_provider
     )
-    
+
     opensearch_client = aws_provider.get_opensearch()
     opensearch_client.add_tags(
         ARN=os_domain_Arn,
@@ -391,7 +393,7 @@ def _get_stacks_to_deploy(cluster_name: str, next_user_config: UserConfig, next_
 
 def _get_cdk_context(cluster_name: str, next_user_config: UserConfig, next_capacity_plan: ClusterPlan, cert_arn: str,
                      aws_env: AwsEnvironment):
-    
+
     # We might not deploy all these, but we need to tell the CDK that they exist as something we might deploy in order
     # for its auto-wiring to work.
     stack_names = context.ClusterStackNames(

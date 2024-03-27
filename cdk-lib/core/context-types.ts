@@ -97,6 +97,7 @@ export interface UserConfig {
     historyDays: number;
     replicas: number;
     pcapDays: number;
+    viewerPrefixList: string;
 }
 
 /**

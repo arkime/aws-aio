@@ -11,6 +11,7 @@ class UserConfig:
     historyDays: int
     replicas: int
     pcapDays: int
+    viewerPrefixList: str = None
 
     """ Only process fields we still need, this allows us to ignore config no longer used """
     @classmethod
@@ -20,8 +21,12 @@ class UserConfig:
         return cls(**valid_kwargs)
 
     def __eq__(self, other):
-        return (self.expectedTraffic == other.expectedTraffic and self.spiDays == other.spiDays
-                and self.replicas == other.replicas and self.pcapDays == other.pcapDays and self.historyDays == other.historyDays)
+        return (self.expectedTraffic == other.expectedTraffic and
+                self.spiDays == other.spiDays and
+                self.historyDays == other.historyDays and
+                self.replicas == other.replicas and
+                self.pcapDays == other.pcapDays and
+                self.viewerPrefixList == other.viewerPrefixList)
 
     def to_dict(self) -> Dict[str, any]:
         return {
@@ -29,6 +34,7 @@ class UserConfig:
             'spiDays': self.spiDays,
             'replicas': self.replicas,
             'pcapDays': self.pcapDays,
-            'historyDays': self.historyDays
+            'historyDays': self.historyDays,
+            'viewerPrefixList': self.viewerPrefixList,
         }
 

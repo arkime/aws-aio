@@ -100,6 +100,7 @@ case 'ClusterMgmtParams': {
         ssmParamNameViewerConfig: params.nameViewerConfigSsmParam,
         ssmParamNameViewerDetails: params.nameViewerDetailsSsmParam,
         planCluster: params.planCluster,
+        userConfig: params.userConfig,
     });
     viewerNodesStack.addDependency(captureBucketStack);
     viewerNodesStack.addDependency(vpcStackToUse);

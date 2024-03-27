@@ -74,7 +74,7 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
     mock_get_context.return_value = {"key": "value"}
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None, None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None, None, None)
 
     # Check our results
     expected_calls = [
@@ -146,7 +146,7 @@ def test_WHEN_cmd_cluster_create_called_AND_ver_mismatch_THEN_as_expected(mock_c
     mock_confirm_ver.side_effect = CliClusterVersionMismatch(2, 1)
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26")
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26", None)
 
     # Check our results
     expected_proceed_calls = []
@@ -200,7 +200,7 @@ def test_WHEN_cmd_cluster_create_called_AND_shouldnt_proceed_THEN_as_expected(mo
     mock_proceed.return_value = False
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26")
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26", None)
 
     # Check our results
     expected_proceed_calls = [
@@ -283,7 +283,7 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
     mock_get_context.return_value = {"key": "value"}
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True, None, None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True, None, None, None)
 
     # Check our results
     expected_calls = [
@@ -337,7 +337,7 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
 def test_WHEN_should_proceed_with_operation_AND_happy_path_THEN_as_expected(mock_confirm):
     # Set up our mock
     azs = ["az1", "az2"]
-    user_config = UserConfig(1, 30, 365, 2, 30)   
+    user_config = UserConfig(1, 30, 365, 2, 30)
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
@@ -367,7 +367,7 @@ def test_WHEN_should_proceed_with_operation_AND_happy_path_THEN_as_expected(mock
 def test_WHEN_should_proceed_with_operation_AND_change_capture_cidr_THEN_as_expected(mock_confirm):
     # Set up our mock
     azs = ["az1", "az2"]
-    user_config = UserConfig(1, 30, 365, 2, 30)  
+    user_config = UserConfig(1, 30, 365, 2, 30)
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
@@ -394,7 +394,7 @@ def test_WHEN_should_proceed_with_operation_AND_change_capture_cidr_THEN_as_expe
 def test_WHEN_should_proceed_with_operation_AND_change_viewer_cidr_THEN_as_expected(mock_confirm):
     # Set up our mock
     azs = ["az1", "az2"]
-    user_config = UserConfig(1, 30, 365, 2, 30)  
+    user_config = UserConfig(1, 30, 365, 2, 30)
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 20, 25, 1),
@@ -432,7 +432,7 @@ def test_WHEN_should_proceed_with_operation_AND_check_overlapping_cidrs_THEN_as_
         S3Plan(DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS),
         ViewerNodesPlan(20, 5),
         VpcPlan(Cidr("2.3.4.5/24"), azs, DEFAULT_CAPTURE_PUBLIC_MASK),
-    )    
+    )
 
     actual_value = _should_proceed_with_operation(False, cluster_plan, cluster_plan, user_config, user_config, True, None, None)
     assert True == actual_value
@@ -458,7 +458,7 @@ def test_WHEN_should_proceed_with_operation_AND_check_overlapping_cidrs_THEN_as_
 def test_WHEN_should_proceed_with_operation_AND_abort_usage_THEN_as_expected(mock_confirm):
     # Set up our mock
     azs = ["az1", "az2"]
-    user_config = UserConfig(1, 30, 365, 2, 30) 
+    user_config = UserConfig(1, 30, 365, 2, 30)
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 1, 2, 1),
@@ -487,7 +487,7 @@ def test_WHEN_should_proceed_with_operation_AND_abort_usage_THEN_as_expected(moc
 def test_WHEN_should_proceed_with_operation_AND_doesnt_fit_THEN_as_expected(mock_confirm):
     # Set up our mock
     azs = ["az1", "az2"]
-    user_config = UserConfig(1, 30, 365, 2, 30) 
+    user_config = UserConfig(1, 30, 365, 2, 30)
 
     cluster_plan = ClusterPlan(
         CaptureNodesPlan("m5.xlarge", 100, 200, 100),
@@ -574,7 +574,7 @@ def test_WHEN_get_next_user_config_called_AND_use_existing_THEN_as_expected(mock
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(1.2, 40, 120, 2, 35) == actual_value
@@ -600,7 +600,7 @@ def test_WHEN_get_next_user_config_called_AND_partial_update_THEN_as_expected(mo
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", None, 30, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, 30, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(1.2, 30, 120, 2, 35) == actual_value
@@ -619,7 +619,7 @@ def test_WHEN_get_next_user_config_called_AND_use_default_THEN_as_expected(mock_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS) == actual_value
@@ -637,10 +637,10 @@ def test_WHEN_get_next_user_config_called_AND_specify_all_THEN_as_expected(mock_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", 10, 40, 120, 2, 35, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", 10, 40, 120, 2, 35, "viewer-prefix-list", mock_provider)
 
     # Check our results
-    assert UserConfig(10, 40, 120, 2, 35) == actual_value
+    assert UserConfig(10, 40, 120, 2, 35, "viewer-prefix-list") == actual_value
 
     expected_get_ssm_calls = []
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
@@ -1176,7 +1176,7 @@ def test_WHEN_is_initial_invocation_called_THEN_as_expected(mock_get_ssm):
 
     actual_value = _is_initial_invocation("MyCluster", mock_provider)
     assert True == actual_value
-    
+
     expected_get_ssm_calls = [
         mock.call(constants.get_cluster_ssm_param_name("MyCluster"), mock_provider)
     ]
@@ -1190,7 +1190,7 @@ def test_WHEN_is_initial_invocation_called_THEN_as_expected(mock_get_ssm):
 
 def test_WHEN_get_stacks_to_deploy_called_THEN_as_expected():
     cluster_name = "MyCluster"
-    user_config = UserConfig(1, 30, 365, 2, 30)   
+    user_config = UserConfig(1, 30, 365, 2, 30)
 
     # TEST: No Viewer VPC
     cluster_plan = ClusterPlan(
@@ -1212,7 +1212,7 @@ def test_WHEN_get_stacks_to_deploy_called_THEN_as_expected():
         constants.get_opensearch_domain_stack_name(cluster_name),
         constants.get_viewer_nodes_stack_name(cluster_name)
     ]
-    assert expected_value == actual_value  
+    assert expected_value == actual_value
 
     # TEST: Has a Viewer VPC
     cluster_plan = ClusterPlan(
@@ -1286,4 +1286,4 @@ def test_WHEN_get_cdk_context_called_THEN_as_expected():
     }
 
     assert expected_value == actual_value
-    
+

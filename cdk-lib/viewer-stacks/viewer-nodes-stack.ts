@@ -12,7 +12,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as path from 'path';
 import { Construct } from 'constructs';
 import * as ssmwrangling from '../core/ssm-wrangling';
-import * as plan from '../core/context-types';
+import * as types from '../core/context-types';
 
 export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly arnViewerCert: string;
@@ -24,7 +24,8 @@ export interface ViewerNodesStackProps extends cdk.StackProps {
     readonly osPassword: secretsmanager.Secret;
     readonly ssmParamNameViewerConfig: string;
     readonly ssmParamNameViewerDetails: string;
-    readonly planCluster: plan.ClusterPlan;
+    readonly planCluster: types.ClusterPlan;
+    readonly userConfig: types.UserConfig;
 }
 
 export class ViewerNodesStack extends cdk.Stack {
@@ -113,11 +114,16 @@ export class ViewerNodesStack extends cdk.Stack {
             internetFacing: true,
             loadBalancerName: `${props.clusterName}-Viewer`.toLowerCase() // Receives a random suffix, which minimizes DNS collisions
         });
-        const listener = lb.addListener('Listener', {
-            protocol: elbv2.ApplicationProtocol.HTTP,
-            port: 80,
-            open: true
-        });
+
+        // If we have a prefix list, we need to create a SG for the LB that allows traffic from the prefix list
+        if (props.userConfig.viewerPrefixList) {
+            const sg = new ec2.SecurityGroup(this, 'ALBSG', {
+                vpc: props.viewerVpc,
+                description: 'Control access viewer ALB',
+            });
+            sg.addIngressRule(ec2.Peer.prefixList(props.userConfig.viewerPrefixList), ec2.Port.tcp(443), 'Allow HTTPS traffic from my prefix list');
+            lb.addSecurityGroup(sg);
+        }
 
         // Our Arkime Capture container
         const container = taskDefinition.addContainer('ViewerContainer', {
@@ -141,6 +147,13 @@ export class ViewerNodesStack extends cdk.Stack {
             hostPort: viewerPort
         });
 
+        /*
+        const listener = lb.addListener('Listener', {
+            protocol: elbv2.ApplicationProtocol.HTTP,
+            port: 80,
+            open: true
+        });
+
         listener.addTargets('TargetGroup', {
             protocol: elbv2.ApplicationProtocol.HTTP,
             port: viewerPort,
@@ -156,6 +169,7 @@ export class ViewerNodesStack extends cdk.Stack {
                 interval: cdk.Duration.seconds(30),
             },
         });
+        */
 
         const certificate = acm.Certificate.fromCertificateArn(this, 'ViewerCert', props.arnViewerCert);
         const httpsListener = lb.addListener('HttpsListener', {
