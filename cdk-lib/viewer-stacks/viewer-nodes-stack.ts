@@ -151,7 +151,8 @@ export class ViewerNodesStack extends cdk.Stack {
         const listener = lb.addListener('Listener', {
             protocol: elbv2.ApplicationProtocol.HTTP,
             port: 80,
-            open: true
+            open: true,
+            sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
         });
 
         listener.addTargets('TargetGroup', {
