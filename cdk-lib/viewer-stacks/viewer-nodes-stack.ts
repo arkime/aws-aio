@@ -109,21 +109,22 @@ export class ViewerNodesStack extends cdk.Stack {
             targetUtilizationPercent: 60,
         });
 
-        const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', {
-            vpc: props.viewerVpc,
-            internetFacing: true,
-            loadBalancerName: `${props.clusterName}-Viewer`.toLowerCase() // Receives a random suffix, which minimizes DNS collisions
-        });
-
+        let sg;
         // If we have a prefix list, we need to create a SG for the LB that allows traffic from the prefix list
         if (props.userConfig.viewerPrefixList) {
-            const sg = new ec2.SecurityGroup(this, 'ALBSG', {
+            sg = new ec2.SecurityGroup(this, 'ALBSG', {
                 vpc: props.viewerVpc,
                 description: 'Control access viewer ALB',
             });
             sg.addIngressRule(ec2.Peer.prefixList(props.userConfig.viewerPrefixList), ec2.Port.tcp(443), 'Allow HTTPS traffic from my prefix list');
-            lb.addSecurityGroup(sg);
         }
+
+        const lb = new elbv2.ApplicationLoadBalancer(this, 'LB', {
+            vpc: props.viewerVpc,
+            internetFacing: true,
+            loadBalancerName: `${props.clusterName}-Viewer`.toLowerCase(), // Receives a random suffix, which minimizes DNS collisions
+            securityGroup: sg,
+        });
 
         // Our Arkime Capture container
         const container = taskDefinition.addContainer('ViewerContainer', {
@@ -147,36 +148,13 @@ export class ViewerNodesStack extends cdk.Stack {
             hostPort: viewerPort
         });
 
-        /*
-        const listener = lb.addListener('Listener', {
-            protocol: elbv2.ApplicationProtocol.HTTP,
-            port: 80,
-            open: true,
-            sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
-        });
-
-        listener.addTargets('TargetGroup', {
-            protocol: elbv2.ApplicationProtocol.HTTP,
-            port: viewerPort,
-            targets: [service.loadBalancerTarget({
-                containerName: container.containerName,
-                containerPort: viewerPort
-            })],
-            healthCheck: {
-                healthyHttpCodes: '200,302,401',
-                path: '/',
-                unhealthyThresholdCount: 2,
-                healthyThresholdCount: 5,
-                interval: cdk.Duration.seconds(30),
-            },
-        });
-        */
-
         const certificate = acm.Certificate.fromCertificateArn(this, 'ViewerCert', props.arnViewerCert);
         const httpsListener = lb.addListener('HttpsListener', {
             port: 443,
             protocol: elbv2.ApplicationProtocol.HTTPS,
             certificates: [certificate],
+            sslPolicy: elbv2.SslPolicy.RECOMMENDED_TLS,
+            open: !sg
         });
         httpsListener.addTargets('HttpsTargetGroup', {
             protocol: elbv2.ApplicationProtocol.HTTP,
