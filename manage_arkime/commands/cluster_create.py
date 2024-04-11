@@ -156,6 +156,12 @@ def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider
     except ssm_ops.ParamDoesNotExist:
         return UserConfig(None, None, None, None, None)
 
+def _not_none(s, d):
+    if s is None:
+        return d
+    else:
+        return s
+
 def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
                           pcap_days: int, viewer_prefix_list: str, aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
@@ -186,7 +192,13 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, None)
+            return UserConfig(_not_none(expected_traffic, MINIMUM_TRAFFIC),
+                              _not_none(spi_days, DEFAULT_SPI_DAYS),
+                              _not_none(history_days, DEFAULT_HISTORY_DAYS),
+                              _not_none(replicas, DEFAULT_REPLICAS),
+                              _not_none(pcap_days,DEFAULT_S3_STORAGE_DAYS),
+                              viewer_prefix_list
+                             )
     # All of the parameters defined
     else:
         return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
