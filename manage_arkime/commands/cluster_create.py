@@ -22,8 +22,7 @@ from core.usage_report import UsageReport
 from core.price_report import PriceReport
 import core.compatibility as compat
 from core.capacity_planning import (get_capture_node_capacity_plan, get_viewer_node_capacity_plan, get_ecs_sys_resource_plan, get_os_domain_plan,
-                                    ClusterPlan, VpcPlan, MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_REPLICAS, get_capture_vpc_plan,
-                                    S3Plan, DEFAULT_S3_STORAGE_CLASS, DEFAULT_S3_STORAGE_DAYS, DEFAULT_HISTORY_DAYS,
+                                    ClusterPlan, VpcPlan, get_capture_vpc_plan, S3Plan, DEFAULT_S3_STORAGE_CLASS,
                                     CaptureNodesPlan, ViewerNodesPlan, DataNodesPlan, EcsSysResourcePlan, MasterNodesPlan, OSDomainPlan,
                                     get_viewer_vpc_plan)
 import core.versioning as ver
@@ -167,8 +166,11 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
                 "userConfig",
                 aws_provider
             )
+
+            # Load UserConfig from what was in SSM
             user_config = UserConfig(**stored_config_json)
 
+            # Now replace what was in SSM with any provided new values
             if expected_traffic is not None:
                 user_config.expectedTraffic = expected_traffic
             if spi_days is not None:
@@ -181,12 +183,11 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
                 user_config.pcapDays = pcap_days
             if viewer_prefix_list is not None:
                 user_config.viewerPrefixList = viewer_prefix_list
-
             return user_config
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            return UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, None)
+            return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
     # All of the parameters defined
     else:
         return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
