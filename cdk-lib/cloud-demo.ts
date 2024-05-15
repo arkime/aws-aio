@@ -23,18 +23,19 @@ const env: Environment = {
     region: params.awsRegion
 };
 
-switch(params.type) {
-case 'ClusterMgmtParams': {
-    function addTags (stack: cdk.Stack) {
-        const clusterParams = params as prms.ClusterMgmtParams;
-        cdk.Tags.of(stack).add('arkime_cluster', clusterParams.nameCluster);
+function addTags (stack: cdk.Stack) {
+    const clusterParams = params as prms.ClusterMgmtParams;
+    cdk.Tags.of(stack).add('arkime_cluster', clusterParams.nameCluster);
 
-        if (clusterParams.userConfig.extraTags) {
-            for (const tag of clusterParams.userConfig.extraTags) {
-                cdk.Tags.of(stack).add(tag.key, tag.value);
-            }
+    if (clusterParams.userConfig.extraTags) {
+        for (const tag of clusterParams.userConfig.extraTags) {
+            cdk.Tags.of(stack).add(tag.key, tag.value);
         }
     }
+}
+
+switch(params.type) {
+case 'ClusterMgmtParams': {
     const captureBucketStack = new CaptureBucketStack(app, params.stackNames.captureBucket, {
         env: env,
         planCluster: params.planCluster,
