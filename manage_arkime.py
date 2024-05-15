@@ -130,13 +130,25 @@ cli.add_command(demo_traffic_destroy)
     default=None,
     type=click.STRING,
     required=False)
+@click.option(
+    "--extra-tag",
+    help=("Extra AWS Tag to apply to all resources."),
+    default=None,
+    nargs=2,
+    type=(click.STRING, click.STRING),
+    multiple=True,
+    required=False)
 @click.pass_context
 def cluster_create(ctx, name, expected_traffic, spi_days, history_days, replicas, pcap_days, preconfirm_usage,
-                   just_print_cfn, capture_cidr, viewer_cidr, viewer_prefix_list):
+                   just_print_cfn, capture_cidr, viewer_cidr, viewer_prefix_list, extra_tag):
     profile = ctx.obj.get("profile")
     region = ctx.obj.get("region")
+    extra_tags = []
+    if extra_tag:
+        for key, value in extra_tag:
+            extra_tags.append({"key": key, "value": value})
     cmd_cluster_create(profile, region, name, expected_traffic, spi_days, history_days, replicas, pcap_days,
-                       preconfirm_usage, just_print_cfn, capture_cidr, viewer_cidr, viewer_prefix_list)
+                       preconfirm_usage, just_print_cfn, capture_cidr, viewer_cidr, viewer_prefix_list, extra_tags)
 cli.add_command(cluster_create)
 
 @click.command(help="Tears down the Arkime Cluster in your account; by default, leaves your data intact")

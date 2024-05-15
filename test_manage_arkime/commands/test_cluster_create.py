@@ -12,7 +12,7 @@ import cdk_interactions.cdk_context as context
 
 from commands.cluster_create import (cmd_cluster_create, _set_up_viewer_cert, _get_next_capacity_plan, _get_next_user_config, _confirm_usage,
                                      _get_previous_capacity_plan, _get_previous_user_config, _configure_ism, _set_up_arkime_config,
-                                     _tag_domain, _should_proceed_with_operation, _is_initial_invocation, _get_stacks_to_deploy, _get_cdk_context)
+                                     _should_proceed_with_operation, _is_initial_invocation, _get_stacks_to_deploy, _get_cdk_context)
 from core.compatibility import CliClusterVersionMismatch
 import core.constants as constants
 from core.capacity_planning import (CaptureNodesPlan, ViewerNodesPlan, EcsSysResourcePlan, MINIMUM_TRAFFIC, OSDomainPlan, DataNodesPlan, MasterNodesPlan,
@@ -28,7 +28,6 @@ from core.versioning import VersionInfo
 @mock.patch("commands.cluster_create._get_cdk_context")
 @mock.patch("commands.cluster_create._get_stacks_to_deploy")
 @mock.patch("commands.cluster_create._is_initial_invocation")
-@mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create._set_up_arkime_config")
 @mock.patch("commands.cluster_create._configure_ism")
 @mock.patch("commands.cluster_create._get_previous_user_config")
@@ -40,7 +39,7 @@ from core.versioning import VersionInfo
 @mock.patch("commands.cluster_create.CdkClient")
 def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                  mock_proceed, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                 mock_set_up_arkime_conf, mock_tag, mock_initial,mock_get_stacks,
+                                                                 mock_set_up_arkime_conf, mock_initial,mock_get_stacks,
                                                                  mock_get_context, mock_aws_provider_cls):
     # Set up our mock
     mock_set_up.return_value = "arn"
@@ -74,7 +73,7 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
     mock_get_context.return_value = {"key": "value"}
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None, None, None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, None, None, None, None)
 
     # Check our results
     expected_calls = [
@@ -105,15 +104,9 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
     ]
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
-    expected_tag_calls = [
-        mock.call("my-cluster",mock.ANY)
-    ]
-    assert expected_tag_calls == mock_tag.call_args_list
-
 @mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_create.compat.confirm_aws_aio_version_compatibility")
 @mock.patch("commands.cluster_create._is_initial_invocation")
-@mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create._set_up_arkime_config")
 @mock.patch("commands.cluster_create._configure_ism")
 @mock.patch("commands.cluster_create._get_previous_user_config")
@@ -125,7 +118,7 @@ def test_WHEN_cmd_cluster_create_called_THEN_cdk_command_correct(mock_cdk_client
 @mock.patch("commands.cluster_create.CdkClient")
 def test_WHEN_cmd_cluster_create_called_AND_ver_mismatch_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                          mock_proceed, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_set_up_arkime_conf, mock_tag, mock_initial, mock_confirm_ver):
+                                                                         mock_set_up_arkime_conf, mock_initial, mock_confirm_ver):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -146,7 +139,7 @@ def test_WHEN_cmd_cluster_create_called_AND_ver_mismatch_THEN_as_expected(mock_c
     mock_confirm_ver.side_effect = CliClusterVersionMismatch(2, 1)
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26", None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26", None, None)
 
     # Check our results
     expected_proceed_calls = []
@@ -161,15 +154,11 @@ def test_WHEN_cmd_cluster_create_called_AND_ver_mismatch_THEN_as_expected(mock_c
     expected_configure_calls = []
     assert expected_configure_calls == mock_configure.call_args_list
 
-    expected_tag_calls = []
-    assert expected_tag_calls == mock_tag.call_args_list
-
     expected_set_up_arkime_conf_calls = []
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
 @mock.patch("commands.cluster_create.AwsClientProvider", mock.Mock())
 @mock.patch("commands.cluster_create._is_initial_invocation")
-@mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create._set_up_arkime_config")
 @mock.patch("commands.cluster_create._configure_ism")
 @mock.patch("commands.cluster_create._get_previous_user_config")
@@ -181,7 +170,7 @@ def test_WHEN_cmd_cluster_create_called_AND_ver_mismatch_THEN_as_expected(mock_c
 @mock.patch("commands.cluster_create.CdkClient")
 def test_WHEN_cmd_cluster_create_called_AND_shouldnt_proceed_THEN_as_expected(mock_cdk_client_cls, mock_set_up, mock_get_plans, mock_get_config,
                                                                          mock_proceed, mock_get_prev_plan, mock_get_prev_config, mock_configure,
-                                                                         mock_set_up_arkime_conf, mock_tag, mock_initial):
+                                                                         mock_set_up_arkime_conf, mock_initial):
     # Set up our mock
     mock_set_up.return_value = "arn"
 
@@ -200,7 +189,7 @@ def test_WHEN_cmd_cluster_create_called_AND_shouldnt_proceed_THEN_as_expected(mo
     mock_proceed.return_value = False
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26", None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, False, "1.2.3.4/24", "2.3.4.5/26", None, None)
 
     # Check our results
     expected_proceed_calls = [
@@ -217,9 +206,6 @@ def test_WHEN_cmd_cluster_create_called_AND_shouldnt_proceed_THEN_as_expected(mo
     expected_configure_calls = []
     assert expected_configure_calls == mock_configure.call_args_list
 
-    expected_tag_calls = []
-    assert expected_tag_calls == mock_tag.call_args_list
-
     expected_set_up_arkime_conf_calls = []
     assert expected_set_up_arkime_conf_calls == mock_set_up_arkime_conf.call_args_list
 
@@ -227,7 +213,6 @@ def test_WHEN_cmd_cluster_create_called_AND_shouldnt_proceed_THEN_as_expected(mo
 @mock.patch("commands.cluster_create._get_cdk_context")
 @mock.patch("commands.cluster_create._get_stacks_to_deploy")
 @mock.patch("commands.cluster_create._is_initial_invocation")
-@mock.patch("commands.cluster_create._tag_domain")
 @mock.patch("commands.cluster_create.cfn.set_up_cloudformation_template_dir")
 @mock.patch("commands.cluster_create.constants.get_repo_root_dir")
 @mock.patch("commands.cluster_create.shutil.rmtree")
@@ -246,7 +231,7 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
                                                                 mock_get_config, mock_proceed, mock_get_prev_plan,
                                                                 mock_get_prev_config, mock_configure, mock_set_up_arkime_conf,
                                                                 mock_aws_provider_cls, mock_get_cdk_dir, mock_rmtree,
-                                                                mock_get_root_dir, mock_set_up_cfn, mock_tag, mock_initial,
+                                                                mock_get_root_dir, mock_set_up_cfn, mock_initial,
                                                                 mock_get_stacks, mock_get_context):
     # Set up our mock
     mock_set_up.return_value = "arn"
@@ -283,7 +268,7 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
     mock_get_context.return_value = {"key": "value"}
 
     # Run our test
-    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True, None, None, None)
+    cmd_cluster_create("profile", "region", "my-cluster", None, None, None, None, None, True, True, None, None, None, None)
 
     # Check our results
     expected_calls = [
@@ -309,9 +294,6 @@ def test_WHEN_cmd_cluster_create_called_AND_just_print_THEN_as_expected(mock_cdk
 
     expected_configure_calls = []
     assert expected_configure_calls == mock_configure.call_args_list
-
-    expected_tag_calls = []
-    assert expected_tag_calls == mock_tag.call_args_list
 
     expected_set_up_arkime_conf_calls = [
         mock.call("my-cluster", mock.ANY)
@@ -574,7 +556,7 @@ def test_WHEN_get_next_user_config_called_AND_use_existing_THEN_as_expected(mock
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(1.2, 40, 120, 2, 35) == actual_value
@@ -600,7 +582,7 @@ def test_WHEN_get_next_user_config_called_AND_partial_update_THEN_as_expected(mo
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", None, 30, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, 30, None, None, None, None, None, mock_provider)
 
     # Check our results
     assert UserConfig(1.2, 30, 120, 2, 35) == actual_value
@@ -619,10 +601,10 @@ def test_WHEN_get_next_user_config_called_AND_use_default_THEN_as_expected(mock_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, None, mock_provider)
+    actual_value = _get_next_user_config("my-cluster", None, None, None, None, None, None, None, mock_provider)
 
     # Check our results
-    assert UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS) == actual_value
+    assert UserConfig(MINIMUM_TRAFFIC, DEFAULT_SPI_DAYS, DEFAULT_HISTORY_DAYS, DEFAULT_REPLICAS, DEFAULT_S3_STORAGE_DAYS, None, None) == actual_value
 
     expected_get_ssm_calls = [
         mock.call(constants.get_cluster_ssm_param_name("my-cluster"), "userConfig", mock.ANY)
@@ -637,10 +619,10 @@ def test_WHEN_get_next_user_config_called_AND_specify_all_THEN_as_expected(mock_
     mock_provider = mock.Mock()
 
     # Run our test
-    actual_value = _get_next_user_config("my-cluster", 10, 40, 120, 2, 35, "viewer-prefix-list", mock_provider)
+    actual_value = _get_next_user_config("my-cluster", 10, 40, 120, 2, 35, "viewer-prefix-list", [{"key": "key", "value": "value"}], mock_provider)
 
     # Check our results
-    assert UserConfig(10, 40, 120, 2, 35, "viewer-prefix-list") == actual_value
+    assert UserConfig(10, 40, 120, 2, 35, "viewer-prefix-list", [{"key": "key", "value": "value"}]) == actual_value
 
     expected_get_ssm_calls = []
     assert expected_get_ssm_calls == mock_ssm_ops.get_ssm_param_json_value.call_args_list
@@ -1137,34 +1119,6 @@ def test_WHEN_set_up_arkime_config_called_AND_couldnt_make_bucket_THEN_as_expect
 
     expected_exit_calls = [mock.call(1)]
     assert expected_exit_calls == mock_exit.call_args_list
-
-@mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_json_value")
-def test_WHEN_tag_domain_called_THEN_as_expected(mock_get_ssm_json):
-    # Set up our mock
-    mock_os_client = mock.Mock()
-    mock_provider = mock.Mock()
-    mock_provider.get_opensearch.return_value = mock_os_client
-
-    mock_get_ssm_json.return_value = "os-arn"
-
-    # Run our test
-    _tag_domain("MyCluster", mock_provider)
-
-    # Check our results
-    expected_get_ssm_json_calls = [
-        mock.call(constants.get_opensearch_domain_ssm_param_name("MyCluster"), "domainArn", mock_provider)
-    ]
-    assert expected_get_ssm_json_calls == mock_get_ssm_json.call_args_list
-
-    expected_add_tag_calls = [
-        mock.call(
-            ARN="os-arn",
-            TagList=[
-                {"Key": "arkime_cluster", "Value": "MyCluster"},
-            ]
-        )
-    ]
-    assert expected_add_tag_calls == mock_os_client.add_tags.call_args_list
 
 @mock.patch("commands.cluster_create.ssm_ops.get_ssm_param_value")
 def test_WHEN_is_initial_invocation_called_THEN_as_expected(mock_get_ssm):
