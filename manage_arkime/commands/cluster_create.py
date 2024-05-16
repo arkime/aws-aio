@@ -3,7 +3,7 @@ import json
 import logging
 import shutil
 import sys
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.acm_interactions import upload_default_elb_cert
@@ -31,7 +31,8 @@ from core.user_config import UserConfig
 logger = logging.getLogger(__name__)
 
 def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool, capture_cidr: str, viewer_cidr: str, viewer_prefix_list: str):
+                       pcap_days: int, preconfirm_usage: bool, just_print_cfn: bool, capture_cidr: str, viewer_cidr: str, viewer_prefix_list: str,
+                       extra_tags: List[Dict[str, str]]):
     logger.debug(f"Invoking cluster-create with profile '{profile}' and region '{region}'")
 
     aws_provider = AwsClientProvider(aws_profile=profile, aws_region=region)
@@ -50,7 +51,7 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
 
     # Generate our capacity plan, then confirm it's what the user expected and it's safe to proceed with the operation
     previous_user_config = _get_previous_user_config(name, aws_provider)
-    next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list,  aws_provider)
+    next_user_config = _get_next_user_config(name, expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list, extra_tags, aws_provider)
     previous_capacity_plan = _get_previous_capacity_plan(name, aws_provider)
     next_capacity_plan = _get_next_capacity_plan(next_user_config, previous_capacity_plan, capture_cidr, viewer_cidr, aws_provider)
 
@@ -81,9 +82,6 @@ def cmd_cluster_create(profile: str, region: str, name: str, expected_traffic: f
     else:
         # Deploy the CFN resources
         cdk_client.deploy(stacks_to_deploy, context=create_context)
-
-        # Tag the OpenSearch Domain
-        _tag_domain(name, aws_provider)
 
         # Kick off Events to ensure that ISM is set up on the CFN-created OpenSearch Domain
         _configure_ism(name, next_user_config.historyDays, next_user_config.spiDays, next_user_config.replicas, aws_provider)
@@ -156,7 +154,7 @@ def _get_previous_user_config(cluster_name: str, aws_provider: AwsClientProvider
         return UserConfig(None, None, None, None, None)
 
 def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: int, history_days: int, replicas: int,
-                          pcap_days: int, viewer_prefix_list: str, aws_provider: AwsClientProvider) -> UserConfig:
+                          pcap_days: int, viewer_prefix_list: str, extra_tags: str, aws_provider: AwsClientProvider) -> UserConfig:
     # At least one parameter isn't defined
     if None in [expected_traffic, spi_days, replicas, pcap_days, history_days, viewer_prefix_list]:
         # Re-use the existing configuration if it exists
@@ -183,14 +181,16 @@ def _get_next_user_config(cluster_name: str, expected_traffic: float, spi_days: 
                 user_config.pcapDays = pcap_days
             if viewer_prefix_list is not None:
                 user_config.viewerPrefixList = viewer_prefix_list
+            if extra_tags is not None:
+                user_config.extraTags = extra_tags
             return user_config
 
         # Existing configuration doesn't exist, use defaults
         except ssm_ops.ParamDoesNotExist:
-            return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
+            return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list, extra_tags)
     # All of the parameters defined
     else:
-        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list)
+        return UserConfig(expected_traffic, spi_days, history_days, replicas, pcap_days, viewer_prefix_list, extra_tags)
 
 def _get_previous_capacity_plan(cluster_name: str, aws_provider: AwsClientProvider) -> ClusterPlan:
     # Pull the existing plan, if possible
@@ -356,21 +356,6 @@ def _configure_ism(cluster_name: str, history_days: int, spi_days: int, replicas
         [events.ConfigureIsmEvent(history_days, spi_days, replicas)],
         event_bus_arn,
         aws_provider
-    )
-
-def _tag_domain(cluster_name: str, aws_provider: AwsClientProvider):
-    os_domain_Arn = ssm_ops.get_ssm_param_json_value(
-        constants.get_opensearch_domain_ssm_param_name(cluster_name),
-        "domainArn",
-        aws_provider
-    )
-
-    opensearch_client = aws_provider.get_opensearch()
-    opensearch_client.add_tags(
-        ARN=os_domain_Arn,
-        TagList=[
-            {"Key": "arkime_cluster", "Value": cluster_name},
-        ]
     )
 
 def _get_stacks_to_deploy(cluster_name: str, next_user_config: UserConfig, next_capacity_plan: ClusterPlan) -> List[str]:

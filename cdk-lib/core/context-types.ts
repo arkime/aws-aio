@@ -98,6 +98,7 @@ export interface UserConfig {
     replicas: number;
     pcapDays: number;
     viewerPrefixList: string;
+    extraTags: ExtraTag[]
 }
 
 /**
@@ -111,4 +112,12 @@ export interface ClusterMgmtStackNames {
     osDomain: string;
     viewerNodes: string;
     viewerVpc: string;
+}
+
+/**
+ * Structure to hold the Extra Tags
+ */
+export interface ExtraTag {
+    key: string;
+    value: string
 }

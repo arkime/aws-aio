@@ -23,6 +23,17 @@ const env: Environment = {
     region: params.awsRegion
 };
 
+function addTags (stack: cdk.Stack) {
+    const clusterParams = params as prms.ClusterMgmtParams;
+    cdk.Tags.of(stack).add('arkime_cluster', clusterParams.nameCluster);
+
+    if (clusterParams.userConfig.extraTags) {
+        for (const tag of clusterParams.userConfig.extraTags) {
+            cdk.Tags.of(stack).add(tag.key, tag.value);
+        }
+    }
+}
+
 switch(params.type) {
 case 'ClusterMgmtParams': {
     const captureBucketStack = new CaptureBucketStack(app, params.stackNames.captureBucket, {
@@ -30,11 +41,13 @@ case 'ClusterMgmtParams': {
         planCluster: params.planCluster,
         ssmParamName: params.nameCaptureBucketSsmParam,
     });
+    addTags(captureBucketStack);
 
     const captureVpcStack = new CaptureVpcStack(app, params.stackNames.captureVpc, {
         env: env,
         planCluster: params.planCluster,
     });
+    addTags(captureVpcStack);
 
     const osDomainStack = new OpenSearchDomainStack(app, params.stackNames.osDomain, {
         env: env,
@@ -42,6 +55,8 @@ case 'ClusterMgmtParams': {
         planCluster: params.planCluster,
         ssmParamName: params.nameOSDomainSsmParam,
     });
+    addTags(osDomainStack);
+
     osDomainStack.addDependency(captureVpcStack);
 
     const captureNodesStack = new CaptureNodesStack(app, params.stackNames.captureNodes, {
@@ -59,6 +74,8 @@ case 'ClusterMgmtParams': {
         ssmParamNameCluster: params.nameClusterSsmParam,
         userConfig: params.userConfig
     });
+    addTags(captureNodesStack);
+
     captureNodesStack.addDependency(captureBucketStack);
     captureNodesStack.addDependency(captureVpcStack);
     captureNodesStack.addDependency(osDomainStack);
@@ -73,6 +90,7 @@ case 'ClusterMgmtParams': {
             env: env,
             captureVpc: captureVpcStack.vpc
         });
+        addTags(captureTgwStack);
         captureTgwStack.addDependency(captureVpcStack);
 
         const viewerVpcStack = new ViewerVpcStack(app, params.stackNames.viewerVpc, {
@@ -81,6 +99,8 @@ case 'ClusterMgmtParams': {
             captureVpc: captureVpcStack.vpc,
             viewerVpcPlan: params.planCluster.viewerVpc
         });
+        addTags(viewerVpcStack);
+
         viewerVpcStack.addDependency(captureVpcStack);
         viewerVpcStack.addDependency(captureNodesStack);
         viewerVpcStack.addDependency(captureTgwStack);
@@ -102,6 +122,7 @@ case 'ClusterMgmtParams': {
         planCluster: params.planCluster,
         userConfig: params.userConfig,
     });
+    addTags(viewerNodesStack);
     viewerNodesStack.addDependency(captureBucketStack);
     viewerNodesStack.addDependency(vpcStackToUse);
     viewerNodesStack.addDependency(osDomainStack);
