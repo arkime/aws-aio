@@ -3,7 +3,7 @@ import json
 import logging
 import shutil
 import sys
-from typing import Callable, List, Tuple, Dict
+from typing import Callable, List, Dict
 
 import arkime_interactions.config_wrangling as config_wrangling
 from aws_interactions.acm_interactions import upload_default_elb_cert
