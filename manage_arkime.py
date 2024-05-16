@@ -132,7 +132,7 @@ cli.add_command(demo_traffic_destroy)
     required=False)
 @click.option(
     "--extra-tag",
-    help=("Extra AWS Tag to apply to all resources."),
+    help=("Extra AWS Tag to add to all resources, previously added tags are not deleted."),
     default=None,
     nargs=2,
     type=(click.STRING, click.STRING),
